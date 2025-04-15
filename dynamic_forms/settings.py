@@ -40,6 +40,7 @@ INSTALLED_APPS = [
      'rest_framework',
      'rest_framework.authtoken',
      'rest_framework_simplejwt',
+     'system_management'
 ]
 
 MIDDLEWARE = [
@@ -107,6 +108,20 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.TokenAuthentication',
+        
+
+    ),
+    'EXPIRY_MINUTES': 30,  # Token will expire after 30 minutes
+
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+}
+
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
@@ -128,3 +143,4 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+AUTH_USER_MODEL = 'system_management.User'

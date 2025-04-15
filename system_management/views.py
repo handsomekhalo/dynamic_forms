@@ -1,0 +1,64 @@
+import secrets
+import string
+from django.http import JsonResponse
+from django.shortcuts import render
+from django.middleware.csrf import get_token
+from rest_framework.authtoken.models import Token
+from django.views.decorators.csrf import ensure_csrf_cookie
+
+
+
+# Create your views here.
+
+
+@ensure_csrf_cookie
+def csrf(request):
+    """
+    Sets the CSRF cookie and returns the token
+    """
+    token = get_token(request)
+    return JsonResponse({'csrfToken': token})
+
+# def csrf(request):
+#     return JsonResponse({'csrfToken': get_token(request)})
+
+# def csrf(request):
+#     return JsonResponse({'csrfToken': get_token(request)})
+
+def get_data_on_success(response_data):
+    status = response_data.get('status')
+    if status == 'success':
+        data = response_data.get('data')
+    else:
+        data = []
+    return data
+
+
+def generate_password(length=12, include_digits=True, include_special_chars=True):
+    letters = string.ascii_letters
+    digits = string.digits if include_digits else ''
+    special_chars = string.punctuation if include_special_chars else ''
+
+    characters = letters + digits + special_chars
+
+    length = max(length, 8)
+
+    password = ''.join(secrets.choice(characters) for _ in range(length))
+
+    return password
+
+
+
+def set_csrf_token(request):
+     response = JsonResponse({'detail': 'CSRF cookie set'})
+     response.set_cookie('csrftoken', get_token(request)) 
+     return response
+
+@ensure_csrf_cookie     
+def login_view(request):
+    """User login function with API."""
+
+    if request.method == "GET":
+    
+        # Update this path to point to your React app's index.html
+        return render(request, 'index.html')  # Adj
