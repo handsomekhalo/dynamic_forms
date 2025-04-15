@@ -1,7 +1,7 @@
 import secrets
 import string
 from django.http import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.middleware.csrf import get_token
 from rest_framework.authtoken.models import Token
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -54,11 +54,16 @@ def set_csrf_token(request):
      response.set_cookie('csrftoken', get_token(request)) 
      return response
 
-@ensure_csrf_cookie     
-def login_view(request):
-    """User login function with API."""
+# @ensure_csrf_cookie     
+# def login_view(request):
+#     """User login function with API."""
 
-    if request.method == "GET":
+#     if request.method == "GET":
     
-        # Update this path to point to your React app's index.html
-        return render(request, 'index.html')  # Adj
+#         # Update this path to point to your React app's index.html
+#         return render(request, 'index.html')  # Adj
+    
+
+# View that redirects to Next.js
+def login_view(request):
+    return redirect("http://localhost:3000/")  # Next.js is running here
