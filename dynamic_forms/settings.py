@@ -41,7 +41,9 @@ INSTALLED_APPS = [
      'rest_framework',
      'rest_framework.authtoken',
      'rest_framework_simplejwt',
-     'system_management'
+     'system_management',
+     'corsheaders'
+     
 ]
 
 MIDDLEWARE = [
@@ -52,6 +54,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+
 ]
 
 ROOT_URLCONF = 'dynamic_forms.urls'
@@ -172,3 +176,8 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:8000",
     "http://localhost:8000",
 ]
+
+CORS_ALLOW_CREDENTIALS = True  # Important for sending cookies cross-domain
+
+# If you need to expose specific headers:
+CORS_EXPOSE_HEADERS = ["Content-Type", "X-CSRFToken"]

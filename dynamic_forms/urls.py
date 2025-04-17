@@ -34,6 +34,6 @@ urlpatterns = [
     # path('', redirect_to_nextjs),  # Root URL will redirect to Next.js landing page
     path('', views.login_view, name='login_view'),
     path('system_management/', include('system_management.urls')),
-    # path('system_management_api/', include('system_management.api.urls')),
+    path('system_management_api/', include('system_management.api.urls')),
 
 ]

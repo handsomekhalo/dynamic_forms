@@ -1,6 +1,6 @@
 # User Types
 ADMIN = "ADMIN"
-SUBSCRIBER = "SUBSCRIBER"
+APPLICANT = "Applicant"
 
 # application types
 EMPTY = ''
