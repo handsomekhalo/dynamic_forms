@@ -343,7 +343,7 @@ const RegisterPage = () => {
         if (token) {
           authLogin(token, tokenToUse);
           localStorage.setItem('user', JSON.stringify(user));
-          navigateTo('/dashboard');
+          navigateTo('/login');
         } else {
           setErrors((prev) => ({ ...prev, server: 'Registration failed. No token received.' }));
         }

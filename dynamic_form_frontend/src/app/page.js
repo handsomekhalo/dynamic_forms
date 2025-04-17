@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import LoginPage from './Components/System_Management_Component/login/login';
 import RegisterPage from './Components/System_Management_Component/register/register';
+import Dashboard from './Components/System_Management_Component/dashboard';
 
 export default function Home() {
   const [showLogin, setShowLogin] = useState(true);
@@ -39,6 +40,9 @@ export default function Home() {
             </p>
           </>
         )}
+
+        <Dashboard />
+
       </main>
     </div>
   );

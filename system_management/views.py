@@ -153,74 +153,80 @@ def register_user(request):
             "status": "error",
             "message": f"Server error occurred: {str(e)}"
         }, status=500)
-# @csrf_exempt
-# def register_user(request):
-#     print('executing')
-#     if request.method != 'POST':
-#         return JsonResponse({
-#             "status": "error",
-#             "message": "Method not allowed"
-#         }, status=405)
 
-#     try:
-#         # Parse request data
-#         data = json.loads(request.body)
 
-#         first_name = data.get('first_name')
-#         last_name = data.get('last_name')
-#         email = data.get('email')
-#         password = data.get('password')
-#         confirm_password = data.get('confirm_password')
 
-#         if not all([first_name, last_name, email, password, confirm_password]):
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "All fields are required."
-#             }, status=400)
+@ensure_csrf_cookie  # This ensures the CSRF cookie is set
+def login(request):
+    """User login function with API."""
+    if request.method != "POST":
+        return JsonResponse({
+            'status': 'error', 
+            'message': 'Only POST requests are allowed'
+        }, status=405)
 
-#         if password != confirm_password:
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "Passwords do not match."
-#             }, status=400)
+    try:
+        data = json.loads(request.body)
+        email = data.get('email')
+        password = data.get('password')
+        # remember_me = data.get('rememberMe', False)
 
-#         # Prepare API call to register_api
-#         url = f"{host_url(request)}{reverse_lazy('register_api')}"
-#         payload = json.dumps({
-#             "first_name": first_name,
-#             "last_name": last_name,
-#             "email": email,
-#             "password": password,
-#             "confirm_password": confirm_password
-#         })
+        if not email or not password:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Email and password are required'
+            }, status=400)
 
-#         headers = {
-#             'Content-Type': constants.JSON_APPLICATION
-#         }
+        # Get the existing token if any
+        token = request.session.get('token')
+        
+        headers = {
+            'Content-Type': 'application/json',
+            "Authorization": f"Token {token}" if token else ""
+        }
 
-#         # Make API call through your api_connection helper
-#         response_data = api_connection(method="POST", url=url, headers=headers, data=payload)
+        payload = json.dumps({
+            'email': email,
+            'password': password,
+            # 'remember_me': remember_me
+        })
 
-#         if response_data.get("status") == "success":
-#             return JsonResponse({
-#                 "status": "success",
-#                 "message": "User registered successfully",
-#                 "user_id": response_data.get("user_id")
-#             })
+        url = f"{host_url(request)}{reverse_lazy('login_api')}"
+        
+        try:
+            response_data = requests.post(
+                url, 
+                headers=headers, 
+                data=payload, 
+                timeout=10
+            )
+            
+            if response_data.status_code == 200:
+                response_json = response_data.json()
+                
+                # Store token in session if remember_me is True
+                # if remember_me and 'token' in response_json:
+                #     request.session['token'] = response_json['token']
+                
+                return JsonResponse({
+                    'status': 'success', 
+                    'data': response_json
+                })
+            
+            
+            return JsonResponse({
+                'status': 'error',
+                'message': response_data.json().get('message', 'Login failed'),
+            }, status=response_data.status_code)
 
-#         return JsonResponse({
-#             "status": "error",
-#             "message": response_data.get("message", "Registration failed"),
-#             "errors": response_data.get("errors", {})
-#         }, status=400)
+        except requests.exceptions.RequestException as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'API request failed: {str(e)}'
+            }, status=500)
 
-#     except json.JSONDecodeError:
-#         return JsonResponse({
-#             "status": "error",
-#             "message": "Invalid JSON data"
-#         }, status=400)
-#     except Exception as e:
-#         return JsonResponse({
-#             "status": "error",
-#             "message": f"Server error occurred: {str(e)}"
-#         }, status=500)
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'status': 'error', 
+            'message': 'Invalid JSON data'
+        }, status=400)

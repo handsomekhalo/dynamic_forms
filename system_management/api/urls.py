@@ -9,7 +9,7 @@ urlpatterns = [
 
     path('register_api/', views.register_api, name='register_api'),
 
-#    path('login_api/', views.login_api, name="login_api"),
+   path('login_api/', views.login_api, name="login_api"),
 #    path('otp_api/', views.otp_api, name="otp_api"),
 #    path('logout_api/', views.logout_api, name="logout_api"),
 #    path('post_otp_api/', views.post_otp_api, name="post_otp_api"),
