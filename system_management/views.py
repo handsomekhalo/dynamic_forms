@@ -25,7 +25,11 @@ def csrf(request):
     Sets the CSRF cookie and returns the token
     """
     token = get_token(request)
+    print('token hit')
+    # return JsonResponse({'message': 'CSRF cookie set'})
     return JsonResponse({'csrfToken': token})
+
+
 
 # def csrf(request):
 #     return JsonResponse({'csrfToken': get_token(request)})
@@ -155,9 +159,11 @@ def register_user(request):
         }, status=500)
 
 
-
 @ensure_csrf_cookie  # This ensures the CSRF cookie is set
+
 def login(request):
+    print('Cookies:', request.COOKIES)
+    print('Headers:', request.headers)
     """User login function with API."""
     if request.method != "POST":
         return JsonResponse({
@@ -230,3 +236,68 @@ def login(request):
             'status': 'error', 
             'message': 'Invalid JSON data'
         }, status=400)
+
+
+
+@csrf_exempt
+def get_all_users(request):
+    
+    if request.method == "GET":
+        """Returns all user information for user management template."""
+        try:
+            # user =request.data
+            token = request.session.get("token")
+            token = request.headers.get("Authorization", "").split("Token ")[-1]
+
+            if token:
+                    request.session["token"] = token
+                    request.session.modified = True
+
+            if not token:
+                return JsonResponse({
+                    "status": "error",
+                    "message": "Token not found in session or headers"
+                })
+
+            # API call to fetch users
+            url = f"{host_url(request)}{reverse('get_users_api')}"
+
+            payload = json.dumps({
+                'token': token  # Adding token to payload
+            })
+
+            headers = {
+                'Authorization': f'Token {token}',
+                'Content-Type': constants.JSON_APPLICATION
+            }
+
+            response_data = api_connection(method="GET", url=url, headers=headers, data=payload)
+
+            users = []
+            if response_data.get('status') == 'success':
+                users = response_data.get('users', [])
+
+            # API call to fetch user types
+            url = f"{host_url(request)}{reverse('get_user_types_api')}"
+            response_data = api_connection(method="GET", url=url, headers=headers, data=payload)
+
+            roles = []
+            if response_data.get('status') == 'success':
+                roles = response_data.get('user_types', [])
+
+            return JsonResponse({
+                'status': 'success',
+                'users': users,
+                'user_types': roles
+            })
+
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(e)
+            })
+
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Invalid request method'
+    })

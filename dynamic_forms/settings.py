@@ -181,3 +181,9 @@ CORS_ALLOW_CREDENTIALS = True  # Important for sending cookies cross-domain
 
 # If you need to expose specific headers:
 CORS_EXPOSE_HEADERS = ["Content-Type", "X-CSRFToken"]
+
+
+#for dhango cross site  settings
+
+SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SECURE = False
