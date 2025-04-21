@@ -12,6 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 
 from system_management import constants
+from system_management.decorators import session_timeout
 from system_management.general_func_classes import api_connection, host_url
 
 
@@ -247,7 +248,15 @@ def get_all_users(request):
         try:
             # user =request.data
             token = request.session.get("token")
-            token = request.headers.get("Authorization", "").split("Token ")[-1]
+            # token = request.headers.get("Authorization", "").split("Token ")[-1]
+            auth_header = request.headers.get("Authorization", "")
+            if auth_header.startswith("Token "):
+                token = auth_header.split("Token ")[-1]
+            elif auth_header.startswith("Bearer "):
+                token = auth_header.split("Bearer ")[-1]
+            else:
+                token = None
+
 
             if token:
                     request.session["token"] = token
@@ -301,3 +310,75 @@ def get_all_users(request):
         'status': 'error',
         'message': 'Invalid request method'
     })
+
+
+@session_timeout
+def get_roles(request):
+    """
+    View function to get all roles/user types.
+    Handles both session and header-based token authentication.
+    """
+    if request.method != "GET":
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Only GET requests are allowed'
+        }, status=405)
+
+    try:
+        # Get token from session or Authorization header
+        token = request.session.get("token")
+            # token = request.headers.get("Authorization", "").split("Token ")[-1]
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Token "):
+            token = auth_header.split("Token ")[-1]
+        elif auth_header.startswith("Bearer "):
+            token = auth_header.split("Bearer ")[-1]
+        else:
+            token = None
+
+
+        if token:
+            request.session["token"] = token
+            request.session.modified = True
+
+        if not token:
+            return JsonResponse({
+                "status": "error",
+                "message": "Token not found in session or headers"
+            }, status=401)
+
+        url = f"{host_url(request)}{reverse('get_user_types_api')}"
+
+        payload = json.dumps({
+            'token': token
+        })
+
+        headers = {
+            'Authorization': f'Token {token}',
+            'Content-Type': constants.JSON_APPLICATION
+        }
+
+        response_data = api_connection(
+            method="GET",
+            url=url,
+            headers=headers,
+            data=payload
+        )
+
+        if response_data.get('status') == 'success':
+            return JsonResponse({
+                'status': 'success',
+                'roles': response_data.get('user_types', [])
+            })
+        
+        return JsonResponse({
+            'status': 'error',
+            'message': response_data.get('message', 'Failed to fetch roles')
+        }, status=400)
+
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+

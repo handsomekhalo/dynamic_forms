@@ -13,6 +13,10 @@ urlpatterns = [
     path('register_user/', views.register_user, name='register_user'),
     path('csrf/', views.csrf, name='csrf'),
     path('login/', views.login, name='login'),
+    path('get_roles/', views.get_roles, name='get_roles'),
+    path('get_all_users/', views.get_all_users, name='get_all_users'),
+
+    
 
     # path('login/', views.login, name='login'),
     # path('get_all_users/', views.get_all_users, name='get_all_users'),

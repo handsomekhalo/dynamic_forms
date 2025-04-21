@@ -30,7 +30,9 @@ def host_url(request):
 def api_connection(method, url, headers, data):
     """This function is used to connect to the api."""
     response = requests.request(method, url, headers=headers, data=data, timeout=120)
-    response_data = json.loads(response.json())
+    # response_data = json.loads(response.json())
+    response_data = response.json()
+
     return response_data
 
 

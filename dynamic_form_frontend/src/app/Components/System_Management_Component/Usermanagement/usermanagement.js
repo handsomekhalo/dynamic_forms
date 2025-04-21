@@ -5,7 +5,9 @@ import React from 'react';
 const UserTable = ({ users, currentUsers, loading, error, currentPage, totalPages, setCurrentPage, indexOfFirstUser }) => (
   <div>
     {loading ? (
-      <p>Loading...</p>
+      <div className="flex justify-center items-center py-4">
+      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-blue-500" />
+    </div>
     ) : error ? (
       <p className="text-red-500">{error}</p>
     ) : (
@@ -26,7 +28,9 @@ const UserTable = ({ users, currentUsers, loading, error, currentPage, totalPage
                 <td className="px-4 py-2">{index + 1 + indexOfFirstUser}</td>
                 <td className="px-4 py-2">{user.first_name} {user.last_name}</td>
                 <td className="px-4 py-2">{user.email}</td>
-                <td className="px-4 py-2">{user.user_type__name}</td>
+                {/* <td className="px-4 py-2">{user.user_type__name}</td> */}
+                <td className="px-4 py-2"> {user.user_type__name || user.user_type?.name || 'Unknown Role'}</td>
+
                 <td className="px-4 py-2">
                   <button className="text-blue-600 hover:underline mr-2">Edit</button>
                   <button className="text-red-600 hover:underline">Delete</button>

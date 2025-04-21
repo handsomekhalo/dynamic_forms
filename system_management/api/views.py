@@ -56,7 +56,6 @@ def register_api(request):
             try:
                 user_type = UserType.objects.get(name=constants.APPLICANT)
 
-                print('user_type',user_type)
             except UserType.DoesNotExist:
                 response_data = json.dumps({
                     "status": "error",
@@ -209,7 +208,6 @@ def login_api(request):
 
 @api_view(['GET'])
 def get_user_types_api(request):
-    print('executing')
     """
     Get all user types in the database
 
@@ -223,12 +221,10 @@ def get_user_types_api(request):
                 data:
             status code:
     """
+ 
     if request.method == 'GET':
-        print('request',)
 
         user_types = UserType.objects.all()
-
-        print('user_types',user_types)
         serializer = UserTypeModelSerializer(user_types, many=True)
 
         try:
@@ -236,7 +232,6 @@ def get_user_types_api(request):
                 'status': "success",
                 'user_types': serializer.data
             }
-            print('data',data)
             return Response(data, status=status.HTTP_200_OK)
 
         except KeyError:
@@ -244,7 +239,6 @@ def get_user_types_api(request):
                 'status': "error",
                 'message': "Error during getting user types."
             }
-            print('data',data)
             return Response(data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     else:
@@ -252,13 +246,13 @@ def get_user_types_api(request):
             'status': "error",
             'message': constants.INVALID_REQUEST_METHOD
         }
-        print('data',data)
         return Response(data, status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
 
 @api_view(['GET'])
 def get_users_api(request):
+
     """
     Get all users api
 
@@ -278,22 +272,22 @@ def get_users_api(request):
         serializer = GetAlltUserModelSerializer(users, many=True).data
 
         try:
-            data = json.dumps({
+            data = {
                 'status': "success",
                 'users': serializer
-            })
+            }
             return Response(data, status=status.HTTP_200_OK)
 
         except KeyError:
-            data = json.dumps({
+            data = {
                 'status': "error",
                 'message': "Error during getting users."
-            })
+            }
             return Response(data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     else:
-        data = ({
+        data = {
             'status': "error",
             'message': "Invalid request method."
-        })
+        }
         return Response(data, status.HTTP_405_METHOD_NOT_ALLOWED)

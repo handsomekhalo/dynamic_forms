@@ -118,6 +118,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.TokenAuthentication',
         
+        
 
     ),
     'EXPIRY_MINUTES': 30,  # Token will expire after 30 minutes

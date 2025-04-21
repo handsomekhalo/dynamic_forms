@@ -1,107 +1,3 @@
-// 'use client';
-
-// import React, { useEffect, useState } from 'react';
-// import axios from 'axios';
-// import Sidebar from '../dashboard/SideBarComponent/sidebar';
-// import UserTable from './usermanagement';
-// import { useAuth } from '../../../../../AuthContext';
-// import backendApi from '../../../../../utils/backendApi';
-
-// const UserManagement = () => {
-//   const { authToken, isAuthenticated, navigate } = useAuth();
-//   const [users, setUsers] = useState([]);
-//   const [roles, setRoles] = useState([]);
-//   const [csrfToken, setCsrfToken] = useState(null);
-//   const [loading, setLoading] = useState(true);
-//   const [error, setError] = useState(null);
-//   const [currentPage, setCurrentPage] = useState(1);
-//   const usersPerPage = 6;
-
-//   // Fetch CSRF Token
-//   useEffect(() => {
-//     backendApi
-//       .get('/system_management/csrf/', { withCredentials: true })
-//       .then((res) => {
-//         if (res.data?.csrfToken) {
-//           setCsrfToken(res.data.csrfToken);
-//         }
-//         console.log('CSRF Token response:', res);
-//       })
-//       .catch((err) => {
-//         console.error('Failed to fetch CSRF:', err);
-//       });
-//   }, []);
-
-//   // Fetch Users
-//   const fetchUsers = async () => {
-//     try {
-//       const res = await axios.get('/system_management_api/get_all_users_api/', {
-//         headers: { Authorization: `Token ${authToken}` }
-//       });
-//       const parsedData = JSON.parse(res.data); // Because your API returns a string
-//       setUsers(parsedData.users);
-//     } catch (err) {
-//       console.error('Failed to fetch users:', err);
-//       setError('Error loading users');
-//     }
-//   };
-
-//   // Fetch Roles
-//   const fetchRoles = async () => {
-//     try {
-//       const res = await axios.get('/system_management_api/get_user_types_api/', {
-//         headers: { Authorization: `Token ${authToken}` }
-//       });
-//       setRoles(res.data.user_types);
-//     } catch (err) {
-//       console.error('Failed to fetch roles:', err);
-//     }
-//   };
-
-//   useEffect(() => {
-//     if (!authToken || !isAuthenticated) {
-//       navigate('/login');
-//       return;
-//     }
-
-//     const fetchData = async () => {
-//       await fetchUsers();
-//       await fetchRoles();
-//       setLoading(false);
-//     };
-
-//     fetchData();
-//   }, [authToken, isAuthenticated]);
-
-//   // Pagination
-//   const indexOfLastUser = currentPage * usersPerPage;
-//   const indexOfFirstUser = indexOfLastUser - usersPerPage;
-//   const currentUsers = users.slice(indexOfFirstUser, indexOfLastUser);
-//   const totalPages = Math.ceil(users.length / usersPerPage);
-
-//   return (
-//     <div className="flex">
-//       <Sidebar />
-//       <div className="flex-1 p-4">
-//         <h2 className="text-2xl font-semibold mb-4">User Management</h2>
-//         <UserTable
-//           users={users}
-//           currentUsers={currentUsers}
-//           roles={roles}
-//           loading={loading}
-//           error={error}
-//           currentPage={currentPage}
-//           totalPages={totalPages}
-//           setCurrentPage={setCurrentPage}
-//           indexOfFirstUser={indexOfFirstUser}
-//           csrfToken={csrfToken}
-//         />
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default UserManagement;
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -148,8 +44,9 @@ useEffect(() => {
   const fetchUsers = async () => {
     try {
       console.log('Fetching users with token:', authToken);
-      const res = await backendApi.get('/system_management_api/get_users_api/', {
+      const res = await backendApi.get('/system_management/get_all_users/', {
         headers: { Authorization: `Token ${authToken}` }
+        
       });
       
       // Check if response data is a string or already an object
@@ -176,14 +73,16 @@ useEffect(() => {
   };
 
   // Fetch Roles
+
   const fetchRoles = async () => {
     try {
       console.log('Fetching roles with token:', authToken);
-      const res = await backendApi.get('/system_management_api/get_user_types_api/', {
+      const res = await backendApi.get('/system_management/get_roles/', {
         headers: { Authorization: `Token ${authToken}` }
       });
+  
       console.log('Roles data received:', res.data);
-      setRoles(res.data.user_types || []);
+      setRoles(res.data.roles || []); // FIXED: was user_types
       return true;
     } catch (err) {
       console.error('Failed to fetch roles:', err);
@@ -191,6 +90,24 @@ useEffect(() => {
       return false;
     }
   };
+  
+//   const fetchRoles = async () => {
+//     try {
+//       console.log('Fetching roles with token:', authToken);
+//       const res = await backendApi.get('/system_management/get_roles/', {
+//         headers: { Authorization: `Token ${authToken}` },
+//       });
+//       console.log('Roles data received:', res.data);
+//     //   setRoles(res.data.user_types || []);
+//       setRoles(res.data.roles || []);
+
+//       return true;
+//     } catch (err) {
+//       console.error('Failed to fetch roles:', err);
+//       setError(prev => prev || 'Error loading roles');
+//       return false;
+//     }
+//   };
 
   // Main data fetching effect
   useEffect(() => {
