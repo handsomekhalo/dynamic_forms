@@ -42,6 +42,7 @@ INSTALLED_APPS = [
      'rest_framework.authtoken',
      'rest_framework_simplejwt',
      'system_management',
+     'question_management',
      'corsheaders'
      
 ]

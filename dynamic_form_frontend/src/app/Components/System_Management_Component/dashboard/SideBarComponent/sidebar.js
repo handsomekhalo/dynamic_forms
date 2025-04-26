@@ -21,6 +21,14 @@ const Sidebar = () => {
       
         
       ],
+      
+    },
+    {
+      title: 'Form Management',
+      links: [
+        {  href: '/Components/Form_Management', icon: 'bx bx-user-circle', label: 'Manage Forms ' },
+       
+      ],
     },
     {
       title: 'Accounts',
