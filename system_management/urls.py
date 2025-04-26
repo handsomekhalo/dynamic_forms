@@ -15,9 +15,12 @@ urlpatterns = [
     path('login/', views.login, name='login'),
     path('get_roles/', views.get_roles, name='get_roles'),
     path('get_all_users/', views.get_all_users, name='get_all_users'),
+    # path('update_user/', views.update_user, name='update_user'),
+    path('update_user/<int:user_id>/', views.update_user, name='update_user'),
+
+
 
     
-
     # path('login/', views.login, name='login'),
     # path('get_all_users/', views.get_all_users, name='get_all_users'),
     # path('create_user/', views.create_user, name='create_user'),

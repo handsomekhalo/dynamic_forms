@@ -6,7 +6,7 @@ import json
 import random
 from requests import Response
 from system_management import constants
-from system_management.api.serializers import GetAlltUserModelSerializer, RegisterSerializer, UserModelSerializer, UserTypeModelSerializer
+from system_management.api.serializers import GetAlltUserModelSerializer, RegisterSerializer, UserModelSerializer, UserTypeModelSerializer, UserUpdateSerializer
 from system_management.models import Profile, User, UserType
 from rest_framework.permissions import AllowAny
 from rest_framework.authtoken.models import Token
@@ -291,3 +291,96 @@ def get_users_api(request):
             'message': "Invalid request method."
         }
         return Response(data, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
+
+@api_view(['POST', 'PUT'])
+def update_user_api(request):
+    print('executing update_user_api')
+    if request.method == 'POST':
+        try:
+            # More robust way to parse request body
+            if isinstance(request.body, bytes) and request.body:
+                try:
+                    body = json.loads(request.body)
+                except json.JSONDecodeError:
+                    print("Failed to parse JSON from bytes body")
+                    body = request.data
+            else:
+                body = request.data
+            
+            
+            # If body is empty or None, use request.data
+            if not body:
+                body = request.data
+            
+            serializer = UserUpdateSerializer(data=body)
+
+            if serializer.is_valid():
+                validated_data = serializer.validated_data
+                user_id = validated_data.get('user_id')
+                email = validated_data.get('email')
+
+                # Check for duplicate email
+                if User.objects.exclude(id=user_id).filter(email=email).exists():
+                    return Response({
+                        'status': "error",
+                        'message': f"User with email {email} already exists."
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+                # Fetch the user
+                try:
+                    user = User.objects.get(id=user_id)
+                except User.DoesNotExist:
+                    return Response({
+                        'status': "error",
+                        'message': f"User with id {user_id} does not exist."
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+                user_type_id = validated_data.get('user_type_id')
+                try:
+                    user_type = UserType.objects.get(id=user_type_id)
+                except UserType.DoesNotExist:
+                    return Response({
+                        'status': "error",
+                        'message': f"User type with id {user_type_id} does not exist."
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+                email_change = False
+                if not user.email == validated_data.get('email'):
+                    email_change = True
+
+                # Update user data
+                user.first_name = validated_data.get('first_name')
+                user.last_name = validated_data.get('last_name')
+                user.email = validated_data.get('email')
+                user.user_type_id = user_type.id
+                user.save()
+
+                return Response({
+                    'status': "success",
+                    'message': "User updated successfully.",
+                    'user_type': str(user_type.name).lower(),
+                    "email_change": email_change
+                }, status=status.HTTP_200_OK)
+
+            else:
+                print('Serializer errors:', serializer.errors)
+                return Response({
+                    'status': "error",
+                    'message': str(serializer.errors)
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            print(f"Exception in update_user_api: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return Response({
+                'status': "error",
+                'message': f"An error occurred: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    else:
+        return Response({
+            'status': "error",
+            'message': "Invalid request method. Use POST."
+        }, status=status.HTTP_405_METHOD_NOT_ALLOWED)

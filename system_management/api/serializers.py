@@ -230,3 +230,69 @@ class GetAlltUserModelSerializer(serializers.ModelSerializer):
             'user_type__name',
             'profile'
         )
+
+
+
+class UserUpdateSerializer(BaseFormSerializer):
+    """User update serializer for cleaning user values"""
+
+    first_name = serializers.CharField(
+        max_length=250,
+        required=True,
+        read_only=False,
+        write_only=False,
+        error_messages={
+            'required': 'The first name field is required.',
+            'max_length': 'The first name field must be less than 250 characters.'
+        }
+    )
+    last_name = serializers.CharField(
+        max_length=250,
+        required=True,
+        read_only=False,
+        write_only=False,
+        error_messages={
+            'required': 'The last name field is required.',
+            'max_length': 'The last name field must be less than 250 characters.'
+        }
+    )
+    email = serializers.EmailField(
+        max_length=250,
+        required=True,
+        read_only=False,
+        write_only=False,
+        error_messages={
+            'required': 'The email field is required.',
+            'max_length': 'The email field must be less than 250 characters.'
+        }
+    )
+    user_id = serializers.IntegerField(
+        required=True,
+        read_only=False,
+        write_only=False,
+        error_messages={
+            'required': 'The user id field is required.',
+        }
+    )
+    # phone_number = serializers.CharField(
+    #     max_length=10,
+    #     required=True,
+    #     read_only=False,
+    #     write_only=False,
+    #     error_messages={
+    #         'required': 'The phone number field is required.',
+    #         'max_length': 'The phone number field must be less than 250 characters.'
+    #     }
+    # )
+
+    user_type_id = serializers.IntegerField(
+        required=False,
+        allow_null=True,  # Allow null to be passed if not included
+
+        read_only=False,
+        write_only=False,
+        error_messages={
+            'required': 'The user type id field is required.',
+        }
+    )
+
