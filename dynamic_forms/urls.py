@@ -36,4 +36,6 @@ urlpatterns = [
     path('system_management/', include('system_management.urls')),
     path('system_management_api/', include('system_management.api.urls')),
 
+    path('question_management/', include('question_management.urls')),
+    path('question_management_api/', include('question_management.api.urls')),
 ]
