@@ -50,7 +50,7 @@ def create_question(question_text, question_number, question_type, mandatory, ot
 
 
 @api_view(['POST'])
-def save_question_api(request):
+def add_question_api(request):
     """
     This API saves a new question to the question bank.
     """

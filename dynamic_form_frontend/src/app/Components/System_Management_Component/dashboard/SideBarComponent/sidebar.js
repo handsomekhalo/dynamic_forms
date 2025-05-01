@@ -15,19 +15,19 @@ const Sidebar = () => {
     {
       title: 'Manage Users',
       links: [
-        // { href: '/users', icon: 'bx bx-user', label: 'View Users' } // Link to /users page
         {  href: '/Components/System_Management_Component/Usermanagement', 
             icon: 'bx bx-user', label: 'View Users' } // Link to /users page
       
-        
+  
       ],
       
     },
     {
       title: 'Form Management',
       links: [
-        {  href: '/Components/Form_Management', icon: 'bx bx-user-circle', label: 'Manage Forms ' },
-       
+        {  href: '/Components/Form_Management_Component/',
+           icon: 'bx bx-user-circle', label: 'Manage Forms ' },// Link to /form management
+         
       ],
     },
     {

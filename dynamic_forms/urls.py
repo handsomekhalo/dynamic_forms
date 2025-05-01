@@ -38,4 +38,8 @@ urlpatterns = [
 
     path('question_management/', include('question_management.urls')),
     path('question_management_api/', include('question_management.api.urls')),
+    path('application_management/', include('application_management.urls')),
+     path('application_management_api/', include('application_management.api.urls')),
+
+     
 ]

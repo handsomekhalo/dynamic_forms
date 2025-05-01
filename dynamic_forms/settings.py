@@ -43,7 +43,8 @@ INSTALLED_APPS = [
      'rest_framework_simplejwt',
      'system_management',
      'question_management',
-     'corsheaders'
+     'application_management',
+     'corsheaders',
      
 ]
 

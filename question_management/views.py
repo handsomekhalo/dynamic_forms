@@ -6,61 +6,159 @@ from django.shortcuts import render, redirect
 from django.urls import reverse
 import requests
 import json
+from django.views.decorators.csrf import csrf_exempt
 
 from question_management.api.serializers import QuestionSerializer
 from system_management.decorators import admin_required, check_token_in_session, session_timeout
 from system_management.general_func_classes import host_url
 
+@csrf_exempt
+# @admin_required
+# @session_timeout
+# @check_token_in_session
+def get_questions(request):
+    if request.method != 'GET':
+        return JsonResponse({
+            "status": "error",
+            "message": "Method not allowed"
+        }, status=405)
+
+    try:
+        # Extract token
+        auth_header = request.headers.get("Authorization", "")
+        token = None
+        if auth_header.startswith("Token "):
+            token = auth_header.split("Token ")[-1]
+        elif auth_header.startswith("Bearer "):
+            token = auth_header.split("Bearer ")[-1]
+
+        if not token:
+            return JsonResponse({
+                "status": "error",
+                "message": "Authorization token is required."
+            }, status=401)
+
+        # Save token in session
+        request.session["token"] = token
+        request.session.modified = True
+
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Token {token}",
+        }
+
+        url = f"{host_url(request)}{reverse('get_question_type_and_questions_api')}"
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+
+        response_data = response.json()
+
+        print('response_data', response_data)
+
+        return JsonResponse({
+            "status": "success",
+            "data": response_data
+        }, status=200)
+
+    except requests.exceptions.RequestException as e:
+        return JsonResponse({'status': 'error', 'message': f'Request failed: {str(e)}'}, status=500)
+    except ValueError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON response from API'}, status=500)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            "status": "error",
+            "message": f"Server error occurred: {str(e)}"
+        }, status=500)
+
+
+@csrf_exempt
 @admin_required
 @session_timeout
 @check_token_in_session
 def add_questions(request):
+    if request.method != 'POST':
+        return JsonResponse({
+            "status": "error",
+            "message": "Method not allowed"
+        }, status=405)
 
-    token = request.session.get("token")
-    
-    if not token:
-        return redirect('login')  # or handle the case when token is missing
-    
-    headers = {
-        "Content-Type": "application/json",  # Assuming JSON is the content type
-        "Authorization": f"Token {token}",
-    }
+    try:
+        # Extract token
+        auth_header = request.headers.get("Authorization", "")
+        token = None
+        if auth_header.startswith("Token "):
+            token = auth_header.split("Token ")[-1]
+        elif auth_header.startswith("Bearer "):
+            token = auth_header.split("Bearer ")[-1]
 
-    if request.method == 'GET':
-        # Fetch question types and existing questions
-        url = f"{host_url(request)}{reverse('get_question_type_and_questions_api')}"
-        
+        if not token:
+            return JsonResponse({
+                "status": "error",
+                "message": "Authorization token is required."
+            }, status=401)
+
+        # Save token in session
+        request.session["token"] = token
+        request.session.modified = True
+
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Token {token}",
+        }
+
+        # Read incoming data
         try:
-            response = requests.get(url, headers=headers, timeout=10)
-            response_data = response.json()
-        except requests.exceptions.RequestException as e:
-            return JsonResponse({'error': str(e)}, status=500)
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'status': 'error', 'message': 'Invalid JSON data'}, status=400)
 
-        context = response_data
-        return render(request, 'question_management/add_questions.html', context)
-
-    elif request.method == 'POST':
-        data = request.POST
         question_serializer_data = QuestionSerializer(data=data)
 
         if question_serializer_data.is_valid():
             validated_data = question_serializer_data.validated_data
-            option_list = [option for option in data.getlist('option[]') if option.strip()]
+
+            # Clean options if provided
+            option_list = [opt for opt in data.get('option', []) if opt.strip()]
             validated_data['option'] = option_list
 
-            # Send the data to save the question
-            url = f"{host_url(request)}{reverse('save_question_api')}"
             payload = json.dumps(validated_data)
+            url = f"{host_url(request)}{reverse('add_question_api')}"
 
             try:
                 response = requests.post(url, headers=headers, data=payload, timeout=10)
+                response.raise_for_status()
             except requests.exceptions.RequestException as e:
-                return JsonResponse({'error': f'Error making request: {str(e)}'}, status=500)
+                return JsonResponse({'status': 'error', 'message': f'Error while saving question: {str(e)}'}, status=500)
 
-            if response.status_code == 200:
-                return JsonResponse({'status': 'success', 'message': 'Question saved successfully'})
+            try:
+                response_data = response.json()
+            except ValueError:
+                return JsonResponse({'status': 'error', 'message': 'Invalid response from save_question_api'}, status=500)
+
+            if response.status_code == 200 and response_data.get('status') == 'success':
+                return JsonResponse({
+                    "status": "success",
+                    "message": "Question saved successfully"
+                }, status=200)
             else:
-                return JsonResponse({'error': f'Could not create the question: {response.text}'}, status=response.status_code)
-        
+                return JsonResponse({
+                    "status": "error",
+                    "message": response_data.get('message', 'Failed to save question')
+                }, status=400)
+
         else:
-            return JsonResponse({'status': 'error', 'message': 'Invalid data submitted'}, status=400)
+            return JsonResponse({
+                "status": "error",
+                "message": "Invalid question data submitted",
+                "errors": question_serializer_data.errors
+            }, status=400)
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            "status": "error",
+            "message": f"Server error occurred: {str(e)}"
+        }, status=500)

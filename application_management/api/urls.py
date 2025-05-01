@@ -1,9 +1,11 @@
 from django.urls import path
-from . import views
+
+from application_management.api import views
+
 
 urlpatterns = [
-     path('add_questions/',views.add_questions,name='add_questions'),
-     path('get_questions/',views.get_questions,name='get_questions'),
+     path('create_form_api/',views.create_form_api,name='create_form_api'),
+    #  path('get_questions/',views.get_questions,name='get_questions'),
 
      
     #  path('update_questions/',views.update_questions,name='update_questions'),

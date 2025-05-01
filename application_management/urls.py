@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views
+from question_management import views
 
 urlpatterns = [
      path('add_questions/',views.add_questions,name='add_questions'),
