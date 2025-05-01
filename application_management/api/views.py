@@ -2,7 +2,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 # AssignCategoryToFormSerializer,
-from application_management.api.serializers import  AssignQuestionToFormSerializer, FormTypeSerializer, CreateMainCategorySerializer
+from application_management.api.serializers import  AssignQuestionToFormSerializer, FormTypeSerializer, CreateMainCategorySerializer, GetAllFormTypeSerializer, SelectAllCategoriesSerializer
 from application_management.models import FormQuestionAssignment, FormType, MainCategory
 
 
@@ -87,7 +87,7 @@ def assign_question_to_form_api(request):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Save assignment
+
         assignment = serializer.save()
         return Response({
             "status": "success",
@@ -115,3 +115,19 @@ def assign_question_and_category_to_form_api(request):
         }, status=status.HTTP_201_CREATED)
     else:
         return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+def get_all_categories_api(request):
+    main_categories = MainCategory.objects.all().order_by('order')
+    serializer = SelectAllCategoriesSerializer(main_categories, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
+
+@api_view(['GET'])
+def get_all_forms_api(request):
+    forms = FormType.objects.filter(is_active=True).order_by('-date_created')
+    serializer = GetAllFormTypeSerializer(forms, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)

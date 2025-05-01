@@ -1,9 +1,9 @@
 from django.urls import path
-from question_management import views
+from application_management import views
 
 urlpatterns = [
-     path('add_questions/',views.add_questions,name='add_questions'),
-     path('get_questions/',views.get_questions,name='get_questions'),
+     path('get_all_categories/',views.get_all_categories,name='get_all_categories'),
+      path('get_all_forms/',views.get_all_forms,name='get_all_forms'),
 
      
     #  path('update_questions/',views.update_questions,name='update_questions'),

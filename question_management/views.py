@@ -53,7 +53,6 @@ def get_questions(request):
 
         response_data = response.json()
 
-        print('response_data', response_data)
 
         return JsonResponse({
             "status": "success",

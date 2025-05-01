@@ -34,6 +34,13 @@ class AssignQuestionToFormSerializer(serializers.ModelSerializer):
         return data
 
 
+
+class SelectAllCategoriesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MainCategory
+        fields = ['id', 'name', 'description', 'order']
+
+
 # class AssignQuestionToFormSerializer(serializers.ModelSerializer):
 #     class Meta:
 #         model = FormQuestionAssignment
@@ -54,3 +61,8 @@ class AssignQuestionToFormSerializer(serializers.ModelSerializer):
 #     class Meta:
 #         model = FormQuestionAssignment
 #         fields = ['form_type', 'main_category', 'question', 'order']  # Add order if necessary
+
+class GetAllFormTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FormType
+        fields = ['id', 'name', 'description', 'is_active', 'date_created']
