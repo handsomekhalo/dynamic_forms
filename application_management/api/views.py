@@ -1,8 +1,9 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-from application_management.api.serializers import FormTypeSerializer
-from application_management.models import FormType
+# AssignCategoryToFormSerializer,
+from application_management.api.serializers import  AssignQuestionToFormSerializer, FormTypeSerializer, CreateMainCategorySerializer
+from application_management.models import FormQuestionAssignment, FormType, MainCategory
 
 
 
@@ -38,3 +39,79 @@ def create_form_api(request):
         "message": "Form created successfully.",
         "form": serializer.data
     }, status=status.HTTP_201_CREATED)
+
+
+
+
+@api_view(['POST'])
+def create_category_api(request):
+    """
+    This API creates a new category (MainCategory) for organizing form sections.
+    """
+    serializer = CreateMainCategorySerializer(data=request.data)
+    
+    if serializer.is_valid():
+        name = serializer.validated_data.get('name')
+
+        # Check if category with this name already exists
+        if MainCategory.objects.filter(name=name).exists():
+            return Response({"error": "A category with this name already exists."}, status=status.HTTP_400_BAD_REQUEST)
+
+        category = serializer.save()
+        return Response({
+            "status": "success",
+            "message": "Category created successfully.",
+            "category": CreateMainCategorySerializer(category).data
+        }, status=status.HTTP_201_CREATED)
+
+    return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+@api_view(['POST'])
+def assign_question_to_form_api(request):
+    """
+    This API assigns a question to a specific form and category.
+    """
+    serializer = AssignQuestionToFormSerializer(data=request.data)
+    if serializer.is_valid():
+        form_type = serializer.validated_data['form_type']
+        main_category = serializer.validated_data['main_category']
+        question = serializer.validated_data['question']
+        
+        # Prevent duplicates
+        if FormQuestionAssignment.objects.filter(form_type=form_type, main_category=main_category, question=question).exists():
+            return Response(
+                {"error": "This question is already assigned to the form with this category."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Save assignment
+        assignment = serializer.save()
+        return Response({
+            "status": "success",
+            "message": "Question assigned to form successfully.",
+            "assignment": AssignQuestionToFormSerializer(assignment).data
+        }, status=status.HTTP_201_CREATED)
+    else:
+        return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+@api_view(['POST'])
+def assign_question_and_category_to_form_api(request):
+    """
+    This API assigns a question to a specific form and category.
+    """
+    serializer = AssignQuestionToFormSerializer(data=request.data)
+    if serializer.is_valid():
+        # Save the new assignment if valid
+        assignment = serializer.save()
+        return Response({
+            "status": "success",
+            "message": "Question assigned to form successfully.",
+            "assignment": AssignQuestionToFormSerializer(assignment).data
+        }, status=status.HTTP_201_CREATED)
+    else:
+        return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
