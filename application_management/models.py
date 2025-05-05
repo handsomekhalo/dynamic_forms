@@ -9,6 +9,8 @@ class FormType(models.Model):
     description = models.TextField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
     date_created = models.DateTimeField(default=timezone.now)
+    categories = models.ManyToManyField('MainCategory', blank=True)
+
 
     def __str__(self):
         return self.name
@@ -65,3 +67,23 @@ class FormResponse(models.Model):
 #     form_submission = models.ForeignKey(FormSubmission, on_delete=models.SET_NULL, null=True, blank=True)
 #     uploaded_at = models.DateTimeField(default=timezone.now)
 #     last_modified = models.DateTimeField(auto_now=True)
+
+
+
+
+
+# class Form(models.Model):
+#     name = models.CharField(max_length=255)
+#     description = models.TextField(blank=True)
+#     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     is_public = models.BooleanField(default=False)
+
+# class FormDispatch(models.Model):
+#     form = models.ForeignKey(Form, on_delete=models.CASCADE)
+#     sent_by = models.ForeignKey(User, on_delete=models.CASCADE)
+#     target_group = models.CharField(max_length=100)  # e.g., 'NPO', 'Civic Society', 'General Public'
+#     audience_count = models.IntegerField(default=0)  # How many were targeted
+#     sent_at = models.DateTimeField(auto_now_add=True)
+#     price = models.DecimalField(max_digits=10, decimal_places=2)
+#     payment_status = models.CharField(max_length=20, choices=[('pending', 'Pending'), ('paid', 'Paid')])
