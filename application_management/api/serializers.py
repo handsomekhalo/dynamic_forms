@@ -73,7 +73,7 @@ class GetAllFormTypeSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'description', 'is_active', 'date_created']
 
 
-# class GetUnassignedCategorySerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = MainCategory
-#         fields = ['id', 'name', 'description']
+class GetUnassignedCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MainCategory
+        fields = ['id', 'name', 'description']

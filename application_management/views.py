@@ -369,3 +369,71 @@ def create_category(request):
             "status": "error",
             "message": f"Server error occurred: {str(e)}"
         }, status=500)
+    
+
+
+@csrf_exempt
+def get_unassigned_categories(request,form_type_id):
+    print('executing')
+    if request.method != 'GET':
+        return JsonResponse({
+            "status": "error",
+            "message": "Method not allowed"
+        }, status=405)
+
+    try:
+        # Extract token
+        auth_header = request.headers.get("Authorization", "")
+        token = None
+        if auth_header.startswith("Token "):
+            token = auth_header.split("Token ")[-1]
+        elif auth_header.startswith("Bearer "):
+            token = auth_header.split("Bearer ")[-1]
+
+        if not token:
+            return JsonResponse({
+                "status": "error",
+                "message": "Authorization token is required."
+            }, status=401)
+
+        # Save token in session (optional based on your logic)
+        request.session["token"] = token
+        request.session.modified = True
+
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Token {token}",
+        }
+
+        # Construct URL to call the existing API
+        # url = f"{host_url(request)}{reverse_lazy('get_unassigned_categories_api')}"
+        url = f"{host_url(request)}{reverse_lazy('get_unassigned_categories_api', kwargs={'form_type_id': form_type_id})}"
+
+
+        # Make the GET request to the existing get_all_categories_api
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+
+        # Parse the response
+        response_data = response.json()
+
+        print('response data', response)
+
+        # Return the categories along with the formId if needed
+        return JsonResponse({
+            "status": "success",
+            "form_type_id": form_type_id,
+            "unassigned_categories": response_data
+        }, status=200)
+
+    except requests.exceptions.RequestException as e:
+        return JsonResponse({'status': 'error', 'message': f'Request failed: {str(e)}'}, status=500)
+    except ValueError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON response from API'}, status=500)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            "status": "error",
+            "message": f"Server error occurred: {str(e)}"
+        }, status=500)
