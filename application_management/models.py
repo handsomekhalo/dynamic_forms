@@ -60,6 +60,19 @@ class FormResponse(models.Model):
         return f"{self.submission.user.email} - {self.question.text[:30]}"
 
 
+# Model for linking FormType with MainCategory
+class FormCategoryAssignment(models.Model):
+    form_type = models.ForeignKey('FormType', on_delete=models.CASCADE)
+    main_category = models.ForeignKey('MainCategory', on_delete=models.CASCADE)
+    date_created = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        unique_together = ('form_type', 'main_category')
+
+    def __str__(self):
+        return f"Form: {self.form_type.name} - Category: {self.main_category.name}"
+    
+
 # class Document(models.Model):
 #     name = models.CharField(max_length=255)
 #     file = models.FileField(upload_to="documents/")

@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 # AssignCategoryToFormSerializer,
 from application_management.api.serializers import  AssignQuestionToFormSerializer, FormTypeSerializer, CreateMainCategorySerializer, GetAllFormTypeSerializer,SelectAllCategoriesSerializer
-from application_management.models import FormQuestionAssignment, FormType, MainCategory
+from application_management.models import FormCategoryAssignment, FormQuestionAssignment, FormType, MainCategory
 
 
 
@@ -103,7 +103,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from application_management.models import FormQuestionAssignment
-from .serializers import AssignQuestionToFormSerializer, GetUnassignedCategorySerializer, SelectCategoryBasedOnIdSerializer
+from .serializers import AssignCategoryToFormSerializer, AssignQuestionToFormSerializer, GetUnassignedCategorySerializer, SelectCategoryBasedOnIdSerializer, updateAssignCategoryToFormSerializer
 from django.db import transaction
 
 
@@ -246,20 +246,3 @@ def get_all_forms_api(request):
 
 
 
-
-
-@api_view(['GET'])
-def get_unassigned_categories_api(request, form_type_id):
-    try:
-        form_type = FormType.objects.get(id=form_type_id)
-    except FormType.DoesNotExist:
-        return Response({'error': 'FormType not found.'}, status=status.HTTP_404_NOT_FOUND)
-
-    # Get all category IDs assigned to this form type
-    assigned_ids = form_type.categories.values_list('id', flat=True)
-
-    # Exclude assigned categories
-    unassigned_categories = MainCategory.objects.exclude(id__in=assigned_ids)
-
-    serializer = GetUnassignedCategorySerializer(unassigned_categories, many=True)
-    return Response(serializer.data, status=status.HTTP_200_OK)
