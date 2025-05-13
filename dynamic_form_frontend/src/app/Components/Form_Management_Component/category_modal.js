@@ -1,43 +1,54 @@
+'use client';
 import React from 'react';
+import { useAuth } from '../../../../AuthContext';
 
-export default function CategoryList({ categories, onCheckboxChange, onAssignCategory }) {
-  // If no categories are available, show a message
-  if (!categories || categories.length === 0) {
-    return (
-      <div className="border p-4 rounded-lg">
-        <h2 className="text-xl font-semibold mb-4">Unassigned Categories</h2>
-        <p className="text-gray-500">Select a form first to view available categories.</p>
-      </div>
-    );
-  }
+export default function CategoryModal({ 
+  newCategoryName, 
+  setNewCategoryName, 
+  newDescriptionName, 
+  setNewDescriptionName, 
+  onSubmit, 
+  onClose 
+}) {
+  const { authToken, isAuthenticated, navigate, isLoading } = useAuth();
 
   return (
-    <div className="border p-4 rounded-lg">
-      <h2 className="text-xl font-semibold mb-4">Unassigned Categories</h2>
-      <ul className="space-y-2">
-        {categories.map((category) => (
-          <li key={category.id} className="flex items-center justify-between p-2 hover:bg-gray-50">
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id={`category-${category.id}`}
-                checked={category.isChecked}
-                onChange={() => onCheckboxChange(category.id)}
-                className="mr-3 h-4 w-4"
-              />
-              <label htmlFor={`category-${category.id}`} className="cursor-pointer">
-                {category.name}
-              </label>
-            </div>
-            <button
-              onClick={() => onAssignCategory(category.id)}
-              className="text-blue-500 hover:text-blue-700 text-sm"
-            >
-              Assign
-            </button>
-          </li>
-        ))}
-      </ul>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+      <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+        <h3 className="text-lg font-semibold mb-4">Create New Category</h3>
+        
+        <input
+          type="text"
+          placeholder="Category Name"
+          value={newCategoryName}
+          onChange={(e) => setNewCategoryName(e.target.value)}
+          className="w-full p-2 border border-gray-300 rounded mb-4"
+        />
+
+        <input
+          type="text"
+          placeholder="Description"
+          value={newDescriptionName}
+          onChange={(e) => setNewDescriptionName(e.target.value)}
+          className="w-full p-2 border border-gray-300 rounded mb-4"
+        />
+
+        <div className="flex justify-end space-x-2">
+          <button
+            onClick={onSubmit}
+            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-500"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Creating...' : 'Create'}
+          </button>
+          <button
+            onClick={onClose}
+            className="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

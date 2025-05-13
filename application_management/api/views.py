@@ -2,8 +2,13 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 # AssignCategoryToFormSerializer,
-from application_management.api.serializers import  AssignQuestionToFormSerializer, FormTypeSerializer, CreateMainCategorySerializer, GetAllFormTypeSerializer,SelectAllCategoriesSerializer
 from application_management.models import FormCategoryAssignment, FormQuestionAssignment, FormType, MainCategory
+
+from rest_framework import status
+from application_management.models import FormQuestionAssignment
+from .serializers import AssignCategoryToFormSerializer, AssignQuestionToFormSerializer, FormCategoriesResponseSerializer, FormCategoryAssignmentSerializer, GetAllFormTypeSerializer, GetUnassignedCategorySerializer, MainCategorySerializer, RemoveCategoryAssignmentSerializer, SelectAllCategoriesSerializer, SelectCategoryBasedOnIdSerializer, UnassignCategorySerializer, updateAssignCategoryToFormSerializer
+from django.db import transaction
+
 
 
 
@@ -99,12 +104,6 @@ def assign_question_to_form_api(request):
 
 
 
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework import status
-from application_management.models import FormQuestionAssignment
-from .serializers import AssignCategoryToFormSerializer, AssignQuestionToFormSerializer, GetUnassignedCategorySerializer, SelectCategoryBasedOnIdSerializer, updateAssignCategoryToFormSerializer
-from django.db import transaction
 
 
 
@@ -151,60 +150,6 @@ def assign_question_and_category_to_form_api(request):
     
     return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
-# @api_view(['POST'])
-# def assign_question_and_category_to_form_api(request):
-#     """
-#     Assign a question to a specific form type and category,
-#     but prevent duplicate assignments.
-#     """
-#     serializer = AssignQuestionToFormSerializer(data=request.data)
-#     if serializer.is_valid():
-#         question = serializer.validated_data['question']
-#         main_category = serializer.validated_data['main_category']
-#         form_type = serializer.validated_data['form_type']
-
-#         # Check for existing assignment
-#         exists = FormQuestionAssignment.objects.filter(
-#             question=question,
-#             main_category=main_category,
-#             form_type=form_type
-#         ).exists()
-
-#         if exists:
-#             return Response({
-#                 "status": "error",
-#                 "message": "This question is already assigned to this form and category."
-#             }, status=status.HTTP_400_BAD_REQUEST)
-
-#         # Proceed to save the new assignment
-#         assignment = serializer.save()
-#         return Response({
-#             "status": "success",
-#             "message": "Question assigned to form successfully.",
-#             "assignment": AssignQuestionToFormSerializer(assignment).data
-#         }, status=status.HTTP_201_CREATED)
-    
-#     return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-
-
-# @api_view(['POST'])
-# def assign_question_and_category_to_form_api(request):
-#     """
-#     This API assigns a question to a specific form and category.
-#     """
-#     serializer = AssignQuestionToFormSerializer(data=request.data)
-#     if serializer.is_valid():
-#         # Save the new assignment if valid
-#         assignment = serializer.save()
-#         return Response({
-#             "status": "success",
-#             "message": "Question assigned to form successfully.",
-#             "assignment": AssignQuestionToFormSerializer(assignment).data
-#         }, status=status.HTTP_201_CREATED)
-#     else:
-#         return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-
-
 @api_view(['GET'])
 def get_all_categories_api(request):
     main_categories = MainCategory.objects.all().order_by('order')
@@ -245,4 +190,402 @@ def get_all_forms_api(request):
 
 
 
+@api_view(['POST'])
+def assign_category_to_form_api(request):
 
+    
+    """
+    Assign a category to a form type, preventing duplicates.
+    """
+    # Transform the incoming data to match what the serializer expects
+    form_type_id = request.data.get('form_type_id')
+    main_category_id = request.data.get('main_category_id')
+
+    
+    print(f"Processing: form_type_id={form_type_id}, main_category_id={main_category_id}")
+    
+    # Check if we have the required data
+    if not form_type_id or not main_category_id:
+        return Response({
+            "status": "error",
+            "message": "form_type_id and main_category_id are required fields"
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Transform the data format to match the serializer's expectations
+    transformed_data = {
+        'form_type': form_type_id,
+        'main_category': main_category_id
+    }
+    
+    # Check if we need to remove the assignment
+   
+    # If we're adding, continue with normal flow
+    serializer = AssignCategoryToFormSerializer(data=transformed_data)
+    
+    if serializer.is_valid():
+        main_category = serializer.validated_data['main_category']
+        form_type = serializer.validated_data['form_type']
+
+        # Check if this assignment already exists
+        exists = FormCategoryAssignment.objects.filter(
+            main_category=main_category,
+            form_type=form_type
+        ).exists()
+
+        if exists:
+            existing = FormCategoryAssignment.objects.get(
+                main_category=main_category,
+                form_type=form_type
+            )
+            return Response({
+                "status": "success",
+                "message": "This category was already assigned.",
+                "assignment": AssignCategoryToFormSerializer(existing).data
+            }, status=status.HTTP_200_OK)
+
+        # if exists:
+        #     return Response({
+        #         "status": "success",  # Changed to success since already assigned
+        #         "message": "This category is already assigned to this form."
+        #     }, status=status.HTTP_200_OK)  # Changed to 200 OK since not an error
+
+        try:
+            with transaction.atomic():
+                assignment = serializer.save()
+                return Response({
+                    "status": "success",
+                    "message": "Category assigned to form successfully.",
+                    "assignment": AssignCategoryToFormSerializer(assignment).data
+                }, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            print(f"Error saving assignment: {str(e)}")
+            return Response({
+                "status": "error",
+                "message": f"An error occurred: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    else:
+        print("Serializer errors:", serializer.errors)
+        return Response({
+            "status": "error", 
+            "error": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+
+
+@api_view(["POST"])
+def unassign_category_api(request):
+    serializer = UnassignCategorySerializer(data=request.data)
+
+    # Check if the serializer is valid
+    if serializer.is_valid():
+        form_type_id = serializer.validated_data['form_type_id']
+        main_category_id = serializer.validated_data['main_category_id']
+        deactivate = serializer.validated_data['deactivate']
+
+        print(f"form_type_id: {form_type_id}, main_category_id: {main_category_id}, deactivate: {deactivate}")
+
+        try:
+            print('try')
+            # Retrieve the FormType and MainCategory objects based on the IDs
+            form_type = FormType.objects.get(id=form_type_id)
+            print('form_type', form_type)
+
+            main_category = MainCategory.objects.get(id=main_category_id)
+            print('main_category', main_category)
+        except (FormType.DoesNotExist, MainCategory.DoesNotExist) as e:
+            return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
+
+        # Remove the category assignment
+        FormCategoryAssignment.objects.filter(
+            form_type=form_type,
+            main_category=main_category
+        ).delete()
+        
+        # Optionally deactivate the category (soft delete)
+        if deactivate:
+            if hasattr(main_category, 'is_active'):
+                main_category.is_active = False
+                main_category.save()
+
+        return Response({"message": "Category unassigned successfully."}, status=status.HTTP_200_OK)
+
+
+
+@api_view(['GET'])
+def get_unassigned_categories_api(request, form_type_id):
+    try:
+        form_type = FormType.objects.get(id=form_type_id)
+    except FormType.DoesNotExist:
+        return Response({'error': 'FormType not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Get all category IDs assigned to this form type
+    assigned_ids = form_type.categories.values_list('id', flat=True)
+
+    # Exclude assigned categories
+    unassigned_categories = MainCategory.objects.exclude(id__in=assigned_ids)
+
+    serializer = GetUnassignedCategorySerializer(unassigned_categories, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
+# @api_view(['POST'])
+# def assign_or_update_category_api(request):
+#     print('API Layer executing')
+#     print('Request Data:', request.data)
+
+#     form_type_id = request.data.get('form_type_id')
+#     main_category_id = request.data.get('main_category_id')  # always required
+#     old_main_category_id = request.data.get('old_main_category_id')  # optional
+
+#     if not form_type_id or not main_category_id:
+#         return Response({
+#             "status": "error",
+#             "message": "form_type_id and main_category_id are required fields"
+#         }, status=status.HTTP_400_BAD_REQUEST)
+
+#     try:
+#         # If updating an existing assignment
+#         if old_main_category_id:
+#             updated_count = FormCategoryAssignment.objects.filter(
+#                 form_type_id=form_type_id,
+#                 main_category_id=old_main_category_id
+#             ).update(main_category_id=main_category_id)
+
+#             if updated_count:
+#                 return Response({
+#                     "status": "success",
+#                     "message": "Category updated successfully."
+#                 }, status=status.HTTP_200_OK)
+#             else:
+#                 return Response({
+#                     "status": "error",
+#                     "message": "No existing assignment to update."
+#                 }, status=status.HTTP_404_NOT_FOUND)
+
+#         # If assigning a new category
+#         else:
+#             if FormCategoryAssignment.objects.filter(
+#                 form_type_id=form_type_id,
+#                 main_category_id=main_category_id
+#             ).exists():
+#                 return Response({
+#                     "status": "success",
+#                     "message": "This category is already assigned to this form."
+#                 }, status=status.HTTP_200_OK)
+
+#             # Create new assignment
+#             serializer = AssignCategoryToFormSerializer(data={
+#                 'form_type': form_type_id,
+#                 'main_category': main_category_id
+#             })
+
+#             if serializer.is_valid():
+#                 assignment = serializer.save()
+#                 return Response({
+#                     "status": "success",
+#                     "message": "Category assigned to form successfully.",
+#                     "assignment": updateAssignCategoryToFormSerializer(assignment).data
+#                 }, status=status.HTTP_201_CREATED)
+#             else:
+#                 return Response({
+#                     "status": "error",
+#                     "error": serializer.errors
+#                 }, status=status.HTTP_400_BAD_REQUEST)
+
+#     except Exception as e:
+#         return Response({
+#             "status": "error",
+#             "message": f"An unexpected error occurred: {str(e)}"
+#         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# Update your existing assign/update endpoint to be more consistent
+@api_view(['POST'])
+def assign_or_update_category_api(request):
+    print('API Layer executing')
+    print('Request Data:', request.data)
+    
+    form_type_id = request.data.get('form_type_id')
+    main_category_id = request.data.get('main_category_id')  # always required
+    old_main_category_id = request.data.get('old_main_category_id')  # optional
+    
+    if not form_type_id or not main_category_id:
+        return Response({
+            "status": "error",
+            "message": "form_type_id and main_category_id are required fields"
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        # If updating an existing assignment
+        if old_main_category_id:
+            updated_count = FormCategoryAssignment.objects.filter(
+                form_type_id=form_type_id,
+                main_category_id=old_main_category_id
+            ).update(main_category_id=main_category_id)
+            
+            if updated_count:
+                # Get all assignments after update
+                assignments = FormCategoryAssignment.objects.filter(form_type_id=form_type_id)
+                assigned_category_ids = [assignment.main_category_id for assignment in assignments]
+                
+                return Response({
+                    "status": "success",
+                    "message": "Category updated successfully.",
+                    "assigned_categories": assigned_category_ids
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({
+                    "status": "error",
+                    "message": "No existing assignment to update."
+                }, status=status.HTTP_404_NOT_FOUND)
+        
+        # If assigning a new category
+        else:
+            if FormCategoryAssignment.objects.filter(
+                form_type_id=form_type_id,
+                main_category_id=main_category_id
+            ).exists():
+                # Get all assignments (including existing one)
+                assignments = FormCategoryAssignment.objects.filter(form_type_id=form_type_id)
+                assigned_category_ids = [assignment.main_category_id for assignment in assignments]
+                
+                return Response({
+                    "status": "success",
+                    "message": "This category is already assigned to this form.",
+                    "assigned_categories": assigned_category_ids
+                }, status=status.HTTP_200_OK)
+            
+            # Create new assignment
+            new_assignment = FormCategoryAssignment.objects.create(
+                form_type_id=form_type_id,
+                main_category_id=main_category_id
+            )
+            
+            # Get all assignments after creation
+            assignments = FormCategoryAssignment.objects.filter(form_type_id=form_type_id)
+            assigned_category_ids = [assignment.main_category_id for assignment in assignments]
+            
+            return Response({
+                "status": "success",
+                "message": "Category assigned to form successfully.",
+                "assigned_categories": assigned_category_ids
+            }, status=status.HTTP_201_CREATED)
+            
+    except Exception as e:
+        return Response({
+            "status": "error",
+            "message": f"An unexpected error occurred: {str(e)}"
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+@api_view(['GET'])
+def get_form_categories_api(request, form_type_id):
+    """
+    Get all categories assigned to a specific form type
+    """
+    try:
+        # Get all assignments for this form type
+        assignments = FormCategoryAssignment.objects.filter(form_type_id=form_type_id)
+        
+        # Extract just the category IDs
+        assigned_category_ids = [assignment.main_category_id for assignment in assignments]
+        
+        # Prepare response data
+        response_data = {
+            "status": "success",
+            "assigned_categories": assigned_category_ids
+        }
+        
+        # Use the serializer to format the response
+        serializer = FormCategoriesResponseSerializer(response_data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            "status": "error",
+            "message": f"An unexpected error occurred: {str(e)}"
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+@api_view(['POST'])
+def remove_category_assignment_api(request):
+    """
+    Remove a category assignment from a form type
+    """
+    # Validate input data
+    serializer = RemoveCategoryAssignmentSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response({
+            "status": "error",
+            "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    form_type_id = serializer.validated_data['form_type_id']
+    main_category_id = serializer.validated_data['main_category_id']
+    
+    try:
+        # Delete the assignment
+        deleted, _ = FormCategoryAssignment.objects.filter(
+            form_type_id=form_type_id,
+            main_category_id=main_category_id
+        ).delete()
+        
+        # Get remaining assignments
+        assignments = FormCategoryAssignment.objects.filter(form_type_id=form_type_id)
+        assignment_data = FormCategoryAssignmentSerializer(assignments, many=True).data
+        assigned_category_ids = [assignment.main_category_id for assignment in assignments]
+        
+        # Prepare response with both IDs and full assignment details
+        response_data = {
+            "status": "success",
+            "message": "Category assignment removed successfully.",
+            "assigned_categories": assigned_category_ids,
+            "assignments": assignment_data
+        }
+        
+        return Response(response_data, status=status.HTTP_200_OK)
+            
+    except Exception as e:
+        return Response({
+            "status": "error",
+            "message": f"An unexpected error occurred: {str(e)}"
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+
+@api_view(['GET'])
+def get_assigned_categories_api(request, form_type_id):
+    """
+    Get the categories assigned to a specific form type.
+    """
+    try:
+        # Get the assignments for the given form_type_id
+        assignments = FormCategoryAssignment.objects.filter(form_type_id=form_type_id)
+        
+        # If no assignments are found
+        if not assignments.exists():
+            return Response({
+                "status": "error",
+                "message": "No categories assigned to this form type."
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Extract the assigned main categories
+        assigned_categories = [assignment.main_category for assignment in assignments]
+        
+        # Serialize the categories
+        category_serializer = MainCategorySerializer(assigned_categories, many=True)
+        
+        # Prepare the response data
+        response_data = {
+            "status": "success",
+            "assigned_categories": category_serializer.data
+        }
+        
+        return Response(response_data, status=status.HTTP_200_OK)
+    
+    except Exception as e:
+        return Response({
+            "status": "error",
+            "message": f"An unexpected error occurred: {str(e)}"
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

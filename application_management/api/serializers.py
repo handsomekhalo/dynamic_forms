@@ -70,3 +70,86 @@ class updateAssignCategoryToFormSerializer(serializers.ModelSerializer):
         model = FormCategoryAssignment
         fields = ['form_type_id', 'main_category']
         read_only_fields = ['date_created']
+
+
+class UnassignCategorySerializer(serializers.Serializer):
+    form_type_id = serializers.IntegerField()
+    main_category_id = serializers.IntegerField()
+    deactivate = serializers.BooleanField(default=False)
+
+
+
+# Serializer for returning form category assignments
+class FormCategoryAssignmentSerializer(serializers.ModelSerializer):
+    category_name = serializers.CharField(source='main_category.name', read_only=True)
+    
+    class Meta:
+        model = FormCategoryAssignment
+        fields = ['id', 'form_type', 'main_category', 'category_name', 'date_created']
+        read_only_fields = ['date_created']
+
+# Serializer for the GET form-categories endpoint
+class FormCategoriesResponseSerializer(serializers.Serializer):
+    assigned_categories = serializers.ListField(
+        child=serializers.IntegerField(),
+        help_text="List of category IDs assigned to the form"
+    )
+    
+    # Optional - include more category details
+    category_details = serializers.SerializerMethodField()
+    
+    def get_category_details(self, obj):
+        # This assumes obj contains 'assigned_categories' list of IDs
+        category_ids = obj.get('assigned_categories', [])
+        categories = MainCategory.objects.filter(id__in=category_ids)
+        return [
+            {
+                'id': category.id,
+                'name': category.name,
+                'description': category.description,
+                'order': category.order
+            }
+            for category in categories
+        ]
+
+# Input serializer for removing category assignment
+class RemoveCategoryAssignmentSerializer(serializers.Serializer):
+    form_type_id = serializers.IntegerField(required=True)
+    main_category_id = serializers.IntegerField(required=True)
+    
+    def validate(self, data):
+        """
+        Check that the assignment exists before attempting to remove it
+        """
+        form_type_id = data.get('form_type_id')
+        main_category_id = data.get('main_category_id')
+        
+        # Verify the form type exists
+        try:
+            form_type = FormType.objects.get(id=form_type_id)
+        except FormType.DoesNotExist:
+            raise serializers.ValidationError(f"Form type with ID {form_type_id} does not exist.")
+        
+        # Verify the category exists
+        try:
+            category = MainCategory.objects.get(id=main_category_id)
+        except MainCategory.DoesNotExist:
+            raise serializers.ValidationError(f"Category with ID {main_category_id} does not exist.")
+        
+        # Verify the assignment exists
+        assignment_exists = FormCategoryAssignment.objects.filter(
+            form_type_id=form_type_id,
+            main_category_id=main_category_id
+        ).exists()
+        
+        if not assignment_exists:
+            raise serializers.ValidationError(
+                f"No assignment exists between form type {form_type_id} and category {main_category_id}."
+            )
+        
+        return data
+
+class MainCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MainCategory
+        fields = ['id', 'name', 'description', 'order', 'is_active']

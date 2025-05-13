@@ -21,6 +21,9 @@ class MainCategory(models.Model):
     description = models.TextField(blank=True, null=True)
     order = models.PositiveIntegerField(default=0)
     date_created = models.DateTimeField(default=timezone.now)
+    is_active = models.BooleanField(default=True)  # <-- Add this line
+
+
 
     class Meta:
         ordering = ['order']
