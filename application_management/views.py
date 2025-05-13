@@ -109,8 +109,6 @@ def get_categories_with_form_id(request, formId):
         # Parse the response
         response_data = response.json()
 
-        print('response data', response)
-
         # Return the categories along with the formId if needed
         return JsonResponse({
             "status": "success",
@@ -408,7 +406,6 @@ def unassign_category(request):
         # Step 2: Parse JSON
         try:
             data = json.loads(request.body)
-            print("Unassign data received:", data)
         except json.JSONDecodeError:
             return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
 
@@ -432,7 +429,6 @@ def unassign_category(request):
         }
 
         try:
-            print('response here')
             response = requests.post(api_url, headers=headers, json=payload, timeout=10)
             response.raise_for_status()
         except requests.RequestException as e:
@@ -514,8 +510,6 @@ def get_unassigned_categories(request, form_type_id):
         # Parse the response
         response_data = response.json()
 
-        print('response data', response)
-
         # Return the categories along with the formId if needed
         return JsonResponse({
             "status": "success",
@@ -537,261 +531,8 @@ def get_unassigned_categories(request, form_type_id):
 
 
 
-# @csrf_exempt
-# def assign_or_update_category(request,formId):
-#     print('executing assign_category_to_form view')
-
-#     if request.method != 'POST':
-#         return JsonResponse({
-#             "status": "error",
-#             "message": "Method not allowed"
-#         }, status=405)
-
-#     try:
-#         # Step 1: Extract Token from Headers
-#         auth_header = request.headers.get("Authorization", "")
-#         print('auth_header received:', auth_header)
-        
-#         token = None
-#         if auth_header.startswith("Token "):
-#             token = auth_header[6:]
-#         elif auth_header.startswith("Bearer "):
-#             token = auth_header[7:]
-#         else:
-#             token = auth_header
-            
-#         print('token extracted:', token)
-
-#         if not token:
-#             print('No token in headers')
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "Authorization token is required."
-#             }, status=401)
-
-#         # Step 2: Parse JSON Payload
-#         try:
-#             data = json.loads(request.body)
-#             print('received data:', data)
-#         except json.JSONDecodeError:
-#             return JsonResponse({'status': 'error', 'message': 'Invalid JSON data'}, status=400)
-
-#         # Step 3: Validate Form Type and Main Category
-#         form_type_id = data.get('form_type_id')
-#         print('form_type_id',form_type_id)
-#         main_category_id = data.get('category_id')
-#         print('main_category_id',main_category_id)
-#         action = data.get('action', 'add')
-#         print('action',action)
-#         assignments = data.get('assignments', [])
-        
-
-#         if not assignments:
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "No assignments provided."
-#             }, status=400)
-
-
-#         if not form_type_id or not main_category_id:
-
-#             print('Form type and main category are required')
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "Form type and main category are required."
-#             }, status=400)
-
-#         # Step 4: Send Data to the Internal API to Assign Category to Form
-#         api_url = f"{host_url(request)}{reverse_lazy('assign_or_update_category_api')}"
-#         print('Calling internal API at:', api_url)
-        
-#         payload = {
-#             "form_type_id": form_type_id,
-#             "main_category_id": main_category_id,
-#             "action": action
-#         }
-#         print('with payload:', payload)
-        
-#         headers = {
-#             "Content-Type": "application/json",
-#             "Authorization": f"Bearer {token}"
-#         }
-#         print('with headers:', headers)
-        
-#         try:
-#             response = requests.post(
-#                 api_url, 
-#                 headers=headers, 
-#                 json=payload,  # Using json parameter to handle serialization
-#                 timeout=10
-#             )
-#             print('Response status code:', response.status_code)
-#             print('Response content:', response.content)
-            
-#             # If we get a 401, try different auth header formats
-#             if response.status_code == 401:
-#                 print("First attempt failed with 401, trying different auth formats")
-                
-#                 auth_formats = [
-#                     {"Authorization": f"Token {token}"},
-#                     {"Authorization": token},
-#                     {"Token": token}
-#                 ]
-                
-#                 for auth_format in auth_formats:
-#                     test_headers = {"Content-Type": "application/json", **auth_format}
-#                     print("Trying with headers:", test_headers)
-                    
-#                     test_response = requests.post(
-#                         api_url,
-#                         headers=test_headers,
-#                         json=payload,
-#                         timeout=10
-#                     )
-                    
-#                     print(f"Response with {auth_format}: {test_response.status_code}")
-                    
-#                     if test_response.status_code != 401:
-#                         response = test_response
-#                         break
-            
-#             response.raise_for_status()
-#         except requests.RequestException as e:
-#             print(f"Request exception: {str(e)}")
-#             return JsonResponse({'status': 'error', 'message': f'Error while assigning category to form: {str(e)}'}, status=500)
-
-#         # Step 5: Handle API Response
-#         try:
-#             response_data = response.json()
-#             print('Parsed response data:', response_data)
-#         except ValueError:
-#             print("Could not parse response as JSON:", response.content)
-#             return JsonResponse({'status': 'error', 'message': 'Invalid response from API'}, status=500)
-
-#         # Return the API response to the frontend
-#         return JsonResponse(response_data, status=response.status_code)
-
-#     except Exception as e:
-#         import traceback
-#         print("Exception occurred:")
-#         traceback.print_exc()
-#         return JsonResponse({
-#             "status": "error",
-#             "message": f"Server error occurred: {str(e)}"
-#         }, status=500)
-
-# @csrf_exempt
-# def assign_or_update_category(request, formId):
-#     print('executing assign_category_to_form view')
-
-#     if request.method != 'POST':
-#         return JsonResponse({
-#             "status": "error",
-#             "message": "Method not allowed"
-#         }, status=405)
-
-#     try:
-#         # Step 1: Extract Token from Headers
-#         auth_header = request.headers.get("Authorization", "")
-#         print('auth_header received:', auth_header)
-
-#         token = None
-#         if auth_header.startswith("Token "):
-#             token = auth_header[6:]
-#         elif auth_header.startswith("Bearer "):
-#             token = auth_header[7:]
-#         else:
-#             token = auth_header
-
-#         print('token extracted:', token)
-
-#         if not token:
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "Authorization token is required."
-#             }, status=401)
-
-#         # Step 2: Parse JSON Payload
-#         try:
-#             data = json.loads(request.body)
-#             print('received data:', data)
-#         except json.JSONDecodeError:
-#             return JsonResponse({'status': 'error', 'message': 'Invalid JSON data'}, status=400)
-
-#         assignments = data.get('assignments', [])
-#         action = data.get('action', 'add')
-
-#         if not assignments:
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "No assignments provided."
-#             }, status=400)
-
-#         responses = []
-
-#         # Step 3: Process each assignment
-#         for assignment in assignments:
-#             form_type_id = assignment.get('form_type_id')
-#             main_category_id = assignment.get('category_id')
-
-#             print('form_type_id', form_type_id)
-#             print('main_category_id', main_category_id)
-
-#             if not form_type_id or not main_category_id:
-#                 print('Form type and main category are required')
-#                 return JsonResponse({
-#                     "status": "error",
-#                     "message": "Form type and main category are required."
-#                 }, status=400)
-
-#             api_url = f"{host_url(request)}{reverse_lazy('assign_or_update_category_api')}"
-#             payload = {
-#                 "form_type_id": form_type_id,
-#                 "main_category_id": main_category_id,
-#                 "action": action
-#             }
-#             headers = {
-#                 "Content-Type": "application/json",
-#                 "Authorization": f"Bearer {token}"
-#             }
-
-#             try:
-#                 response = requests.post(api_url, headers=headers, json=payload, timeout=10)
-#                 if response.status_code == 401:
-#                     auth_formats = [
-#                         {"Authorization": f"Token {token}"},
-#                         {"Authorization": token},
-#                         {"Token": token}
-#                     ]
-#                     for auth_format in auth_formats:
-#                         test_headers = {"Content-Type": "application/json", **auth_format}
-#                         test_response = requests.post(api_url, headers=test_headers, json=payload, timeout=10)
-#                         if test_response.status_code != 401:
-#                             response = test_response
-#                             break
-#                 response.raise_for_status()
-#                 responses.append(response.json())
-#             except requests.RequestException as e:
-#                 print(f"Error with assignment {assignment}: {str(e)}")
-#                 responses.append({
-#                     "assignment": assignment,
-#                     "error": str(e)
-#                 })
-
-#         return JsonResponse({"status": "success", "results": responses}, status=200)
-
-#     except Exception as e:
-#         import traceback
-#         print("Exception occurred:")
-#         traceback.print_exc()
-#         return JsonResponse({
-#             "status": "error",
-#             "message": f"Server error occurred: {str(e)}"
-#         }, status=500)
-
 @csrf_exempt
-def assign_or_update_category(request, formId):
-    print('executing assign_category_to_form view')
+def assign_or_update_category(request):
 
     if request.method != 'POST':
         return JsonResponse({
@@ -802,7 +543,6 @@ def assign_or_update_category(request, formId):
     try:
         # Step 1: Extract Token from Headers
         auth_header = request.headers.get("Authorization", "")
-        print('auth_header received:', auth_header)
 
         token = None
         if auth_header.startswith("Token "):
@@ -811,8 +551,6 @@ def assign_or_update_category(request, formId):
             token = auth_header[7:]
         else:
             token = auth_header
-
-        print('token extracted:', token)
 
         if not token:
             return JsonResponse({
@@ -823,14 +561,11 @@ def assign_or_update_category(request, formId):
         # Step 2: Parse JSON Payload
         try:
             data = json.loads(request.body)
-            print('received data:', data)
         except json.JSONDecodeError:
             return JsonResponse({'status': 'error', 'message': 'Invalid JSON data'}, status=400)
 
         assignments = data.get('assignments', [])
-        print('assignemtns',assignments)
         action = data.get('action', 'add')
-        print('action', action)
 
         if not assignments:
             return JsonResponse({
@@ -845,11 +580,9 @@ def assign_or_update_category(request, formId):
             form_type_id = assignment.get('form_type_id')
             main_category_id = assignment.get('category_id')
 
-            print('form_type_id', form_type_id)
-            print('main_category_id', main_category_id)
+
 
             if not form_type_id or not main_category_id:
-                print('Form type and main category are required')
                 return JsonResponse({
                     "status": "error",
                     "message": "Form type and main category are required."
@@ -913,7 +646,6 @@ def assign_or_update_category(request, formId):
 
 @csrf_exempt
 def get_form_categories(request, formId):
-    print('executing get_form_categories view')
 
     if request.method != 'GET':
         return JsonResponse({
@@ -924,7 +656,6 @@ def get_form_categories(request, formId):
     try:
         # Step 1: Extract Token from Headers
         auth_header = request.headers.get("Authorization", "")
-        print('auth_header received:', auth_header)
 
         token = None
         if auth_header.startswith("Token "):
@@ -994,8 +725,6 @@ def get_form_categories(request, formId):
 
 @csrf_exempt
 def remove_category_assignment(request):
-    print('executing remove_category_assignment view')
-
     if request.method != 'POST':
         return JsonResponse({
             "status": "error",
@@ -1005,7 +734,6 @@ def remove_category_assignment(request):
     try:
         # Step 1: Extract Token from Headers
         auth_header = request.headers.get("Authorization", "")
-        print('auth_header received:', auth_header)
 
         token = None
         if auth_header.startswith("Token "):
@@ -1014,8 +742,6 @@ def remove_category_assignment(request):
             token = auth_header[7:]
         else:
             token = auth_header
-
-        print('token extracted:', token)
 
         if not token:
             return JsonResponse({
@@ -1026,16 +752,13 @@ def remove_category_assignment(request):
         # Step 2: Parse JSON Payload
         try:
             data = json.loads(request.body)
-            print('received data:', data)
         except json.JSONDecodeError:
             return JsonResponse({'status': 'error', 'message': 'Invalid JSON data'}, status=400)
 
         # Get the category ID to remove
         main_category_id = data.get('main_category_id')
-        print('category_id', main_category_id)
         # form_type_id = formId  # Using the URL parameter for form ID
         form_type_id = data.get('form_type_id')  # Using the URL parameter for form ID
-        print('category_id', form_type_id)
 
 
         if not main_category_id:
@@ -1099,10 +822,8 @@ def remove_category_assignment(request):
         }, status=500)
     
 
-
 @csrf_exempt
 def get_assigned_categories(request, form_type_id):
-    print('Executing get_assigned_categories_view')
 
     if request.method != 'GET':
         return JsonResponse({
@@ -1113,7 +834,6 @@ def get_assigned_categories(request, form_type_id):
     try:
         # Step 1: Extract Token from Headers
         auth_header = request.headers.get("Authorization", "")
-        print('auth_header received:', auth_header)
 
         token = None
         if auth_header.startswith("Token "):
@@ -1123,24 +843,12 @@ def get_assigned_categories(request, form_type_id):
         else:
             token = auth_header
 
-        print('token extracted:', token)
-
         if not token:
             return JsonResponse({
                 "status": "error",
                 "message": "Authorization token is required."
             }, status=401)
         
-        print('form_type_id:', form_type_id)
-
-
-        # Step 2: Parse URL parameters
-        # data = json.loads(request.body)
-        # print('received data:', data)
-        
-        # form_type_id = request.GET.get('form_type_id')
-
-        # print('form_type_id:', form_type_id)
 
         if not form_type_id:
             return JsonResponse({
@@ -1151,7 +859,6 @@ def get_assigned_categories(request, form_type_id):
 
         # Step 3: Make API call to fetch assigned categories
         api_url = f"{host_url(request)}{reverse_lazy('get_assigned_categories_api', kwargs={'form_type_id': form_type_id})}"
-        print(f"API URL: {api_url}")
         
         # Try different auth formats sequentially until one works
         auth_formats = [

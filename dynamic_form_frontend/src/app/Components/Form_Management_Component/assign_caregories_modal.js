@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Dialog } from '@headlessui/react';
@@ -22,22 +23,16 @@ export default function AssignCategoryModal({ open, formId, onClose }) {
     setLoading(true);
 
     try {
-      // Fetch all categories first
+      // Fetch all categories first - this endpoint works according to logs
       const allCategoriesRes = await backendApi.get('/application_management/get_all_categories/', {
         headers: { Authorization: `Token ${authToken}` },
       });
       
-      // Use your specific get_assigned_categories endpoint with form_type_id parameter
+      // Changed to use the API endpoint instead of the regular endpoint
       const assignedCategoriesRes = await backendApi.get(
-        // '/application_management/get_assigned_categories/'  , 
-        // `/application_management/get_assigned_categories/?form_type_id=${formId}`, 
-        `/application_management/get_assigned_categories/${formId}/`,
-        
-
-
+        `/application_management/get_form_categories/${formId}/`,
         {
           headers: { Authorization: `Token ${authToken}` },
-
         }
       );
 
@@ -46,9 +41,8 @@ export default function AssignCategoryModal({ open, formId, onClose }) {
 
       const allCategories = allCategoriesRes.data.categories || [];
       
-      // Extract assigned categories from your specific endpoint
-      // Adjust this based on the actual response structure of your get_assigned_categories endpoint
-      const assignedCategories = assignedCategoriesRes.data.assigned_categories || [];
+      // Adjust based on the actual response structure from your API
+      const assignedCategories = assignedCategoriesRes.data.categories || [];
       
       // Create a Set of assigned category IDs for easy lookup
       const assignedIds = new Set(assignedCategories.map(cat => cat.id));
@@ -89,9 +83,9 @@ export default function AssignCategoryModal({ open, formId, onClose }) {
     setSavingChanges(true);
     try {
       if (checked) {
-        // Assign category
+        // Use API endpoint for assignment
         await backendApi.post(
-          `/application_management/assign_or_update_category/${formId}/`, 
+          `/application_management/assign_or_update_category/`, 
           {
             assignments: [{ category_id: categoryId, form_type_id: formId }],
           },
@@ -100,7 +94,7 @@ export default function AssignCategoryModal({ open, formId, onClose }) {
           }
         );
       } else {
-        // Remove category assignment
+        // Use API endpoint for removal
         await backendApi.post(
           `/application_management/remove_category_assignment/`, 
           {
@@ -114,15 +108,14 @@ export default function AssignCategoryModal({ open, formId, onClose }) {
       }
 
       // After successful update, refresh the assigned categories
-      // This ensures our local state stays in sync with the server
       const refreshRes = await backendApi.get(
-        `/application_management/get_assigned_categories/?form_type_id=${formId}`, 
+        `/application_management/get_form_categories/${formId}/`,
         {
           headers: { Authorization: `Token ${authToken}` },
         }
       );
       
-      const refreshedAssignedCategories = refreshRes.data.assigned_categories || [];
+      const refreshedAssignedCategories = refreshRes.data.categories || [];
       const refreshedAssignedIds = new Set(refreshedAssignedCategories.map(cat => cat.id));
       setAssignedCategoryIds(refreshedAssignedIds);
       

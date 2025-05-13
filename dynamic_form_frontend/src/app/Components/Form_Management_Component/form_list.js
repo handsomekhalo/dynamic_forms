@@ -43,7 +43,7 @@ const FormList = ({ forms, onAssignClick, onCategoryUpdate }) => {
       setLoading(true);
       setError(null);
       
-      const formCatRes = await backendApi.get(`/application_management/get_categories_with_form_id/${formId}/`, {
+      const formCatRes = await backendApi.get(`/application_management/get_assigned_categories/${formId}/`, {
         headers: { Authorization: `Token ${authToken}` },
       });
       
@@ -83,6 +83,7 @@ const FormList = ({ forms, onAssignClick, onCategoryUpdate }) => {
 
       if (isCurrentlyAssigned) {
         // Unassign category
+        
         await backendApi.post(`/application_management/unassign_category/`, {
           form_type_id: formTypeId,
           main_category_id: categoryId,
