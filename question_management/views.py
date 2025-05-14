@@ -13,9 +13,6 @@ from system_management.decorators import admin_required, check_token_in_session,
 from system_management.general_func_classes import host_url
 
 @csrf_exempt
-# @admin_required
-# @session_timeout
-# @check_token_in_session
 def get_questions(request):
     if request.method != 'GET':
         return JsonResponse({
@@ -53,7 +50,6 @@ def get_questions(request):
 
         response_data = response.json()
 
-
         return JsonResponse({
             "status": "success",
             "data": response_data
@@ -73,9 +69,9 @@ def get_questions(request):
 
 
 @csrf_exempt
-@admin_required
-@session_timeout
-@check_token_in_session
+# @admin_required
+# @session_timeout
+# @check_token_in_session
 def add_questions(request):
     if request.method != 'POST':
         return JsonResponse({

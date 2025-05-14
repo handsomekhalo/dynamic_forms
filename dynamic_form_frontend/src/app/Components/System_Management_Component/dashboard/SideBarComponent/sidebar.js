@@ -34,7 +34,7 @@ const Sidebar = () => {
       title: 'Question Management',
       links: [
         {  href: '/Components/Question_Management_Component/',
-           icon: 'bx bx-user-circle', label: 'Manage Questions ' },// Link to /form management
+           icon: 'bx bx-user-circle', label: 'Manage Questions' },// Link to /form management
          
       ],
     },
