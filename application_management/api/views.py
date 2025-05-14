@@ -564,11 +564,19 @@ def get_assigned_categories_api(request, form_type_id):
         assignments = FormCategoryAssignment.objects.filter(form_type_id=form_type_id)
         
         # If no assignments are found
+        # if not assignments.exists():
+        #     return Response({
+        #         "status": "error",
+        #         "message": "No categories assigned to this form type."
+        #     }, status=status.HTTP_404_NOT_FOUND)
+        
         if not assignments.exists():
+    # Instead of 404, return empty list with success
             return Response({
-                "status": "error",
-                "message": "No categories assigned to this form type."
-            }, status=status.HTTP_404_NOT_FOUND)
+                "status": "success",
+                "assigned_categories": []
+            }, status=status.HTTP_200_OK)
+
         
         # Extract the assigned main categories
         assigned_categories = [assignment.main_category for assignment in assignments]

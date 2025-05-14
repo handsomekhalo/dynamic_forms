@@ -37,7 +37,12 @@ export default function FormManagement() {
     try {
       setLoading(true);
       const res = await backendApi.get('/application_management/get_all_forms/');
-      let formsData = Array.isArray(res.data) ? res.data : res.data.forms || [];
+      // let formsData = Array.isArray(res.data) ? res.data : res.data.forms || [];
+      let formsData = Array.isArray(res.data)
+  ? res.data
+  : Array.isArray(res.data.forms)
+    ? res.data.forms
+    : [];
       setForms(formsData);
       setLoading(false);
     } catch (err) {

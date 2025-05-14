@@ -1,5 +1,4 @@
-
-'use client';
+// 'use client';
 import React, { useState, useEffect } from 'react';
 import { Dialog } from '@headlessui/react';
 import { useAuth } from '../../../../AuthContext';
@@ -13,22 +12,47 @@ export default function AssignCategoryModal({ open, formId, onClose }) {
   const [savingChanges, setSavingChanges] = useState(false);
   const [assignedCategoryIds, setAssignedCategoryIds] = useState(new Set());
 
+  // Clear state when modal closes to ensure fresh data on reopen
+  useEffect(() => {
+    if (!open) {
+      setCategories([]);
+      setAssignedCategoryIds(new Set());
+    }
+  }, [open]);
+
+  // Add a manual refresh method
+  const refreshCategoryData = async () => {
+    if (formId) {
+      await fetchData();
+    }
+  };
+
+  // Setup our initial effect with the expanded condition
   useEffect(() => {
     if (formId && open) {
-      fetchData();
+      refreshCategoryData();
     }
   }, [formId, open]);
+
+  // Create a new method to handle when checkboxes are changed successfully
+  const afterSuccessfulUpdate = async () => {
+    try {
+      await refreshCategoryData();
+    } catch (err) {
+      console.error("Error refreshing categories after update:", err);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
 
     try {
-      // Fetch all categories first - this endpoint works according to logs
+      // Fetch all categories
       const allCategoriesRes = await backendApi.get('/application_management/get_all_categories/', {
         headers: { Authorization: `Token ${authToken}` },
       });
       
-      // Changed to use the API endpoint instead of the regular endpoint
+      // Fetch assigned categories for this specific form
       const assignedCategoriesRes = await backendApi.get(
         `/application_management/get_form_categories/${formId}/`,
         {
@@ -39,22 +63,41 @@ export default function AssignCategoryModal({ open, formId, onClose }) {
       console.log('All categories response:', allCategoriesRes.data);
       console.log('Assigned categories response:', assignedCategoriesRes.data);
 
-      const allCategories = allCategoriesRes.data.categories || [];
+      // Check different possible structures based on your APIs
+      let allCategories = [];
+      if (allCategoriesRes.data.categories) {
+        allCategories = allCategoriesRes.data.categories;
+      } else if (Array.isArray(allCategoriesRes.data)) {
+        allCategories = allCategoriesRes.data;
+      }
       
-      // Adjust based on the actual response structure from your API
-      const assignedCategories = assignedCategoriesRes.data.categories || [];
+      // Try different possible structures for assigned categories
+      let assignedCategories = [];
+      if (assignedCategoriesRes.data.assigned_categories) {
+        assignedCategories = assignedCategoriesRes.data.assigned_categories;
+      } else if (assignedCategoriesRes.data.categories) {
+        assignedCategories = assignedCategoriesRes.data.categories;
+      } else if (Array.isArray(assignedCategoriesRes.data)) {
+        assignedCategories = assignedCategoriesRes.data;
+      }
+      
+      console.log('Extracted all categories:', allCategories);
+      console.log('Extracted assigned categories:', assignedCategories);
       
       // Create a Set of assigned category IDs for easy lookup
-      const assignedIds = new Set(assignedCategories.map(cat => cat.id));
+      // Be flexible in how we extract the ID in case the structure varies
+      const assignedIds = new Set(assignedCategories.map(cat => cat.id || cat.category_id || cat));
+      console.log('Assigned category IDs:', [...assignedIds]);
       setAssignedCategoryIds(assignedIds);
 
       // Map and mark which categories are assigned
-      setCategories(
-        allCategories.map(cat => ({
-          ...cat,
-          isChecked: assignedIds.has(cat.id)
-        }))
-      );
+      const updatedCategories = allCategories.map(cat => ({
+        ...cat,
+        isChecked: assignedIds.has(cat.id || cat.category_id)
+      }));
+      
+      console.log('Categories with checked state:', updatedCategories);
+      setCategories(updatedCategories);
     } catch (error) {
       console.error('Error fetching categories:', error);
       Swal.fire('Error', 'Failed to load categories', 'error');
@@ -84,7 +127,7 @@ export default function AssignCategoryModal({ open, formId, onClose }) {
     try {
       if (checked) {
         // Use API endpoint for assignment
-        await backendApi.post(
+        const response = await backendApi.post(
           `/application_management/assign_or_update_category/`, 
           {
             assignments: [{ category_id: categoryId, form_type_id: formId }],
@@ -93,9 +136,10 @@ export default function AssignCategoryModal({ open, formId, onClose }) {
             headers: { Authorization: `Token ${authToken}` },
           }
         );
+        console.log('Assignment response:', response.data);
       } else {
         // Use API endpoint for removal
-        await backendApi.post(
+        const response = await backendApi.post(
           `/application_management/remove_category_assignment/`, 
           {
             form_type_id: formId,
@@ -105,19 +149,11 @@ export default function AssignCategoryModal({ open, formId, onClose }) {
             headers: { Authorization: `Token ${authToken}` },
           }
         );
+        console.log('Removal response:', response.data);
       }
-
-      // After successful update, refresh the assigned categories
-      const refreshRes = await backendApi.get(
-        `/application_management/get_form_categories/${formId}/`,
-        {
-          headers: { Authorization: `Token ${authToken}` },
-        }
-      );
       
-      const refreshedAssignedCategories = refreshRes.data.categories || [];
-      const refreshedAssignedIds = new Set(refreshedAssignedCategories.map(cat => cat.id));
-      setAssignedCategoryIds(refreshedAssignedIds);
+      // Refresh our data to ensure consistency with server state
+      await afterSuccessfulUpdate();
       
     } catch (err) {
       console.error("Error updating category assignment:", err);

@@ -152,10 +152,3 @@ def change_question_status_api(request):
 
     return Response({"status": "success", "message": f"Question {status_message} successfully."}, status=status.HTTP_200_OK)
 
-
-# @api_view(['POST', 'GET'])
-# def get_main_categories_api(request):
-#     main_categories = MainCategory.objects.all()
-#     serializer_data = SelectMainCategory(main_categories, many=True).data
-
-#     return Response(json.dumps(serializer_data), status=status.HTTP_200_OK)
