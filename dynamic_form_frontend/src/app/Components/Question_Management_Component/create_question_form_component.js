@@ -1,25 +1,28 @@
-import { useEffect, useState } from 'react';
-import Swal from 'sweetalert2';
+import { useEffect, useState } from "react";
+import Swal from "sweetalert2";
 
-export default function CreateQuestionForm({ questionTypes }) {
-  const [questionType, setQuestionType] = useState('');
+export default function CreateQuestionForm({ questionTypes = [] }) {
+  const [questionType, setQuestionType] = useState("");
   const [numberOfOptions, setNumberOfOptions] = useState(0);
   const [options, setOptions] = useState([]);
   const [showOptions, setShowOptions] = useState(false);
 
   useEffect(() => {
-    setShowOptions(questionType === 'Checkbox' || questionType === 'Selection');
+    setShowOptions(questionType === "Checkbox" || questionType === "Selection");
   }, [questionType]);
 
   const handleOptionsChange = (e) => {
     const num = parseInt(e.target.value, 10);
     if (num > 25) {
-      Swal.fire("Too Many Options", "You cannot enter more than 25 options.", "error");
+      Swal.fire(
+        "Too Many Options",
+        "You cannot enter more than 25 options.",
+        "error"
+      );
       return;
     }
-
     setNumberOfOptions(num);
-    setOptions(Array.from({ length: num }, () => ''));
+    setOptions(Array.from({ length: num }, () => ""));
   };
 
   const handleOptionInput = (idx, val) => {
@@ -32,20 +35,20 @@ export default function CreateQuestionForm({ questionTypes }) {
     e.preventDefault();
     const form = e.target;
     const formData = new FormData(form);
-    options.forEach(option => formData.append('option[]', option));
+    options.forEach((option) => formData.append("option[]", option));
 
     try {
-      const response = await fetch('/your-add-question-api-url', {
-        method: 'POST',
+      const response = await fetch("/your-add-question-api-url", {
+        method: "POST",
         body: formData,
-        headers: {
-          'X-CSRFToken': window.CSRF_TOKEN,
-        },
+        headers: { "X-CSRFToken": window.CSRF_TOKEN },
       });
       const result = await response.json();
 
-      if (result.status === 'success') {
-        Swal.fire("Success", result.message, "success").then(() => window.location.reload());
+      if (result.status === "success") {
+        Swal.fire("Success", result.message, "success").then(() =>
+          window.location.reload()
+        );
       } else {
         Swal.fire("Error", "Something went wrong", "error");
       }
@@ -55,37 +58,58 @@ export default function CreateQuestionForm({ questionTypes }) {
   };
 
   return (
-    <form id="add_questions_form" onSubmit={handleSubmit}>
-      {/* Question and Number */}
-      <div className="row">
-        <div className="col">
-          <div className="mb-3">
-            <label htmlFor="question" className="form-label text-xxs"><strong>Question *</strong></label>
-            <input type="text" className="form-control text-xxs" id="question" name="question" placeholder="Is the building occupied?" required />
-          </div>
+    <form id="add_questions_form" onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium">Question *</label>
+          <input
+            type="text"
+            name="question"
+            className="w-full border rounded px-2 py-1 text-sm"
+            placeholder="Is the building occupied?"
+            required
+          />
         </div>
-        <div className="col">
-          <div className="mb-3">
-            <label htmlFor="question_number" className="form-label text-xxs"><strong>Question Number *</strong></label>
-            <input type="text" className="form-control text-xxs" id="question_number" name="question_number" placeholder="eg. 1" required />
-          </div>
+        <div>
+          <label className="block text-sm font-medium">Question Number *</label>
+          <input
+            type="text"
+            name="question_number"
+            className="w-full border rounded px-2 py-1 text-sm"
+            placeholder="e.g. 1"
+            required
+          />
         </div>
       </div>
 
-      {/* Type and Mandatory */}
-      <div className="row">
-        <div className="col mb-3">
-          <label htmlFor="question_type" className="form-label text-xxs"><strong>Select Question Type *</strong></label>
-          <select name="question_type" id="question_type" className="form-select text-xxs" onChange={(e) => setQuestionType(e.target.value)} required>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium">
+            Select Question Type *
+          </label>
+          <select
+            name="question_type"
+            className="w-full border rounded px-2 py-1 text-sm"
+            onChange={(e) => setQuestionType(e.target.value)}
+            required
+          >
             <option hidden>Question Type</option>
-            {questionTypes.map(type => (
-              <option key={type.question_type} value={type.question_type}>{type.question_type}</option>
+            {questionTypes.map((type) => (
+              <option key={type.question_type} value={type.question_type}>
+                {type.question_type}
+              </option>
             ))}
           </select>
         </div>
-        <div className="col mb-3">
-          <label htmlFor="mandatory" className="form-label text-xxs"><strong>Is the Question Mandatory? *</strong></label>
-          <select name="mandatory" id="mandatory" className="form-select text-xxs" required>
+        <div>
+          <label className="block text-sm font-medium">
+            Is the Question Mandatory? *
+          </label>
+          <select
+            name="mandatory"
+            className="w-full border rounded px-2 py-1 text-sm"
+            required
+          >
             <option hidden>Select Option</option>
             <option value="False">No</option>
             <option value="True">Yes</option>
@@ -93,44 +117,57 @@ export default function CreateQuestionForm({ questionTypes }) {
         </div>
       </div>
 
-      {/* Dynamic Options */}
       {showOptions && (
-        <>
-          <h6 className="option text-sm">Add Options If Applicable</h6>
-          <div className="row">
-            <div className="col mb-3">
-              <label className="form-label text-xxs"><strong>Enter number of options</strong></label>
-              <input type="number" className="form-control text-xxs" min="1" onInput={handleOptionsChange} />
-            </div>
-            <div className="col mb-3 mt-4">
-              {options.map((opt, idx) => (
-                <input
-                  key={idx}
-                  type="text"
-                  className="form-control text-xxs mb-1"
-                  value={opt}
-                  onChange={(e) => handleOptionInput(idx, e.target.value)}
-                  required
-                  placeholder={`Option ${idx + 1}`}
-                />
-              ))}
-            </div>
+        <div className="space-y-2">
+          <p className="text-sm font-semibold">Add Options If Applicable</p>
+          <div>
+            <label className="block text-sm font-medium">
+              Enter number of options
+            </label>
+            <input
+              type="number"
+              min="1"
+              className="w-full border rounded px-2 py-1 text-sm"
+              onInput={handleOptionsChange}
+            />
           </div>
 
-          <div className="row">
-            <div className="col mb-3">
-              <label htmlFor="other_field" className="form-label text-xxs"><strong>Do you have an extra field for <span>other</span> options? *</strong></label>
-              <select name="other_field" id="other_field" className="form-select text-xxs">
-                <option hidden value="">Select Option</option>
-                <option value="False">No</option>
-                <option value="True">Yes</option>
-              </select>
-            </div>
+          {options.map((opt, idx) => (
+            <input
+              key={idx}
+              type="text"
+              className="w-full border rounded px-2 py-1 text-sm"
+              value={opt}
+              onChange={(e) => handleOptionInput(idx, e.target.value)}
+              placeholder={`Option ${idx + 1}`}
+              required
+            />
+          ))}
+
+          <div>
+            <label className="block text-sm font-medium">
+              Extra field for Other option? *
+            </label>
+            <select
+              name="other_field"
+              className="w-full border rounded px-2 py-1 text-sm"
+            >
+              <option hidden value="">
+                Select Option
+              </option>
+              <option value="False">No</option>
+              <option value="True">Yes</option>
+            </select>
           </div>
-        </>
+        </div>
       )}
 
-      <button type="submit" className="btn btn-primary btn-sm">Create Question</button>
+      <button
+        type="submit"
+        className="bg-blue-600 text-white rounded px-4 py-2 text-sm hover:bg-blue-700"
+      >
+        Create Question
+      </button>
     </form>
   );
 }
