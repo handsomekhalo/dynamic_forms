@@ -5,7 +5,7 @@ class Command(BaseCommand):
     help = 'Adding question types'
     
     def handle(self, *args, **options):
-        question_types_to_create = ['Text', 'Selection', 'Checkbox', 'Date', 'File', 'Number']
+        question_types_to_create = ['Text', 'Selection', 'Checkbox', 'Date', 'File', 'Number', "Textarea", "Email"]
         
         for question_type in question_types_to_create:
             # Filter by the 'name' field instead of 'question_type'

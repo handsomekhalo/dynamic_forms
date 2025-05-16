@@ -1,18 +1,62 @@
+"use client";
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
+import backendApi from "../../../../utils/backendApi";
+import { useAuth } from "../../../../AuthContext";
 
-export default function CreateQuestionForm({ questionTypes = [] }) {
-  const [questionType, setQuestionType] = useState("");
+export default function CreateQuestionForm() {
+  const { authToken, isLoading } = useAuth();
+
+  const [questionType, setQuestionType] = useState(""); // stores selected question_type ID
+  const [questionTypes, setQuestionTypes] = useState([]);
   const [numberOfOptions, setNumberOfOptions] = useState(0);
   const [options, setOptions] = useState([]);
   const [showOptions, setShowOptions] = useState(false);
+  const [validationErrors, setValidationErrors] = useState({});
 
   useEffect(() => {
-    setShowOptions(questionType === "Checkbox" || questionType === "Selection");
-  }, [questionType]);
+    if (!authToken || isLoading) return;
+
+    const fetchQuestionsTypes = async () => {
+      try {
+        const res = await backendApi.get("/question_management/get_questions/", {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Token ${authToken}`,
+          },
+        });
+
+        const questionData = res.data;
+        if (
+          questionData?.data?.question_types &&
+          Array.isArray(questionData.data.question_types)
+        ) {
+          setQuestionTypes(questionData.data.question_types);
+        }
+      } catch (error) {
+        console.error("Error fetching question types:", error);
+        Swal.fire("Error", error.message || "Something went wrong", "error");
+      }
+    };
+
+    fetchQuestionsTypes();
+  }, [authToken, isLoading]);
+
+  // Show options input if selected question type's name is "Checkbox" or "Selection"
+  useEffect(() => {
+    if (!questionType) {
+      setShowOptions(false);
+      return;
+    }
+    const selectedType = questionTypes.find((type) => String(type.id) === String(questionType));
+    setShowOptions(
+      selectedType &&
+      (selectedType.name === "Checkbox" || selectedType.name === "Selection")
+    );
+  }, [questionType, questionTypes]);
 
   const handleOptionsChange = (e) => {
-    const num = parseInt(e.target.value, 10);
+    const num = parseInt(e.target.value, 10) || 0;
     if (num > 25) {
       Swal.fire(
         "Too Many Options",
@@ -31,29 +75,94 @@ export default function CreateQuestionForm({ questionTypes = [] }) {
     setOptions(newOptions);
   };
 
+  const validateForm = (formData) => {
+    const errors = {};
+    
+    // Validate question text
+    if (!formData.get("question").trim()) {
+      errors.question = "Question text is required";
+    }
+    
+    // Validate question number - ensure it's a number
+    const questionNumber = formData.get("question_number");
+    if (questionNumber) {
+      if (isNaN(Number(questionNumber))) {
+        errors.question_number = "Question number must be a valid number";
+      }
+    }
+    
+    // Validate question type
+    if (!formData.get("question_type")) {
+      errors.question_type = "Question type is required";
+    }
+    
+    // Validate options for checkbox or selection types
+    if (showOptions && options.filter(opt => opt.trim()).length === 0) {
+      errors.options = "At least one option is required";
+    }
+    
+    return errors;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const form = e.target;
     const formData = new FormData(form);
-    options.forEach((option) => formData.append("option[]", option));
+    
+    // Form validation
+    const errors = validateForm(formData);
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    
+    // Clear any previous validation errors
+    setValidationErrors({});
+
+    const payload = {
+      question: formData.get("question"),
+      question_number: formData.get("question_number") || "0", // Default to 0 if empty
+      question_type: formData.get("question_type"),
+      mandatory: formData.get("mandatory") === "True",
+      other_field: formData.get("other_field") === "True",
+      options: options.filter((opt) => opt.trim() !== ""),
+    };
 
     try {
-      const response = await fetch("/your-add-question-api-url", {
-        method: "POST",
-        body: formData,
-        headers: { "X-CSRFToken": window.CSRF_TOKEN },
-      });
-      const result = await response.json();
+      const response = await backendApi.post(
+        "/question_management/add_questions/",
+        payload,
+        {
+          headers: {
+            Authorization: `Token ${authToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const result = response.data;
 
       if (result.status === "success") {
-        Swal.fire("Success", result.message, "success").then(() =>
+        Swal.fire("Success", result.message || "Question created successfully", "success").then(() =>
           window.location.reload()
         );
       } else {
-        Swal.fire("Error", "Something went wrong", "error");
+        // Handle server validation errors
+        if (result.errors) {
+          setValidationErrors(result.errors);
+        } else {
+          Swal.fire("Error", result.message || "Something went wrong", "error");
+        }
       }
     } catch (err) {
-      Swal.fire("Error", "Something went wrong. Try again.", "error");
+      console.error("Question submission failed:", err);
+      
+      // Handle server response errors
+      if (err.response && err.response.data && err.response.data.errors) {
+        setValidationErrors(err.response.data.errors);
+      } else {
+        Swal.fire("Error", "Something went wrong. Try again.", "error");
+      }
     }
   };
 
@@ -65,20 +174,35 @@ export default function CreateQuestionForm({ questionTypes = [] }) {
           <input
             type="text"
             name="question"
-            className="w-full border rounded px-2 py-1 text-sm"
+            className={`w-full border rounded px-2 py-1 text-sm ${
+              validationErrors.question ? "border-red-500" : ""
+            }`}
             placeholder="Is the building occupied?"
             required
           />
+          {validationErrors.question && (
+            <p className="text-red-500 text-xs mt-1">{validationErrors.question}</p>
+          )}
         </div>
         <div>
-          <label className="block text-sm font-medium">Question Number *</label>
+          <label className="block text-sm font-medium">Question Number</label>
           <input
-            type="text"
+            type="number"
             name="question_number"
-            className="w-full border rounded px-2 py-1 text-sm"
-            placeholder="e.g. 1"
-            required
+            className={`w-full border rounded px-2 py-1 text-sm ${
+              validationErrors.question_number ? "border-red-500" : ""
+            }`}
+            placeholder="1"
+            min="0"
+            defaultValue="0"
           />
+          {validationErrors.question_number ? (
+            <p className="text-red-500 text-xs mt-1">{validationErrors.question_number}</p>
+          ) : (
+            <p className="text-xs text-gray-500 mt-1">
+              Enter a number to set the display order
+            </p>
+          )}
         </div>
       </div>
 
@@ -89,18 +213,27 @@ export default function CreateQuestionForm({ questionTypes = [] }) {
           </label>
           <select
             name="question_type"
-            className="w-full border rounded px-2 py-1 text-sm"
+            className={`w-full border rounded px-2 py-1 text-sm ${
+              validationErrors.question_type ? "border-red-500" : ""
+            }`}
             onChange={(e) => setQuestionType(e.target.value)}
             required
+            value={questionType}
           >
-            <option hidden>Question Type</option>
+            <option hidden value="">
+              Question Type
+            </option>
             {questionTypes.map((type) => (
-              <option key={type.question_type} value={type.question_type}>
-                {type.question_type}
+              <option key={type.id} value={type.id}>
+                {type.name}
               </option>
             ))}
           </select>
+          {validationErrors.question_type && (
+            <p className="text-red-500 text-xs mt-1">{validationErrors.question_type}</p>
+          )}
         </div>
+
         <div>
           <label className="block text-sm font-medium">
             Is the Question Mandatory? *
@@ -119,7 +252,7 @@ export default function CreateQuestionForm({ questionTypes = [] }) {
 
       {showOptions && (
         <div className="space-y-2">
-          <p className="text-sm font-semibold">Add Options If Applicable</p>
+          <p className="text-sm font-semibold">Add Options</p>
           <div>
             <label className="block text-sm font-medium">
               Enter number of options
@@ -128,7 +261,8 @@ export default function CreateQuestionForm({ questionTypes = [] }) {
               type="number"
               min="1"
               className="w-full border rounded px-2 py-1 text-sm"
-              onInput={handleOptionsChange}
+              onChange={handleOptionsChange}
+              value={numberOfOptions}
             />
           </div>
 
@@ -136,25 +270,28 @@ export default function CreateQuestionForm({ questionTypes = [] }) {
             <input
               key={idx}
               type="text"
-              className="w-full border rounded px-2 py-1 text-sm"
+              className={`w-full border rounded px-2 py-1 text-sm ${
+                validationErrors.options ? "border-red-500" : ""
+              }`}
               value={opt}
               onChange={(e) => handleOptionInput(idx, e.target.value)}
               placeholder={`Option ${idx + 1}`}
-              required
             />
           ))}
+          
+          {validationErrors.options && (
+            <p className="text-red-500 text-xs">{validationErrors.options}</p>
+          )}
 
           <div>
             <label className="block text-sm font-medium">
-              Extra field for Other option? *
+              Extra field for other option?
             </label>
             <select
               name="other_field"
               className="w-full border rounded px-2 py-1 text-sm"
+              defaultValue="False"
             >
-              <option hidden value="">
-                Select Option
-              </option>
               <option value="False">No</option>
               <option value="True">Yes</option>
             </select>

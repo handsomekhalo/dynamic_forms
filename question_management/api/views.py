@@ -1,4 +1,5 @@
 
+from django.forms import ValidationError
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -32,58 +33,143 @@ def create_question(question_text, question_number, question_type, mandatory, ot
     """
     Helper function to create a new question based on the input attributes.
     """
+    try:
+        order_value = int(question_number) if question_number else 0
+    except (ValueError, TypeError):
+        order_value = 0
+
     question_type_obj = QuestionType.objects.get(id=question_type)
+
+    input_type = 'text'
+    if question_type_obj.name.lower() == 'checkbox':
+        input_type = 'checkbox'
+    elif question_type_obj.name.lower() == 'selection':
+        input_type = 'select'
+
+    # Check if question already exists
+    if Question.objects.filter(text__iexact=question_text.strip()).exists():
+        raise ValidationError({"question": "A question with this text already exists."})
 
     question = Question.objects.create(
         text=question_text,
         question_type=question_type_obj,
-        order=question_number,
+        input_type=input_type,
+        order=order_value,
         is_required=mandatory,
-        allow_other_option=other_field is not None,
+        allow_other_option=other_field is not None and other_field,
     )
-    
-    if other_field:
-        question.allow_other_option = True
-        question.save()
-    
+
     return question
+
+
+def validate_question_data(data):
+    """
+    Validate incoming question data and return a tuple of (is_valid, errors)
+    """
+    errors = {}
+    
+    # Required fields
+    if not data.get('question'):
+        errors['question'] = "Question text is required"
+    
+    if not data.get('question_type'):
+        errors['question_type'] = "Question type is required"
+    
+    # Validate question_number if provided
+    question_number = data.get('question_number')
+    if question_number:
+        try:
+            int(question_number)
+        except (ValueError, TypeError):
+            errors['question_number'] = "Question number must be a valid integer"
+    
+    # Check if mandatory field is provided
+    if 'mandatory' not in data:
+        errors['mandatory'] = "Mandatory field is required"
+    
+    # Check options for select/checkbox types
+    question_type_id = data.get('question_type')
+    options = data.get('options', [])
+    
+    if question_type_id:
+        try:
+            question_type_obj = QuestionType.objects.get(id=question_type_id)
+            # If question type is checkbox or selection, options are required
+            if question_type_obj.name.lower() in ['checkbox', 'selection'] and not options:
+                errors['options'] = f"Options are required for {question_type_obj.name} questions"
+        except QuestionType.DoesNotExist:
+            errors['question_type'] = "Invalid question type"
+    
+    return (len(errors) == 0, errors)
+
 
 
 @api_view(['POST'])
 def add_question_api(request):
     """
-    This API saves a new question to the question bank.
+    API endpoint to save a new question to the question bank with improved validation.
     """
     question_data = request.data
-    question_text = question_data.get('question')
-
-    if question_text:
-        question_text = question_text.strip() 
-
+    
+    # Validate incoming data
+    is_valid, errors = validate_question_data(question_data)
+    if not is_valid:
+        return Response({"status": "error", "errors": errors}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Extract cleaned data
+    question_text = question_data.get('question', '').strip()
     question_number = question_data.get('question_number')
     question_type = question_data.get('question_type')
     mandatory = question_data.get('mandatory', True)
     other_field = question_data.get('other_field')
     options = question_data.get('options', [])
 
-   
     try:
         question_type_obj = QuestionType.objects.get(id=question_type)
     except QuestionType.DoesNotExist:
-        return Response({"error": "Invalid question type"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"status": "error", "message": "Invalid question type"}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
-    # 🔥 Check if question already exists (case-insensitive and no space errors)
+    # Check if question already exists (case-insensitive)
     if Question.objects.filter(text__iexact=question_text, question_type=question_type_obj).exists():
-        return Response({"error": "Question already exists."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"status": "error", "message": "Question already exists."}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
-    # Create the question
-    question = create_question(question_text, question_number, question_type, mandatory, other_field)
+    try:
+        # Create the question with validation handling
+        question = create_question(question_text, question_number, question_type, mandatory, other_field)
+        
+        # Create options if provided
+        if options:
+            for option_text in options:
+                if option_text.strip():  # Only create non-empty options
+                    Option.objects.create(question=question, text=option_text.strip())
+        
+        return Response({
+            "status": "success",
+            "message": "Question created successfully",
+            "data": {
+                "id": question.id,
+                "text": question.text
+            }
+        }, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        # Log the error for debugging
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error creating question: {str(e)}")
+        
+        return Response({
+            "status": "error",
+            "message": "Failed to create question. Please try again."
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    # Handle options if provided
-    for option in options:
-        Option.objects.create(question=question, text=option)
 
-    return Response(status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])

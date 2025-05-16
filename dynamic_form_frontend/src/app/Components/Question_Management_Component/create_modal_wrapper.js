@@ -1,23 +1,3 @@
-// 'use client';
-// import React from 'react';
-// import Modal from 'react-bootstrap/Modal';
-// import Button from 'react-bootstrap/Button';
-
-// export default function Create_Modal_Wrapper({ show, onClose, title, children }) {
-//   return (
-//     <Modal show={show} onHide={onClose} size="lg" centered backdrop="static" keyboard={false}>
-//       <Modal.Header closeButton>
-//         <Modal.Title className="text-sm">{title}</Modal.Title>
-//       </Modal.Header>
-//       <Modal.Body>{children}</Modal.Body>
-//       <Modal.Footer>
-//         <Button variant="secondary" size="sm" onClick={onClose}>
-//           Close
-//         </Button>
-//       </Modal.Footer>
-//     </Modal>
-//   );
-// }
 export default function Create_Modal_Wrapper({ children, onClose }) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
