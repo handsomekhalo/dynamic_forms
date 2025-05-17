@@ -43,3 +43,53 @@ class QuestionSerializer(serializers.ModelSerializer):
         Fetch and return the question type's name.
         """
         return question.question_type.name
+
+
+
+
+class GetOptionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Option
+        fields = ['id', 'text', 'is_default']
+
+class GetQuestionTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = QuestionType
+        fields = ['id', 'name', 'description']
+
+class GetQuestionSerializer(serializers.ModelSerializer):
+    options = GetOptionSerializer(many=True, read_only=True)
+    question_type = GetQuestionTypeSerializer(read_only=True)
+
+    class Meta:
+        model = Question
+        fields = [
+            'id',
+            'text',
+            'input_type',
+            'order',
+            'is_active',
+            'is_required',
+            'allow_other_option',
+            'date_created',
+            'question_type',
+            'options',
+        ]
+
+
+class QuestionUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Question
+        fields = [
+            'text', 'question_type', 'input_type', 'order',
+            'is_active', 'is_required', 'allow_other_option'
+        ]
+        extra_kwargs = {
+            'text': {'required': False},
+            'question_type': {'required': False},
+            'input_type': {'required': False},
+            'order': {'required': False},
+            'is_active': {'required': False},
+            'is_required': {'required': False},
+            'allow_other_option': {'required': False},
+        }

@@ -153,6 +153,9 @@
 
 
 
+from django.http import JsonResponse
+
+
 @csrf_exempt
 def assign_category_to_form(request):
     print('executing assign_category_to_form view')

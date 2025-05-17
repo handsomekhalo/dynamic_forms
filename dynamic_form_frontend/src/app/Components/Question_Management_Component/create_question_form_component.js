@@ -13,6 +13,12 @@ export default function CreateQuestionForm() {
   const [options, setOptions] = useState([]);
   const [showOptions, setShowOptions] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editQuestionData, setEditQuestionData] = useState(null); // For passing the question to edit
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [statusModalData, setStatusModalData] = useState(null); //
+
 
   useEffect(() => {
     if (!authToken || isLoading) return;

@@ -1,11 +1,13 @@
 
+import logging
 from django.forms import ValidationError
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from django.core.exceptions import ObjectDoesNotExist
-from question_management.api.serializers import QuestionSerializer, QuestionTypeSerializer
+from question_management.api.serializers import GetQuestionSerializer, QuestionSerializer, QuestionTypeSerializer, QuestionUpdateSerializer
 from question_management.models import Option, Question, QuestionType
+logger = logging.getLogger(__name__)
 
 
 @api_view(['GET'])
@@ -173,43 +175,6 @@ def add_question_api(request):
 
 
 @api_view(['POST'])
-def update_question_api(request):
-    """
-    This API updates an existing question in the question bank.
-    """
-    question_data = request.data
-    question_id = question_data.get('question_id')
-    question_text = question_data.get('question')
-    question_number = question_data.get('question_number')
-    question_type = question_data.get('question_type')
-    mandatory = question_data.get('mandatory')
-    other_field = question_data.get('other_field')
-    options = question_data.get('options', [])
-    delete_options = question_data.get('delete_options', False)
-
-    try:
-        question = Question.objects.get(id=question_id)
-    except Question.DoesNotExist:
-        return Response({"error": "Question does not exist."}, status=status.HTTP_404_NOT_FOUND)
-
-    
-    question.text = question_text
-    question.order = question_number
-    question.is_required = mandatory
-    question.allow_other_option = other_field is not None
-    question.save()
-
-    
-    if delete_options:
-        Option.objects.filter(question=question).delete()
-
-    for option in options:
-        Option.objects.create(question=question, text=option)
-
-    return Response({"status": "success", "message": "Question updated successfully"}, status=status.HTTP_200_OK)
-
-
-@api_view(['POST'])
 def change_question_status_api(request):
     """
     This API allows toggling the active/inactive status of a question.
@@ -238,3 +203,60 @@ def change_question_status_api(request):
 
     return Response({"status": "success", "message": f"Question {status_message} successfully."}, status=status.HTTP_200_OK)
 
+
+
+
+@api_view(['GET'])
+def get_question_detail_api(request, question_id):
+    try:
+        question = Question.objects.get(pk=question_id)
+    except Question.DoesNotExist:
+        return Response({'status': 'error', 'message': 'Question not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = GetQuestionSerializer(question)
+    return Response({'status': 'success', 'data': serializer.data}, status=status.HTTP_200_OK)
+
+
+
+@api_view(['PUT'])
+def update_question_api(request, question_id):
+    try:
+        # Try fetching the Question
+        try:
+            question = Question.objects.get(pk=question_id)
+        except Question.DoesNotExist:
+            logger.warning(f"Question with ID {question_id} not found.")
+            return Response({"error": "Question not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Deserialize and validate data
+        serializer = QuestionUpdateSerializer(question, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            logger.info(f"Question ID {question_id} updated successfully.")
+            return Response({
+                "success": "Question updated successfully.",
+                "data": serializer.data
+            }, status=status.HTTP_200_OK)
+
+        # Log validation errors
+        logger.error(f"Validation failed for question ID {question_id}: {serializer.errors}")
+        return Response({
+            "error": "Validation failed.",
+            "details": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    except ValidationError as ve:
+        logger.exception(f"Validation error occurred for question ID {question_id}: {ve}")
+        return Response({
+            "error": "Invalid input.",
+            "details": str(ve)
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    except Exception as e:
+        logger.exception(f"Unexpected error occurred while updating question ID {question_id}: {e}")
+        return Response({
+            "error": "An unexpected error occurred.",
+            "details": str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
