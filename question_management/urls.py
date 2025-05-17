@@ -9,6 +9,7 @@ urlpatterns = [
 
     path('get_question_detail/<int:question_id>/',views.get_question_detail,
          name='get_question_detail'),
+    path('_change_question_status/',views._change_question_status,name='_change_question_status'),
 
 
 

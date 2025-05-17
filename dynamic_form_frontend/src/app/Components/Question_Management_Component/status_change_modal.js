@@ -1,4 +1,3 @@
-// StatusChangeModal.jsx
 import backendApi from "../../../../utils/backendApi";
 import { useAuth } from "../../../../AuthContext";
 import Swal from "sweetalert2";
@@ -8,16 +7,22 @@ export default function StatusChangeModal({ questionId, newStatus, onClose }) {
 
   const handleStatusChange = async () => {
     try {
-      const res = await backendApi.put(
-        `/question_management/toggle_status/${questionId}/`,
-        { is_active: newStatus },
+      const statusValue = newStatus ? "Active" : "Inactive";
+
+      const res = await backendApi.post(
+        `/question_management/_change_question_status/`, // or the exact URL of your Django view
+        new URLSearchParams({
+          question_id: questionId,
+          status_value: statusValue,
+        }),
         {
           headers: {
             Authorization: `Token ${authToken}`,
-            "Content-Type": "application/json",
+            "Content-Type": "application/x-www-form-urlencoded",
           },
         }
       );
+
       Swal.fire("Success", "Status changed", "success").then(() =>
         window.location.reload()
       );

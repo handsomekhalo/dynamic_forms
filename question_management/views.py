@@ -1,3 +1,5 @@
+from asyncio import constants
+import traceback
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse, reverse_lazy
@@ -6,7 +8,7 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 from question_management.api.serializers import QuestionSerializer
 from system_management.decorators import admin_required, check_token_in_session, session_timeout
-from system_management.general_func_classes import host_url
+from system_management.general_func_classes import api_connection, host_url
 from django.http import JsonResponse
 
 
@@ -325,6 +327,82 @@ def update_question(request, question_id):
     
     except Exception as e:
         import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            "status": "error",
+            "message": f"Unexpected server error: {str(e)}"
+        }, status=500)
+    
+
+
+@csrf_exempt
+def deactivate_question(request):
+    return _change_question_status(request, status_value="Inactive")
+
+
+@csrf_exempt
+def activate_question(request):
+    return _change_question_status(request, status_value="Active")
+
+@csrf_exempt
+def _change_question_status(request):
+    """
+    Internal handler for activating/deactivating questions.
+    """
+    if request.method != "POST":
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+    try:
+        # Extract token from Authorization header
+        auth_header = request.headers.get("Authorization", "")
+        token = None
+        if auth_header.startswith("Token "):
+            token = auth_header.split("Token ")[-1]
+        elif auth_header.startswith("Bearer "):
+            token = auth_header.split("Bearer ")[-1]
+
+        if not token:
+            return JsonResponse({"status": "error", "message": "Authorization token is required."}, status=401)
+
+        # Extract POST parameters
+        question_id = request.POST.get('question_id')
+        status_value = request.POST.get('status_value')
+
+        if not question_id:
+            return JsonResponse({'status': 'error', 'message': 'Question ID is required'}, status=400)
+
+        if not status_value:
+            return JsonResponse({'status': 'error', 'message': 'Status value is required'}, status=400)
+
+        # Build internal API URL
+        url = f"{host_url(request)}{reverse('change_question_status_api')}"
+
+        # Prepare JSON payload
+        payload = json.dumps({
+            "question_id": question_id,
+            "status_value": status_value
+        })
+
+        headers = {
+            'Authorization': f'Token {token}',
+            'Content-Type': 'application/json'
+        }
+
+        # Make internal POST request
+        response = requests.post(url, headers=headers, data=payload, timeout=10)
+        response.raise_for_status()
+
+        response_data = response.json()
+
+        return JsonResponse(data=response_data, safe=False)
+
+    except requests.exceptions.RequestException as e:
+        return JsonResponse({
+            "status": "error",
+            "message": f"Error calling internal API: {str(e)}"
+        }, status=500)
+
+    except Exception as e:
         traceback.print_exc()
         return JsonResponse({
             "status": "error",

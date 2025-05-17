@@ -172,40 +172,6 @@ def add_question_api(request):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-
-
-@api_view(['POST'])
-def change_question_status_api(request):
-    """
-    This API allows toggling the active/inactive status of a question.
-    """
-    body = request.data
-    question_id = body.get('question_id')
-    status_value = body.get('status_value')
-
-    if not question_id or status_value not in ['Active', 'Inactive']:
-        return Response({"error": "Invalid request: question_id or status_value is missing."}, status=status.HTTP_400_BAD_REQUEST)
-
-    try:
-        question = Question.objects.get(id=question_id)
-    except Question.DoesNotExist:
-        return Response({"error": f"Question with id {question_id} does not exist."}, status=status.HTTP_400_BAD_REQUEST)
-
-    # Update status
-    if status_value == 'Active':
-        question.is_active = True
-        status_message = "activated"
-    else:
-        question.is_active = False
-        status_message = "deactivated"
-
-    question.save()
-
-    return Response({"status": "success", "message": f"Question {status_message} successfully."}, status=status.HTTP_200_OK)
-
-
-
-
 @api_view(['GET'])
 def get_question_detail_api(request, question_id):
     try:
@@ -259,4 +225,33 @@ def update_question_api(request, question_id):
             "error": "An unexpected error occurred.",
             "details": str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
+
+
+@api_view(['POST'])
+def change_question_status_api(request):
+    """
+    This API allows toggling the active/inactive status of a question.
+    """
+    body = request.data
+    question_id = body.get('question_id')
+    status_value = body.get('status_value')
+
+    if not question_id or status_value not in ['Active', 'Inactive']:
+        return Response({"error": "Invalid request: question_id or status_value is missing."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        question = Question.objects.get(id=question_id)
+    except Question.DoesNotExist:
+        return Response({"error": f"Question with id {question_id} does not exist."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Update status
+    if status_value == 'Active':
+        question.is_active = True
+        status_message = "activated"
+    else:
+        question.is_active = False
+        status_message = "deactivated"
+
+    question.save()
+
+    return Response({"status": "success", "message": f"Question {status_message} successfully."}, status=status.HTTP_200_OK)

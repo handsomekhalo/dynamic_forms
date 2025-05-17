@@ -19,7 +19,6 @@ export default function ManageQuestions({ formId, questionTypes }) {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusModalData, setStatusModalData] = useState(null); // Contains question ID and status
 
-
   useEffect(() => {
     if (!authToken || isLoading) return;
 
@@ -104,17 +103,17 @@ export default function ManageQuestions({ formId, questionTypes }) {
                   </ul>
                 </td>
                 <td className="p-2">
-                  <button 
+                  <button
                     onClick={() => {
                       setEditQuestionData(question);
                       setShowEditModal(true);
                     }}
-                     className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-xs"
+                    className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-xs"
                   >
                     Edit
                   </button>
                 </td>
-                <td className="p-2">
+                {/* <td className="p-2">
                   <button  className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-xs"
                     onClick={() => {
                       setStatusModalData({
@@ -123,6 +122,24 @@ export default function ManageQuestions({ formId, questionTypes }) {
                       });
                       setShowStatusModal(true);
                     }}
+                  >
+                    {question.is_active ? "Deactivate" : "Activate"}
+                  </button>
+                </td> */}
+                <td className="p-2">
+                  <button
+                    onClick={() => {
+                      setStatusModalData({
+                        questionId: question.id,
+                        newStatus: !question.is_active,
+                      });
+                      setShowStatusModal(true);
+                    }}
+                    className={`px-3 py-1 rounded text-xs hover:brightness-90 text-white ${
+                      question.is_active
+                        ? "bg-red-500 hover:bg-red-600"
+                        : "bg-green-500 hover:bg-green-600"
+                    }`}
                   >
                     {question.is_active ? "Deactivate" : "Activate"}
                   </button>
@@ -153,43 +170,28 @@ export default function ManageQuestions({ formId, questionTypes }) {
         </div>
       )}
 
-      {/* {showEditModal && editQuestionData && (
-        <EditQuestionModal
-          question={editQuestionData}
-          onClose={() => setShowEditModal(false)}
-        />
+      {showEditModal && editQuestionData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg">
+            <EditQuestionModal
+              question={editQuestionData}
+              onClose={() => setShowEditModal(false)}
+            />
+          </div>
+        </div>
       )}
 
       {showStatusModal && statusModalData && (
-        <StatusChangeModal
-          questionId={statusModalData.questionId}
-          newStatus={statusModalData.newStatus}
-          onClose={() => setShowStatusModal(false)}
-        />
-      )} */}
-      {showEditModal && editQuestionData && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-    <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg">
-      <EditQuestionModal
-        question={editQuestionData}
-        onClose={() => setShowEditModal(false)}
-      />
-    </div>
-  </div>
-)}
-
-{showStatusModal && statusModalData && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-    <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg">
-      <StatusChangeModal
-        questionId={statusModalData.questionId}
-        newStatus={statusModalData.newStatus}
-        onClose={() => setShowStatusModal(false)}
-      />
-    </div>
-  </div>
-)}
-
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg">
+            <StatusChangeModal
+              questionId={statusModalData.questionId}
+              newStatus={statusModalData.newStatus}
+              onClose={() => setShowStatusModal(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
