@@ -6,6 +6,9 @@ import Swal from "sweetalert2";
 import CreateQuestionForm from "./create_question_form_component";
 import EditQuestionModal from "./edit_question_modal";
 import StatusChangeModal from "./status_change_modal";
+import AssignQuestionToCategoryModal from "./assign_questions_to_category_modal";
+
+
 // import showEditModal
 
 export default function ManageQuestions({ formId, questionTypes }) {
@@ -18,6 +21,8 @@ export default function ManageQuestions({ formId, questionTypes }) {
   const [editQuestionData, setEditQuestionData] = useState(null); // For passing the question to edit
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusModalData, setStatusModalData] = useState(null); // Contains question ID and status
+  const [showAssignModal, setShowAssignModal] = useState(false);
+
 
   useEffect(() => {
     if (!authToken || isLoading) return;
@@ -63,11 +68,15 @@ export default function ManageQuestions({ formId, questionTypes }) {
         <h2 className="text-xl font-semibold">Manage Questions</h2>
 
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => setShowAssignModal(true)}
           className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-700"
         >
           Assign To Category
+          
         </button>
+
+ 
+
 
         <button
           onClick={() => setShowModal(true)}
@@ -192,6 +201,15 @@ export default function ManageQuestions({ formId, questionTypes }) {
           </div>
         </div>
       )}
+
+{showAssignModal && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+    <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg">
+      <AssignQuestionToCategoryModal onClose={() => setShowAssignModal(false)} />
+    </div>
+  </div>
+)}
+
     </div>
   );
 }

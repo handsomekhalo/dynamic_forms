@@ -705,7 +705,10 @@ def get_form_categories(request, formId):
             
         try:
             response.raise_for_status()
-            return JsonResponse(response.json(), status=200)
+
+            response_data = response.json()
+            print('response_data', response_data)
+            return JsonResponse(response_data, status=200)
         except requests.RequestException as e:
             print(f"Error getting form categories: {str(e)}")
             return JsonResponse({

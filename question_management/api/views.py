@@ -5,7 +5,8 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from django.core.exceptions import ObjectDoesNotExist
-from question_management.api.serializers import GetQuestionSerializer, QuestionSerializer, QuestionTypeSerializer, QuestionUpdateSerializer
+from application_management.models import FormQuestionAssignment, FormType, MainCategory
+from question_management.api.serializers import FormQuestionAssignmentSerializer, GetQuestionSerializer, QuestionSerializer, QuestionTypeSerializer, QuestionUpdateSerializer
 from question_management.models import Option, Question, QuestionType
 logger = logging.getLogger(__name__)
 
@@ -255,3 +256,118 @@ def change_question_status_api(request):
     question.save()
 
     return Response({"status": "success", "message": f"Question {status_message} successfully."}, status=status.HTTP_200_OK)
+
+
+
+@api_view(['POST'])
+def add_or_assign_questions_to_category_api(request):
+    print('API Layer executing')
+    print('Request Data:', request.data)
+
+    form_type_id = request.data.get('form_type_id')
+    main_category_id = request.data.get('main_category_id')
+    question_ids = request.data.get('question_ids', [])  # expect list
+    old_main_category_id = request.data.get('old_main_category_id')
+
+    if not form_type_id or not main_category_id or not question_ids:
+        return Response({
+            "status": "error",
+            "message": "form_type_id, main_category_id, and question_ids (list) are required."
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        form_type = FormType.objects.get(id=form_type_id)
+        main_category = MainCategory.objects.get(id=main_category_id)
+
+        assigned_or_updated = []
+        already_assigned = []
+
+        for qid in question_ids:
+            question = Question.objects.get(id=qid)
+
+            if old_main_category_id:
+                # Reassign case
+                updated_count = FormQuestionAssignment.objects.filter(
+                    form_type=form_type,
+                    question=question,
+                    main_category_id=old_main_category_id
+                ).update(main_category=main_category)
+
+                if updated_count:
+                    assigned_or_updated.append(qid)
+                else:
+                    # If not found in old category, attempt fresh assign
+                    created, _ = FormQuestionAssignment.objects.get_or_create(
+                        form_type=form_type,
+                        question=question,
+                        main_category=main_category
+                    )
+                    if created:
+                        assigned_or_updated.append(qid)
+                    else:
+                        already_assigned.append(qid)
+            else:
+                # Direct assignment (no reassignment)
+                exists = FormQuestionAssignment.objects.filter(
+                    form_type=form_type,
+                    main_category=main_category,
+                    question=question
+                ).exists()
+
+                if exists:
+                    already_assigned.append(qid)
+                else:
+                    FormQuestionAssignment.objects.create(
+                        form_type=form_type,
+                        main_category=main_category,
+                        question=question
+                    )
+                    assigned_or_updated.append(qid)
+
+        all_assignments = FormQuestionAssignment.objects.filter(form_type=form_type)
+        serializer = FormQuestionAssignmentSerializer(all_assignments, many=True)
+
+        return Response({
+            "status": "success",
+            "message": "Questions processed.",
+            "assigned_or_updated": assigned_or_updated,
+            "already_assigned": already_assigned,
+            "assigned_questions": serializer.data
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response({
+            "status": "error",
+            "message": f"An unexpected error occurred: {str(e)}"
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+@api_view(['GET'])
+def get_questions_assigned_category_api(request):
+    form_type_id = request.query_params.get('form_type_id')
+    main_category_id = request.query_params.get('main_category_id')
+
+    if not form_type_id or not main_category_id:
+        return Response({
+            "status": "error",
+            "message": "form_type_id and main_category_id are required."
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        assignments = FormQuestionAssignment.objects.filter(
+            form_type_id=form_type_id,
+            main_category_id=main_category_id
+        ).select_related('question', 'form_type', 'main_category')
+
+        serializer = FormQuestionAssignmentSerializer(assignments, many=True)
+        return Response({
+            "status": "success",
+            "assigned_questions": serializer.data
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response({
+            "status": "error",
+            "message": f"An unexpected error occurred: {str(e)}"
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

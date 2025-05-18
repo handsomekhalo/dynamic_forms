@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from application_management.models import FormQuestionAssignment
 from question_management.models import QuestionType, Question, Option
 
 
@@ -93,3 +94,19 @@ class QuestionUpdateSerializer(serializers.ModelSerializer):
             'is_required': {'required': False},
             'allow_other_option': {'required': False},
         }
+
+
+
+class AssignQuestionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Question
+        fields = ['id', 'text', 'input_type', 'order', 'is_active', 'is_required']
+
+
+
+class FormQuestionAssignmentSerializer(serializers.ModelSerializer):
+    question = AssignQuestionSerializer()
+
+    class Meta:
+        model = FormQuestionAssignment
+        fields = ['id', 'question', 'main_category', 'form_type', 'order']

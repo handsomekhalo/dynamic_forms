@@ -12,6 +12,7 @@
     "@headlessui/react": "^2.2.2",
     "axios": "^1.8.4",
     "boxicons": "^2.1.4",
+    "flowbite-react": "^0.11.7",
     "lucide-react": "^0.488.0",
     "next": "15.3.0",
     "react": "^19.0.0",
@@ -23,8 +24,10 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "autoprefixer": "^10.4.21",
     "eslint": "^9",
     "eslint-config-next": "15.3.0",
-    "tailwindcss": "^4"
+    "postcss": "^8.5.3",
+    "tailwindcss": "^4.1.7"
   }
 }
