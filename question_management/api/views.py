@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.core.exceptions import ObjectDoesNotExist
 from application_management.models import FormQuestionAssignment, FormType, MainCategory
-from question_management.api.serializers import FormQuestionAssignmentSerializer, GetQuestionSerializer, QuestionSerializer, QuestionTypeSerializer, QuestionUpdateSerializer
+from question_management.api.serializers import AssignQuestionToCategorySerializer, FormQuestionAssignmentSerializer, GetAssignedQuestionToCategoryQuestionSerializer, GetQuestionSerializer, QuestionSerializer, QuestionTypeSerializer, QuestionUpdateSerializer, RemoveQuestionAssignmentSerializer
 from question_management.models import Option, Question, QuestionType
 logger = logging.getLogger(__name__)
 
@@ -260,81 +260,189 @@ def change_question_status_api(request):
 
 
 @api_view(['POST'])
-def add_or_assign_questions_to_category_api(request):
-    print('API Layer executing')
-    print('Request Data:', request.data)
-
-    form_type_id = request.data.get('form_type_id')
-    main_category_id = request.data.get('main_category_id')
-    question_ids = request.data.get('question_ids', [])  # expect list
-    old_main_category_id = request.data.get('old_main_category_id')
-
-    if not form_type_id or not main_category_id or not question_ids:
+def assign_or_update_question_api(request):
+    """
+    Assign a question to a category or update an existing assignment
+    
+    Request Body:
+    {
+        "form_type_id": 1,
+        "main_category_id": 2,
+        "question_id": 3,
+        "old_question_id": 4,  // Optional - for updating existing assignment
+        "order": 0  // Optional - display order
+    }
+    """
+    
+    # Validate input using serializer
+    serializer = AssignQuestionToCategorySerializer(data=request.data)
+    if not serializer.is_valid():
         return Response({
             "status": "error",
-            "message": "form_type_id, main_category_id, and question_ids (list) are required."
+            "message": "Invalid input data",
+            "errors": serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
-
+    
+    # Extract validated data
+    validated_data = serializer.validated_data
+    form_type_id = validated_data['form_type_id']
+    main_category_id = validated_data['main_category_id']
+    question_id = validated_data['question_id']
+    old_question_id = validated_data.get('old_question_id')
+    order = validated_data.get('order', 0)
+    
     try:
-        form_type = FormType.objects.get(id=form_type_id)
-        main_category = MainCategory.objects.get(id=main_category_id)
-
-        assigned_or_updated = []
-        already_assigned = []
-
-        for qid in question_ids:
-            question = Question.objects.get(id=qid)
-
-            if old_main_category_id:
-                # Reassign case
-                updated_count = FormQuestionAssignment.objects.filter(
-                    form_type=form_type,
-                    question=question,
-                    main_category_id=old_main_category_id
-                ).update(main_category=main_category)
-
-                if updated_count:
-                    assigned_or_updated.append(qid)
-                else:
-                    # If not found in old category, attempt fresh assign
-                    created, _ = FormQuestionAssignment.objects.get_or_create(
-                        form_type=form_type,
-                        question=question,
-                        main_category=main_category
-                    )
-                    if created:
-                        assigned_or_updated.append(qid)
-                    else:
-                        already_assigned.append(qid)
+        # If updating an existing assignment
+        if old_question_id:
+            updated_count = FormQuestionAssignment.objects.filter(
+                form_type_id=form_type_id,
+                main_category_id=main_category_id,
+                question_id=old_question_id
+            ).update(question_id=question_id, order=order)
+            
+            if updated_count:
+                # Get all assignments after update
+                assignments = FormQuestionAssignment.objects.filter(
+                    form_type_id=form_type_id,
+                    main_category_id=main_category_id
+                )
+                assigned_question_ids = [assignment.question_id for assignment in assignments]
+                
+                # Format response using serializer
+                response_data = {
+                    "status": "success",
+                    "message": "Question updated successfully.",
+                    "assigned_questions": assigned_question_ids
+                }
+                response_serializer = GetAssignedQuestionToCategoryQuestionSerializer(response_data)
+                return Response(response_serializer.data, status=status.HTTP_200_OK)
             else:
-                # Direct assignment (no reassignment)
-                exists = FormQuestionAssignment.objects.filter(
-                    form_type=form_type,
-                    main_category=main_category,
-                    question=question
-                ).exists()
+                response_data = {
+                    "status": "error",
+                    "message": "No existing assignment to update."
+                }
+                response_serializer = GetAssignedQuestionToCategoryQuestionSerializer(response_data)
+                return Response(response_serializer.data, status=status.HTTP_404_NOT_FOUND)
+        
+        # If assigning a new question
+        else:
+            if FormQuestionAssignment.objects.filter(
+                form_type_id=form_type_id,
+                main_category_id=main_category_id,
+                question_id=question_id
+            ).exists():
+                # Get all assignments (including existing one)
+                assignments = FormQuestionAssignment.objects.filter(
+                    form_type_id=form_type_id,
+                    main_category_id=main_category_id
+                )
+                assigned_question_ids = [assignment.question_id for assignment in assignments]
+                
+                # Format response using serializer
+                response_data = {
+                    "status": "success",
+                    "message": "This question is already assigned to this category.",
+                    "assigned_questions": assigned_question_ids
+                }
+                response_serializer = GetAssignedQuestionToCategoryQuestionSerializer(response_data)
+                return Response(response_serializer.data, status=status.HTTP_200_OK)
+            
+            # Create new assignment
+            new_assignment = FormQuestionAssignment.objects.create(
+                form_type_id=form_type_id,
+                main_category_id=main_category_id,
+                question_id=question_id,
+                order=order
+            )
+            
+            # Get all assignments after creation
+            assignments = FormQuestionAssignment.objects.filter(
+                form_type_id=form_type_id,
+                main_category_id=main_category_id
+            )
+            assigned_question_ids = [assignment.question_id for assignment in assignments]
+            
+            # Format response using serializer
+            response_data = {
+                "status": "success",
+                "message": "Question assigned to category successfully.",
+                "assigned_questions": assigned_question_ids
+            }
+            response_serializer = GetAssignedQuestionToCategoryQuestionSerializer(response_data)
+            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+            
+    except Exception as e:
+        response_data = {
+            "status": "error",
+            "message": f"An unexpected error occurred: {str(e)}"
+        }
+        response_serializer = GetAssignedQuestionToCategoryQuestionSerializer(response_data)
+        return Response(response_serializer.data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-                if exists:
-                    already_assigned.append(qid)
-                else:
-                    FormQuestionAssignment.objects.create(
-                        form_type=form_type,
-                        main_category=main_category,
-                        question=question
-                    )
-                    assigned_or_updated.append(qid)
 
-        all_assignments = FormQuestionAssignment.objects.filter(form_type=form_type)
-        serializer = FormQuestionAssignmentSerializer(all_assignments, many=True)
+# @api_view(['GET'])
+# def get_questions_assigned_to_category_api(request, form_type_id, main_category_id):
+#     """
+#     Get all questions assigned to a specific category within a form type
+    
+#     URL: /api/forms/{form_type_id}/categories/{main_category_id}/questions/
+#     """
+#     try:
+#         # Get all assignments for this form type and category
+#         assignments = FormQuestionAssignment.objects.filter(
+#             form_type_id=form_type_id,
+#             main_category_id=main_category_id
+#         ).order_by('order')
+        
+#         # Extract just the question IDs
+#         assigned_question_ids = [assignment.question_id for assignment in assignments]
+        
+#         # Prepare response data and format using serializer
+#         response_data = {
+#             "status": "success",
+#             "assigned_questions": assigned_question_ids
+#         }
+        
+#         # Use the serializer to format the response
+#         serializer = GetAssignedQuestionToCategoryQuestionSerializer(response_data)
+#         return Response(serializer.data, status=status.HTTP_200_OK)
+        
+#     except Exception as e:
+#         response_data = {
+#             "status": "error",
+#             "message": f"An unexpected error occurred: {str(e)}"
+#         }
+#         serializer = GetAssignedQuestionToCategoryQuestionSerializer(response_data)
+#         return Response(serializer.data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+# Optional: Additional API to get all questions for a form type (across all categories)
+@api_view(['GET'])
+def get_all_questions_assigned_to_all_categories_api(request, form_type_id):
+    """
+    Get all questions assigned to all categories within a form type
+    
+    URL: /api/forms/{form_type_id}/questions/
+    """
+    try:
+        # Get all assignments for this form type
+        assignments = FormQuestionAssignment.objects.filter(
+            form_type_id=form_type_id
+        ).order_by('main_category_id', 'order')
+        
+        # Group questions by category
+        questions_by_category = {}
+        for assignment in assignments:
+            category_id = assignment.main_category_id
+            if category_id not in questions_by_category:
+                questions_by_category[category_id] = []
+            questions_by_category[category_id].append(assignment.question_id)
+        
         return Response({
             "status": "success",
-            "message": "Questions processed.",
-            "assigned_or_updated": assigned_or_updated,
-            "already_assigned": already_assigned,
-            "assigned_questions": serializer.data
+            "questions_by_category": questions_by_category
         }, status=status.HTTP_200_OK)
-
+        
     except Exception as e:
         return Response({
             "status": "error",
@@ -343,27 +451,184 @@ def add_or_assign_questions_to_category_api(request):
 
 
 
-@api_view(['GET'])
-def get_questions_assigned_category_api(request):
-    form_type_id = request.query_params.get('form_type_id')
-    main_category_id = request.query_params.get('main_category_id')
-
-    if not form_type_id or not main_category_id:
+@api_view(['POST'])
+def remove_assigned_question_api(request):
+    """
+    Remove a question assignment from a category within a form type
+    """
+    # Validate input data
+    data= request.data
+    serializer = RemoveQuestionAssignmentSerializer(data=request.data)
+    if not serializer.is_valid():
         return Response({
             "status": "error",
-            "message": "form_type_id and main_category_id are required."
+            "errors": serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
+    
+    form_type_id = serializer.validated_data['form_type_id']
+    main_category_id = serializer.validated_data['main_category_id']
+    question_id = serializer.validated_data['question_id']
+    
+    try:
+        # Delete the assignment
+        deleted, _ = FormQuestionAssignment.objects.filter(
+            form_type_id=form_type_id,
+            main_category_id=main_category_id,
+            question_id=question_id
+        ).delete()
+        
+        if deleted == 0:
+            return Response({
+                "status": "error",
+                "message": "No question assignment found to remove."
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Get remaining assignments for this form type and category
+        assignments = FormQuestionAssignment.objects.filter(
+            form_type_id=form_type_id,
+            main_category_id=main_category_id
+        ).order_by('order')
+        
+        assignment_data = FormQuestionAssignmentSerializer(assignments, many=True).data
+        assigned_question_ids = [assignment.question_id for assignment in assignments]
+        
+        # Prepare response with both IDs and full assignment details
+        response_data = {
+            "status": "success",
+            "message": "Question assignment removed successfully.",
+            "assigned_questions": assigned_question_ids,
+            "assignments": assignment_data
+        }
+        
+        return Response(response_data, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            "status": "error",
+            "message": f"An unexpected error occurred: {str(e)}"
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+# @api_view(['GET'])
+# def get_assigned_questions_api(request, form_type_id, main_category_id):
+#     """
+#     Get the questions assigned to a specific category within a form type.
+#     """
+#     try:
+#         # Get the assignments for the given form_type_id and main_category_id
+#         assignments = FormQuestionAssignment.objects.filter(
+#             form_type_id=form_type_id,
+#             main_category_id=main_category_id
+#         ).order_by('order')
+        
+#         # If no assignments are found, return empty list with success
+#         if not assignments.exists():
+#             return Response({
+#                 "status": "success",
+#                 "assigned_questions": []
+#             }, status=status.HTTP_200_OK)
+        
+#         # Extract the assigned questions
+#         assigned_questions = [assignment.question for assignment in assignments]
+        
+#         # Serialize the questions
+#         question_serializer = QuestionSerializer(assigned_questions, many=True)
+        
+#         # Prepare the response data
+#         response_data = {
+#             "status": "success",
+#             "assigned_questions": question_serializer.data
+#         }
+        
+#         return Response(response_data, status=status.HTTP_200_OK)
+        
+#     except Exception as e:
+#         return Response({
+#             "status": "error",
+#             "message": f"An unexpected error occurred: {str(e)}"
+#         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+# @api_view(['GET'])
+# def get_questions_assigned_to_category_api(request, form_type_id, main_category_id):
+#     """
+#     Get questions assigned to a specific category within a form type.
+#     Use ?detail=true to get full question data instead of just IDs.
+#     """
+#     try:
+#         # Fetch all assignments for this form type and category
+#         assignments = FormQuestionAssignment.objects.filter(
+#             form_type_id=form_type_id,
+#             main_category_id=main_category_id
+#         ).order_by('order')
+
+#         # Check if the client wants full details
+#         detail = request.query_params.get('detail', 'false').lower() == 'true'
+
+#         if not assignments.exists():
+#             response_data = {
+#                 "status": "success",
+#                 "assigned_questions": []
+#             }
+#             serializer = GetAssignedQuestionToCategoryQuestionSerializer(response_data)
+#             return Response(serializer.data, status=status.HTTP_200_OK)
+
+#         if detail:
+#             # Serialize full question data
+#             assigned_questions = [assignment.question for assignment in assignments]
+#             serialized_questions = QuestionSerializer(assigned_questions, many=True).data
+#         else:
+#             # Only return question IDs
+#             serialized_questions = [assignment.question_id for assignment in assignments]
+
+#         response_data = {
+#             "status": "success",
+#             "assigned_questions": serialized_questions
+#         }
+
+#         print('response_data for ',response_data)
+
+#         serializer = GetAssignedQuestionToCategoryQuestionSerializer(response_data)
+#         return Response(serializer.data, status=status.HTTP_200_OK)
+
+#     except Exception as e:
+#         response_data = {
+#             "status": "error",
+#             "message": f"An unexpected error occurred: {str(e)}"
+#         }
+#         serializer = GetAssignedQuestionToCategoryQuestionSerializer(response_data)
+#         return Response(serializer.data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+def get_questions_assigned_to_category_api(request, form_type_id, main_category_id):
+    """
+    Get questions assigned to a specific category within a form type.
+    Use ?detail=true to get full question data instead of just IDs.
+    """
     try:
         assignments = FormQuestionAssignment.objects.filter(
             form_type_id=form_type_id,
             main_category_id=main_category_id
-        ).select_related('question', 'form_type', 'main_category')
+        ).order_by('order')
 
-        serializer = FormQuestionAssignmentSerializer(assignments, many=True)
+        detail = request.query_params.get('detail', 'false').lower() == 'true'
+
+        if not assignments.exists():
+            return Response({
+                "status": "success",
+                "assigned_questions": []
+            }, status=status.HTTP_200_OK)
+
+        if detail:
+            assigned_questions = [assignment.question for assignment in assignments]
+            serialized_questions = QuestionSerializer(assigned_questions, many=True).data
+        else:
+            serialized_questions = [assignment.question_id for assignment in assignments]
+
         return Response({
             "status": "success",
-            "assigned_questions": serializer.data
+            "assigned_questions": serialized_questions
         }, status=status.HTTP_200_OK)
 
     except Exception as e:

@@ -1,5 +1,6 @@
 from asyncio import constants
 import traceback
+from urllib.parse import urlencode
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse, reverse_lazy
@@ -304,7 +305,9 @@ def update_question(request, question_id):
   
         headers = {
             "Content-Type": "application/json",
+            # "Authorization": f"Token {token}",
             "Authorization": f"Token {token}",
+
         }
         
         try:
@@ -342,10 +345,10 @@ def deactivate_question(request):
 
 @csrf_exempt
 def activate_question(request):
-    return _change_question_status(request, status_value="Active")
+    return change_question_status(request, status_value="Active")
 
 @csrf_exempt
-def _change_question_status(request):
+def change_question_status(request):
     """
     Internal handler for activating/deactivating questions.
     """
@@ -408,3 +411,298 @@ def _change_question_status(request):
             "status": "error",
             "message": f"Unexpected server error: {str(e)}"
         }, status=500)
+    
+
+
+
+@csrf_exempt
+def add_or_assign_questions_to_category(request):
+    if request.method != 'POST':
+        return JsonResponse({
+            "status": "error",
+            "message": "Method not allowed"
+        }, status=405)
+
+    try:
+        # Step 1: Extract Token from Headers
+        auth_header = request.headers.get("Authorization", "")
+        token = None
+        if auth_header.startswith("Token "):
+            token = auth_header[6:]
+        elif auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+        else:
+            token = auth_header
+
+        if not token:
+            return JsonResponse({
+                "status": "error",
+                "message": "Authorization token is required."
+            }, status=401)
+
+        # Step 2: Parse JSON Payload
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'status': 'error', 'message': 'Invalid JSON data'}, status=400)
+
+        # assignments = data.get('assignments', [])
+        # action = data.get('action', 'add')
+
+        question_ids = data.get('question_ids', [])
+        category_id = data.get('category_id')
+        form_type_id = data.get('form_type_id')
+
+        
+
+        if not question_ids or not category_id:
+            return JsonResponse({
+        "status": "error",
+        "message": "Both question_ids and category_id are required."
+    }, status=400)
+
+        assignments = [{"question_id": qid,"form_type_id": form_type_id,  "category_id": category_id} for qid in question_ids]
+
+        responses = []
+
+        # Step 3: Process each assignment
+        for assignment in assignments:
+            question_id = assignment.get('question_id')
+            category_id = assignment.get('category_id')
+            form_type_id = assignment.get('form_type_id')
+
+            
+            if not question_id or not category_id:
+                print('No question or  category_id')
+                return JsonResponse({
+                    "status": "error",
+                    "message": "Question ID and Category ID are required."
+                }, status=400)
+
+            api_url = f"{host_url(request)}{reverse_lazy('assign_or_update_question_api')}"
+            # payload = {
+            #     "question_id": question_id,
+            #     "category_id": category_id,
+            #     # "action": action
+            # }
+            payload = {
+                "question_id": question_id,
+                "main_category_id": category_id,  
+                "form_type_id":form_type_id                 # ✅ ADD this based on your form type (hardcoded or dynamic)
+               
+            }
+
+            auth_formats = [
+                {"Authorization": f"Token {token}"},
+                {"Authorization": f"Bearer {token}"},
+                {"Authorization": token},
+            ]
+
+            response = None
+            success = False
+
+            for auth_format in auth_formats:
+                headers = {"Content-Type": "application/json", **auth_format}
+                try:
+                    print(f"Trying authentication format: {auth_format}")
+                    response = requests.post(api_url, headers=headers, json=payload, timeout=10)
+                    if response.status_code != 401:
+                        success = True
+                        break
+                except requests.RequestException as e:
+                    print(f"Request failed with auth format {auth_format}: {str(e)}")
+
+            if not success or not response:
+                return JsonResponse({
+                    "status": "error",
+                    "message": "Failed to authenticate with the API"
+                }, status=401)
+
+            try:
+                response.raise_for_status()
+                responses.append(response.json())
+            except requests.RequestException as e:
+                print(f"Error with assignment {assignment}: {str(e)}")
+                responses.append({
+                    "assignment": assignment,
+                    "error": str(e)
+                })
+
+        return JsonResponse({"status": "success", "results": responses}, status=200)
+
+    except Exception as e:
+        import traceback
+        print("Exception occurred:")
+        traceback.print_exc()
+        return JsonResponse({
+            "status": "error",
+            "message": f"Server error occurred: {str(e)}"
+        }, status=500)
+
+
+@csrf_exempt
+def remove_assigned_question(request):
+    if request.method != 'POST':
+        return JsonResponse({
+            "status": "error",
+            "message": "Method not allowed"
+        }, status=405)
+
+    try:
+        # Step 1: Extract Token from Headers
+        auth_header = request.headers.get("Authorization", "")
+        token = None
+        if auth_header.startswith("Token "):
+            token = auth_header[6:]
+        elif auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+        else:
+            token = auth_header
+
+        if not token:
+            return JsonResponse({
+                "status": "error",
+                "message": "Authorization token is required."
+            }, status=401)
+
+        # Step 2: Parse JSON Payload
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'status': 'error', 'message': 'Invalid JSON data'}, status=400)
+
+        form_type_id = data.get('form_type_id')
+        main_category_id = data.get('main_category_id')
+        question_id = data.get('question_id')
+
+        if not form_type_id or not main_category_id or not question_id:
+            return JsonResponse({
+                "status": "error",
+                "message": "form_type_id, main_category_id, and question_id are required."
+            }, status=400)
+
+        # Step 3: Make API call to remove the question assignment
+        api_url = f"{host_url(request)}{reverse_lazy('remove_assigned_question_api')}"
+        payload = {
+            "form_type_id": form_type_id,
+            "main_category_id": main_category_id,
+            "question_id": question_id
+        }
+
+        auth_formats = [
+            {"Authorization": f"Token {token}"},
+            {"Authorization": f"Bearer {token}"},
+            {"Authorization": token}
+        ]
+
+        response = None
+        success = False
+
+        for auth_format in auth_formats:
+            headers = {"Content-Type": "application/json", **auth_format}
+            try:
+                print(f"Trying authentication format: {auth_format}")
+                response = requests.post(api_url, headers=headers, json=payload, timeout=10)
+                if response.status_code != 401:
+                    success = True
+                    break
+            except requests.RequestException as e:
+                print(f"Request failed with auth format {auth_format}: {str(e)}")
+
+        if not success or not response:
+            return JsonResponse({
+                "status": "error",
+                "message": "Failed to authenticate with the API"
+            }, status=401)
+
+        try:
+            response.raise_for_status()
+            return JsonResponse(response.json(), status=response.status_code)
+        except requests.RequestException as e:
+            return JsonResponse({
+                "status": "error",
+                "message": f"API request failed: {str(e)}",
+                "details": response.text if response else "No response"
+            }, status=response.status_code if response else 500)
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            "status": "error",
+            "message": f"Server error occurred: {str(e)}"
+        }, status=500)
+
+@csrf_exempt
+def get_questions_assigned_to_category(request, formId, category):
+    if request.method != 'GET':
+        return JsonResponse({
+            "status": "error",
+            "message": "Method not allowed"
+        }, status=405)
+
+    try:
+        # Step 1: Extract token from headers
+        auth_header = request.headers.get("Authorization", "")
+        token = None
+        if auth_header.startswith("Token "):
+            token = auth_header[6:]
+        elif auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+        else:
+            token = auth_header
+
+        if not token:
+            return JsonResponse({
+                "status": "error",
+                "message": "Authorization token is required."
+            }, status=401)
+
+        # Step 2: Prepare the internal API URL
+        base_url = host_url(request)
+        query_string = ""
+        if request.GET.get("detail", "").lower() == "true":
+            query_string = f"?{urlencode({'detail': 'true'})}"
+
+        api_path = reverse_lazy('get_questions_assigned_to_category_api', kwargs={
+            'form_type_id': formId,
+            'main_category_id': category  
+        })
+        api_url = f"{base_url}{api_path}{query_string}"
+
+        # Step 3: Try different auth header formats
+        auth_formats = [
+            {"Authorization": f"Token {token}"},
+            {"Authorization": f"Bearer {token}"},
+            {"Authorization": token},
+        ]
+
+        response = None
+        for auth_format in auth_formats:
+            headers = {"Content-Type": "application/json", **auth_format}
+            try:
+                response = requests.get(api_url, headers=headers, timeout=10)
+                if response.status_code != 401:
+                    break
+            except requests.RequestException as e:
+                print(f"Request failed with headers {auth_format}: {str(e)}")
+
+        if not response or response.status_code == 401:
+            return JsonResponse({
+                "status": "error",
+                "message": "Failed to authenticate with the internal API."
+            }, status=401)
+
+        response.raise_for_status()
+        return JsonResponse(response.json(), status=response.status_code)
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            "status": "error",
+            "message": f"Server error occurred: {str(e)}"
+        }, status=500)
+
+
+

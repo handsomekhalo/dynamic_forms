@@ -9,12 +9,14 @@ urlpatterns = [
 
     path('get_question_detail/<int:question_id>/',views.get_question_detail,
          name='get_question_detail'),
-    path('_change_question_status/',views._change_question_status,name='_change_question_status'),
+    path('change_question_status/',views.change_question_status,name='change_question_status'),
+    path('add_or_assign_questions_to_category/',
+         views.add_or_assign_questions_to_category,name='add_or_assign_questions_to_category'),
+#     path('get_questions_assigned_to_category/<int:formId>/categories/<int:category>/questions/',
+#             views.get_questions_assigned_to_category, name="get_questions_assigned_to_category"),
+    path('get_questions_assigned_to_category/<int:formId>/categories/<int:category>/questions/',
+     views.get_questions_assigned_to_category, name="get_questions_assigned_to_category"),
+    path('remove_assigned_question/',views.remove_assigned_question,name='remove_assigned_question'),
 
 
-
-     
-    #  path('update_questions/',views.update_questions,name='update_questions'),
-    #  path('deactivate_question/', views.deactivate_question, name='deactivate_question'),
-    #  path('activate_question/', views.activate_question, name='activate_question')
 ]

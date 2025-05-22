@@ -97,16 +97,37 @@ class QuestionUpdateSerializer(serializers.ModelSerializer):
 
 
 
-class AssignQuestionSerializer(serializers.ModelSerializer):
+class AssignQuestionToCategorySerializer(serializers.Serializer):
+    form_type_id = serializers.IntegerField(required=True)
+    main_category_id = serializers.IntegerField(required=True)
+    question_id = serializers.IntegerField(required=True)
+    old_question_id = serializers.IntegerField(required=False)  # For updates
+    order = serializers.IntegerField(required=False, default=0)
+
+class GetAssignedQuestionToCategoryQuestionSerializer(serializers.Serializer):
+    status = serializers.CharField()
+    assigned_questions = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False
+    )
+    message = serializers.CharField(required=False)
+
+
+
+
+
+class RemoveQuestionAssignmentSerializer(serializers.Serializer):
+    form_type_id = serializers.IntegerField(required=True)
+    main_category_id = serializers.IntegerField(required=True)
+    question_id = serializers.IntegerField(required=True)
+
+# Assuming you have these serializers for Question and FormQuestionAssignment
+class QuestionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Question
-        fields = ['id', 'text', 'input_type', 'order', 'is_active', 'is_required']
-
-
+        fields = '__all__'
 
 class FormQuestionAssignmentSerializer(serializers.ModelSerializer):
-    question = AssignQuestionSerializer()
-
     class Meta:
         model = FormQuestionAssignment
-        fields = ['id', 'question', 'main_category', 'form_type', 'order']
+        fields = '__all__'
