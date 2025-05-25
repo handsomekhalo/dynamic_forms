@@ -122,7 +122,7 @@ class RemoveQuestionAssignmentSerializer(serializers.Serializer):
     question_id = serializers.IntegerField(required=True)
 
 # Assuming you have these serializers for Question and FormQuestionAssignment
-class QuestionSerializer(serializers.ModelSerializer):
+class GetAssignedQuestionToCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Question
         fields = '__all__'

@@ -202,8 +202,6 @@ def assign_category_to_form_api(request):
     main_category_id = request.data.get('main_category_id')
 
     
-    print(f"Processing: form_type_id={form_type_id}, main_category_id={main_category_id}")
-    
     # Check if we have the required data
     if not form_type_id or not main_category_id:
         return Response({
@@ -282,16 +280,12 @@ def unassign_category_api(request):
         main_category_id = serializer.validated_data['main_category_id']
         deactivate = serializer.validated_data['deactivate']
 
-        print(f"form_type_id: {form_type_id}, main_category_id: {main_category_id}, deactivate: {deactivate}")
 
         try:
-            print('try')
             # Retrieve the FormType and MainCategory objects based on the IDs
             form_type = FormType.objects.get(id=form_type_id)
-            print('form_type', form_type)
 
             main_category = MainCategory.objects.get(id=main_category_id)
-            print('main_category', main_category)
         except (FormType.DoesNotExist, MainCategory.DoesNotExist) as e:
             return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
 
@@ -329,82 +323,11 @@ def get_unassigned_categories_api(request, form_type_id):
 
 
 
-# @api_view(['POST'])
-# def assign_or_update_category_api(request):
-#     print('API Layer executing')
-#     print('Request Data:', request.data)
-
-#     form_type_id = request.data.get('form_type_id')
-#     main_category_id = request.data.get('main_category_id')  # always required
-#     old_main_category_id = request.data.get('old_main_category_id')  # optional
-
-#     if not form_type_id or not main_category_id:
-#         return Response({
-#             "status": "error",
-#             "message": "form_type_id and main_category_id are required fields"
-#         }, status=status.HTTP_400_BAD_REQUEST)
-
-#     try:
-#         # If updating an existing assignment
-#         if old_main_category_id:
-#             updated_count = FormCategoryAssignment.objects.filter(
-#                 form_type_id=form_type_id,
-#                 main_category_id=old_main_category_id
-#             ).update(main_category_id=main_category_id)
-
-#             if updated_count:
-#                 return Response({
-#                     "status": "success",
-#                     "message": "Category updated successfully."
-#                 }, status=status.HTTP_200_OK)
-#             else:
-#                 return Response({
-#                     "status": "error",
-#                     "message": "No existing assignment to update."
-#                 }, status=status.HTTP_404_NOT_FOUND)
-
-#         # If assigning a new category
-#         else:
-#             if FormCategoryAssignment.objects.filter(
-#                 form_type_id=form_type_id,
-#                 main_category_id=main_category_id
-#             ).exists():
-#                 return Response({
-#                     "status": "success",
-#                     "message": "This category is already assigned to this form."
-#                 }, status=status.HTTP_200_OK)
-
-#             # Create new assignment
-#             serializer = AssignCategoryToFormSerializer(data={
-#                 'form_type': form_type_id,
-#                 'main_category': main_category_id
-#             })
-
-#             if serializer.is_valid():
-#                 assignment = serializer.save()
-#                 return Response({
-#                     "status": "success",
-#                     "message": "Category assigned to form successfully.",
-#                     "assignment": updateAssignCategoryToFormSerializer(assignment).data
-#                 }, status=status.HTTP_201_CREATED)
-#             else:
-#                 return Response({
-#                     "status": "error",
-#                     "error": serializer.errors
-#                 }, status=status.HTTP_400_BAD_REQUEST)
-
-#     except Exception as e:
-#         return Response({
-#             "status": "error",
-#             "message": f"An unexpected error occurred: {str(e)}"
-#         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-# Update your existing assign/update endpoint to be more consistent
+
 @api_view(['POST'])
 def assign_or_update_category_api(request):
-    print('API Layer executing')
-    print('Request Data:', request.data)
     
     form_type_id = request.data.get('form_type_id')
     main_category_id = request.data.get('main_category_id')  # always required

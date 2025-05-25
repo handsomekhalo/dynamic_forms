@@ -340,7 +340,7 @@ def update_question(request, question_id):
 
 @csrf_exempt
 def deactivate_question(request):
-    return _change_question_status(request, status_value="Inactive")
+    return change_question_status(request, status_value="Inactive")
 
 
 @csrf_exempt
@@ -473,7 +473,6 @@ def add_or_assign_questions_to_category(request):
 
             
             if not question_id or not category_id:
-                print('No question or  category_id')
                 return JsonResponse({
                     "status": "error",
                     "message": "Question ID and Category ID are required."
@@ -547,6 +546,7 @@ def remove_assigned_question(request):
             "status": "error",
             "message": "Method not allowed"
         }, status=405)
+    print("Received request:", request.body)  # Log the request body
 
     try:
         # Step 1: Extract Token from Headers
@@ -582,7 +582,9 @@ def remove_assigned_question(request):
             }, status=400)
 
         # Step 3: Make API call to remove the question assignment
-        api_url = f"{host_url(request)}{reverse_lazy('remove_assigned_question_api')}"
+        api_url = request.build_absolute_uri(reverse('remove_assigned_question_api'))
+
+
         payload = {
             "form_type_id": form_type_id,
             "main_category_id": main_category_id,
@@ -640,7 +642,7 @@ def get_questions_assigned_to_category(request, formId, category):
             "status": "error",
             "message": "Method not allowed"
         }, status=405)
-
+    
     try:
         # Step 1: Extract token from headers
         auth_header = request.headers.get("Authorization", "")
@@ -692,9 +694,15 @@ def get_questions_assigned_to_category(request, formId, category):
                 "status": "error",
                 "message": "Failed to authenticate with the internal API."
             }, status=401)
-
+        
         response.raise_for_status()
-        return JsonResponse(response.json(), status=response.status_code)
+
+        response_data = response.json()
+        return JsonResponse({
+            "status": "success",
+            "data": response_data
+        }, status=200)
+
 
     except Exception as e:
         import traceback

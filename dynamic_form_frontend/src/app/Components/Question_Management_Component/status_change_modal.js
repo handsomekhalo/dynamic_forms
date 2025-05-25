@@ -10,7 +10,7 @@ export default function StatusChangeModal({ questionId, newStatus, onClose }) {
       const statusValue = newStatus ? "Active" : "Inactive";
 
       const res = await backendApi.post(
-        `/question_management/_change_question_status/`, // or the exact URL of your Django view
+        `/question_management/change_question_status/`, // or the exact URL of your Django view
         new URLSearchParams({
           question_id: questionId,
           status_value: statusValue,

@@ -1,144 +1,151 @@
 "use client";
-
 import React, { useEffect, useState } from "react";
 import backendApi from "../../../../utils/backendApi";
-import { useAuth } from "../../../../AuthContext";
 import Swal from "sweetalert2";
-import CategoryAccordion from "./category_accordion";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
-export default function AssignQuestionToCategoryModal({ formId, onClose }) {
-  const { authToken } = useAuth();
-  const [questions, setQuestions] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [selectedQuestionIds, setSelectedQuestionIds] = useState([]);
-  const [activeCategoryId, setActiveCategoryId] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState(null);
+export default function CategoryAccordion({ category, questions, formId, authToken }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [assignedIds, setAssignedIds] = useState(new Set());
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      setError(null);
-
+    const fetchAssigned = async () => {
       try {
-        const [questionsRes, formCategoriesRes] = await Promise.all([
-          backendApi.get(`/question_management/get_questions/`, {
-            headers: { Authorization: `Token ${authToken}` },
-          }),
-          backendApi.get(`/application_management/get_form_categories/${formId}/`, {
-            headers: { Authorization: `Token ${authToken}` },
-          }),
-        ]);
-
-        setQuestions(questionsRes.data?.data?.questions || []);
-        setCategories(formCategoriesRes.data?.category_details || []);
+        const endpoint = `/question_management/get_questions_assigned_to_category/${formId}/categories/${category.id}/questions/?detail=true`;
+        const res = await backendApi.get(endpoint, {
+          headers: { Authorization: `Token ${authToken}` },
+        });
+        const data = res.data?.data?.assigned_questions || [];
+  
+ 
+        setAssignedIds(new Set(data.map((q) => q.id)));
       } catch (err) {
-        console.error("Error fetching data", err);
-        setError("Failed to load questions or categories.");
+        console.error(`Error fetching assignments for category ${category.id}:`, err);
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
-
-    if (formId) fetchData();
-  }, [authToken, formId]);
-
-  const toggleQuestionSelection = (questionId) => {
-    setSelectedQuestionIds((prev) =>
-      prev.includes(questionId)
-        ? prev.filter((id) => id !== questionId)
-        : [...prev, questionId]
-    );
-  };
-
-  const handleSave = async (categoryId) => {
-    if (!categoryId || selectedQuestionIds.length === 0) {
-      Swal.fire(
-        "Validation",
-        "Please select a category and at least one question.",
-        "warning"
-      );
-      return;
-    }
+  
+    fetchAssigned();
+  }, [authToken, category.id, formId]);
+  
+  const toggleQuestion = async (id) => {
+    const assign = !assignedIds.has(id);
+    const updated = new Set(assignedIds);
+    assign ? updated.add(id) : updated.delete(id);
+    setAssignedIds(updated);
+    setIsSaving(true);
 
     try {
-      setSaving(true);
-      await backendApi.post(
-        "/question_management/assign_or_update_question_api/",
-        {
-          category_id: categoryId,
-          question_ids: selectedQuestionIds,
-        },
-        {
-          headers: {
-            Authorization: `Token ${authToken}`,
-          },
-        }
-      );
+      const url = assign
+        ? "/question_management/add_or_assign_questions_to_category/"
+        : "/question_management/remove_assigned_question/";
+      const payload = assign
+        ? { category_id: category.id, question_ids: [id], form_type_id: formId }
+        : { main_category_id: category.id, question_id: id, form_type_id: formId };
 
-      Swal.fire("Success", "Questions assigned to category", "success").then(() => {
-        onClose(true);
+      await backendApi.post(url, payload, {
+        headers: {
+          Authorization: `Token ${authToken}`,
+          "Content-Type": "application/json",
+        },
       });
     } catch (err) {
-      console.error("Failed to assign questions", err);
-      Swal.fire("Error", "Failed to assign questions", "error");
+      Swal.fire("Error", `Could not ${assign ? "assign" : "unassign"} question`, "error");
+      assign ? updated.delete(id) : updated.add(id); // revert
+      setAssignedIds(new Set(updated));
     } finally {
-      setSaving(false);
+      setIsSaving(false);
+    }
+  };
+
+  const bulkUpdate = async (assign = true) => {
+    const target = questions.filter((q) => assign !== assignedIds.has(q.id));
+    const ids = target.map((q) => q.id);
+    if (ids.length === 0) return;
+
+    const updated = new Set(assignedIds);
+    ids.forEach((id) => (assign ? updated.add(id) : updated.delete(id)));
+    setAssignedIds(updated);
+    setIsSaving(true);
+
+    try {
+      if (assign) {
+        await backendApi.post(
+          "/question_management/add_or_assign_questions_to_category/",
+          { category_id: category.id, question_ids: ids, form_type_id: formId },
+          { headers: { Authorization: `Token ${authToken}`, "Content-Type": "application/json" } }
+        );
+      } else {
+        await Promise.all(
+          ids.map((id) =>
+            backendApi.post(
+              "/question_management/remove_assigned_question/",
+              { main_category_id: category.id, question_id: id, form_type_id: formId },
+              { headers: { Authorization: `Token ${authToken}`, "Content-Type": "application/json" } }
+            )
+          )
+        );
+      }
+    } catch (err) {
+      Swal.fire("Error", `Bulk ${assign ? "assignment" : "removal"} failed`, "error");
+      ids.forEach((id) => (assign ? updated.delete(id) : updated.add(id)));
+      setAssignedIds(new Set(updated));
+    } finally {
+      setIsSaving(false);
     }
   };
 
   return (
-    <div
-      className="fixed inset-0 bg-black/30 flex items-center justify-center z-50"
-      onClick={() => onClose()}
-    >
-      <div
-        className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
+    <div className="mb-4 border border-gray-200 rounded-lg">
+      <button
+        className="w-full px-4 py-2 bg-gray-100 flex justify-between items-center"
+        onClick={() => setIsOpen((prev) => !prev)}
       >
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Assign Questions to Category</h2>
-          <button
-            onClick={() => onClose()}
-            className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
-            aria-label="Close"
-          >
-            &times;
-          </button>
-        </div>
+        <span className="font-semibold">{category.name}</span>
+        {isOpen ? <ChevronUp /> : <ChevronDown />}
+      </button>
 
-        {loading ? (
-          <div className="text-center py-6">
-            <div className="inline-block animate-spin h-6 w-6 border-4 border-gray-300 border-t-blue-600 rounded-full mb-2"></div>
-            <p>Loading...</p>
+      {isOpen && (
+        <div className="p-4 border-t border-gray-200">
+          <div className="flex justify-end space-x-2 mb-4">
+            <button
+              onClick={() => bulkUpdate(true)}
+              className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
+              disabled={isSaving}
+            >
+              Select All
+            </button>
+            <button
+              onClick={() => bulkUpdate(false)}
+              className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+              disabled={isSaving}
+            >
+              Deselect All
+            </button>
           </div>
-        ) : error ? (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-            {error}
-          </div>
-        ) : (
-          <div>
-            {categories.map((category) => (
-              <CategoryAccordion
-                key={category.id}
-                category={category}
-                isOpen={activeCategoryId === category.id}
-                onToggle={() =>
-                  setActiveCategoryId(
-                    activeCategoryId === category.id ? null : category.id
-                  )
-                }
-                questions={questions}
-                selectedQuestionIds={selectedQuestionIds}
-                toggleQuestionSelection={toggleQuestionSelection}
-                onSave={handleSave}
-                saving={saving}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+
+          {isLoading ? (
+            <p>Loading questions...</p>
+          ) : (
+            <ul className="space-y-2">
+              {questions.map((q) => (
+                <li key={q.id} className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={assignedIds.has(q.id)}
+                    onChange={() => toggleQuestion(q.id)}
+                    disabled={isSaving}
+                  />
+                  <label className="text-sm">{q.text}</label>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 }

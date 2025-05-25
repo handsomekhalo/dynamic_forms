@@ -15,7 +15,8 @@ urlpatterns = [
             views.get_questions_assigned_to_category_api, name="get_questions_assigned_to_category_api"),
     path('get_all_questions_assigned_to_all_categories_api/<int:form_type_id>',
          views.get_all_questions_assigned_to_all_categories_api,name="get_all_questions_assigned_to_all_categories_api"),
-     path('remove_assigned_question_api/', views.remove_assigned_question_api,name="remove_assigned_question_api"),
+    #  path('remove_assigned_question_api/', views.remove_assigned_question_api,name="remove_assigned_question_api"),
+    path('remove_assigned_question_api/', views.remove_assigned_question_api, name="remove_assigned_question_api"),
 
     # path('get_assigned_questions_api/<int:form_type_id>/categories/<int:main_category_id>/questions/',
     #     views.get_assigned_questions_api,name='get_assigned_questions_api'
