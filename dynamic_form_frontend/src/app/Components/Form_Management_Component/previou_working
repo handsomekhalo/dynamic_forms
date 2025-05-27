@@ -1,4 +1,4 @@
-'use client';
+i deleted some chats coz theres alot that wnst making sence so i waan combine my components coz they not wproking properly , specificaly AssignQuestionToCategoryModal and CategoryAccordion since checkboxes ae not working properly, similar to 'use client';
 import React, { useState, useEffect } from 'react';
 import { Dialog } from '@headlessui/react';
 import { useAuth } from '../../../../AuthContext';
@@ -9,36 +9,95 @@ export default function AssignCategoryModal({ open, formId, onClose }) {
   const { authToken } = useAuth();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [savingChanges, setSavingChanges] = useState(false);
+  const [assignedCategoryIds, setAssignedCategoryIds] = useState(new Set());
 
+  // Clear state when modal closes to ensure fresh data on reopen
+  useEffect(() => {
+    if (!open) {
+      setCategories([]);
+      setAssignedCategoryIds(new Set());
+    }
+  }, [open]);
+
+  // Add a manual refresh method
+  const refreshCategoryData = async () => {
+    if (formId) {
+      await fetchData();
+    }
+  };
+
+  // Setup our initial effect with the expanded condition
   useEffect(() => {
     if (formId && open) {
-      fetchCategories();
+      refreshCategoryData();
     }
   }, [formId, open]);
 
-  const fetchCategories = async () => {
-    setLoading(true);
+  // Create a new method to handle when checkboxes are changed successfully
+  const afterSuccessfulUpdate = async () => {
     try {
-      const [allRes, assignedRes] = await Promise.all([
-        backendApi.get('/application_management/get_all_categories/', {
-          headers: { Authorization: `Token ${authToken}` },
-        }),
-        backendApi.get(`/application_management/get_form_categories/${formId}/`, {
-          headers: { Authorization: `Token ${authToken}` },
-        }),
-      ]);
+      await refreshCategoryData();
+    } catch (err) {
+      console.error("Error refreshing categories after update:", err);
+    }
+  };
 
-      const allCategories = allRes.data.categories || [];
-      const assignedCategoryIds = new Set(
-        (assignedRes.data.assigned_categories || []).map((cat) => cat.id)
+  const fetchData = async () => {
+    setLoading(true);
+
+    try {
+      // Fetch all categories
+      const allCategoriesRes = await backendApi.get('/application_management/get_all_categories/', {
+        headers: { Authorization: `Token ${authToken}` },
+      });
+      
+      // Fetch assigned categories for this specific form
+      const assignedCategoriesRes = await backendApi.get(
+        `/application_management/get_form_categories/${formId}/`,
+        {
+          headers: { Authorization: `Token ${authToken}` },
+        }
       );
 
-      setCategories(
-        allCategories.map((cat) => ({
-          ...cat,
-          isChecked: assignedCategoryIds.has(cat.id),
-        }))
-      );
+      console.log('All categories response:', allCategoriesRes.data);
+      console.log('Assigned categories response:', assignedCategoriesRes.data);
+
+      // Check different possible structures based on your APIs
+      let allCategories = [];
+      if (allCategoriesRes.data.categories) {
+        allCategories = allCategoriesRes.data.categories;
+      } else if (Array.isArray(allCategoriesRes.data)) {
+        allCategories = allCategoriesRes.data;
+      }
+      
+      // Try different possible structures for assigned categories
+      let assignedCategories = [];
+      if (assignedCategoriesRes.data.assigned_categories) {
+        assignedCategories = assignedCategoriesRes.data.assigned_categories;
+      } else if (assignedCategoriesRes.data.categories) {
+        assignedCategories = assignedCategoriesRes.data.categories;
+      } else if (Array.isArray(assignedCategoriesRes.data)) {
+        assignedCategories = assignedCategoriesRes.data;
+      }
+      
+      console.log('Extracted all categories:', allCategories);
+      console.log('Extracted assigned categories:', assignedCategories);
+      
+      // Create a Set of assigned category IDs for easy lookup
+      // Be flexible in how we extract the ID in case the structure varies
+      const assignedIds = new Set(assignedCategories.map(cat => cat.id || cat.category_id || cat));
+      console.log('Assigned category IDs:', [...assignedIds]);
+      setAssignedCategoryIds(assignedIds);
+
+      // Map and mark which categories are assigned
+      const updatedCategories = allCategories.map(cat => ({
+        ...cat,
+        isChecked: assignedIds.has(cat.id || cat.category_id)
+      }));
+      
+      console.log('Categories with checked state:', updatedCategories);
+      setCategories(updatedCategories);
     } catch (error) {
       console.error('Error fetching categories:', error);
       Swal.fire('Error', 'Failed to load categories', 'error');
@@ -47,62 +106,96 @@ export default function AssignCategoryModal({ open, formId, onClose }) {
     }
   };
 
-  const handleCheckboxChange = (categoryId, checked) => {
-    setCategories((prev) =>
-      prev.map((cat) =>
+  const handleCheckboxChange = async (categoryId, checked) => {
+    // Update local state immediately for responsiveness
+    setCategories(prev =>
+      prev.map(cat =>
         cat.id === categoryId ? { ...cat, isChecked: checked } : cat
       )
     );
-  };
-
-  const handleAssignSelected = async () => {
-    const selected = categories.filter((cat) => cat.isChecked);
-    if (selected.length === 0) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'No Categories Selected',
-        text: 'Please select at least one category to assign.',
-      });
-      return;
+    
+    // Update our tracking of assigned categories
+    const newAssignedIds = new Set(assignedCategoryIds);
+    if (checked) {
+      newAssignedIds.add(categoryId);
+    } else {
+      newAssignedIds.delete(categoryId);
     }
-
+    setAssignedCategoryIds(newAssignedIds);
+  
+    setSavingChanges(true);
     try {
-      await backendApi.post(
-        `/application_management/assign_or_update_category/${formId}/`,
-        {
-          assignments: selected.map((cat) => ({
-            category_id: cat.id,
+      if (checked) {
+        // Use API endpoint for assignment
+        const response = await backendApi.post(
+          `/application_management/assign_or_update_category/`, 
+          {
+            assignments: [{ category_id: categoryId, form_type_id: formId }],
+          },
+          {
+            headers: { Authorization: `Token ${authToken}` },
+          }
+        );
+        console.log('Assignment response:', response.data);
+      } else {
+        // Use API endpoint for removal
+        const response = await backendApi.post(
+          `/application_management/remove_category_assignment/`, 
+          {
             form_type_id: formId,
-          })),
-        },
-        {
-          headers: { Authorization: `Token ${authToken}` },
-        }
-      );
-
-      Swal.fire({
-        icon: 'success',
-        title: 'Success!',
-        text: 'Selected categories have been assigned.',
-      }).then(() => {
-        onClose(true);
-      });
+            main_category_id: categoryId,
+          },
+          {
+            headers: { Authorization: `Token ${authToken}` },
+          }
+        );
+        console.log('Removal response:', response.data);
+      }
+      
+      // Refresh our data to ensure consistency with server state
+      await afterSuccessfulUpdate();
+      
     } catch (err) {
-      console.error('Assignment error:', err);
-      Swal.fire({
-        icon: 'error',
-        title: 'Oops...',
-        text: 'Something went wrong while assigning categories.',
-      });
+      console.error("Error updating category assignment:", err);
+      
+      // Revert local state if API call fails
+      setCategories(prev =>
+        prev.map(cat =>
+          cat.id === categoryId ? { ...cat, isChecked: !checked } : cat
+        )
+      );
+      
+      // Also revert our tracking of assigned categories
+      const revertedAssignedIds = new Set(assignedCategoryIds);
+      if (checked) {
+        revertedAssignedIds.delete(categoryId);
+      } else {
+        revertedAssignedIds.add(categoryId);
+      }
+      setAssignedCategoryIds(revertedAssignedIds);
+      
+      Swal.fire('Error', 'Failed to update category assignment', 'error');
+    } finally {
+      setSavingChanges(false);
     }
+  };
+  
+  const handleClose = () => {
+    // Call parent component's onClose with a refresh flag
+    onClose(true);
   };
 
   return (
-    <Dialog open={open} onClose={() => onClose(false)} className="relative z-50">
+    <Dialog open={open} onClose={handleClose} className="relative z-50">
       <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
       <div className="fixed inset-0 flex items-center justify-center p-4">
         <Dialog.Panel className="mx-auto max-w-xl bg-white p-6 rounded-xl shadow-lg">
-          <Dialog.Title className="text-lg font-bold mb-4">Assign Categories</Dialog.Title>
+          <Dialog.Title className="text-lg font-bold mb-4 flex items-center justify-between">
+            <span>Assign Categories</span>
+            {savingChanges && (
+              <span className="text-sm text-blue-600">(Saving changes...)</span>
+            )}
+          </Dialog.Title>
 
           {loading ? (
             <div className="flex justify-center py-4">
@@ -111,10 +204,10 @@ export default function AssignCategoryModal({ open, formId, onClose }) {
           ) : categories.length > 0 ? (
             <div className="space-y-2 max-h-96 overflow-y-auto">
               {categories.map((category) => (
-                <label key={category.id} className="flex items-center space-x-2">
+                <label key={category.id} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={category.isChecked}
+                    checked={category.isChecked || false}
                     onChange={(e) =>
                       handleCheckboxChange(category.id, e.target.checked)
                     }
@@ -128,22 +221,625 @@ export default function AssignCategoryModal({ open, formId, onClose }) {
             <p className="text-gray-500">No categories available.</p>
           )}
 
-          <div className="mt-6 flex justify-between">
+          <div className="mt-6 flex justify-between items-center">
+            <div className="text-sm text-gray-500">
+              {assignedCategoryIds.size} categories assigned
+            </div>
             <button
-              onClick={() => onClose(false)}
-              className="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300"
+              onClick={handleClose}
+              className="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300 transition"
             >
               Close
-            </button>
-            <button
-              onClick={handleAssignSelected}
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-            >
-              Assign Selected
             </button>
           </div>
         </Dialog.Panel>
       </div>
     </Dialog>
   );
+} combine the 2 components into a single component  and esnure checkboxes are working correctly meaning we can tick and untick withoght ticks disaapearing on modal reopen // "use client";
+// import React, { useEffect, useState } from "react";
+// import backendApi from "../../../../utils/backendApi";
+// import { useAuth } from "../../../../AuthContext";
+// import Swal from "sweetalert2";
+// import CategoryAccordion from "./category_accordion";
+
+// export default function AssignQuestionToCategoryModal({ formId, onClose }) {
+//   const { authToken } = useAuth();
+//   const [questions, setQuestions] = useState([]);
+//   const [categories, setCategories] = useState([]);
+//   const [loading, setLoading] = useState(true);
+//   const [error, setError] = useState(null);
+//   const [categoryAssignments, setCategoryAssignments] = useState({});
+
+//   // useEffect(() => {
+//   //   if (!formId) return;
+
+//   //   const fetchData = async () => {
+//   //     setLoading(true);
+//   //     try {
+//   //       const [questionsRes, categoriesRes] = await Promise.all([
+//   //         backendApi.get("/question_management/get_questions/", {
+//   //           headers: { Authorization: `Token ${authToken}` },
+//   //         }),
+//   //         backendApi.get(`/application_management/get_form_categories/${formId}/`, {
+//   //           headers: { Authorization: `Token ${authToken}` },
+//   //         }),
+//   //       ]);
+
+//   //       const fetchedQuestions = questionsRes.data?.data?.questions ?? [];
+//   //       const fetchedCategories = categoriesRes.data?.category_details ?? [];
+
+//   //       setQuestions(fetchedQuestions);
+//   //       setCategories(fetchedCategories);
+
+//   //       const assignments = {};
+//   //       await Promise.all(
+//   //         fetchedCategories.map(async (category) => {
+//   //           try {
+//   //             const endpoint = `/question_management/get_questions_assigned_to_category/${formId}/categories/${category.id}/questions/`;
+//   //             const res = await backendApi.get(endpoint, {
+//   //               headers: { Authorization: `Token ${authToken}` },
+//   //             });
+//   //             const assignedQuestions = res.data?.questions || res.data?.data?.questions || [];
+//   //             assignments[category.id] = new Set(assignedQuestions.map(q => q.id));
+//   //           } catch (err) {
+//   //             console.error(`Error fetching assignments for category ${category.id}:`, err);
+//   //             assignments[category.id] = new Set();
+//   //           }
+//   //         })
+//   //       );
+
+//   //       setCategoryAssignments(assignments);
+//   //     } catch (err) {
+//   //       console.error("Data fetching failed:", err);
+//   //       setError("Failed to load questions or categories.");
+//   //     } finally {
+//   //       setLoading(false);
+//   //     }
+//   //   };
+
+//   //   fetchData();
+//   // }, [authToken, formId]);
+
+//   // ... (inside AssignQuestionToCategoryModal)
+// useEffect(() => {
+//   if (!formId) return;
+
+//   const fetchData = async () => {
+//     setLoading(true);
+//     try {
+//       const [questionsRes, categoriesRes] = await Promise.all([
+//         backendApi.get("/question_management/get_questions/", {
+//           headers: { Authorization: `Token ${authToken}` },
+//         }),
+//         backendApi.get(`/application_management/get_form_categories/${formId}/`, {
+//           headers: { Authorization: `Token ${authToken}` },
+//         }),
+//       ]);
+
+//       const fetchedQuestions = questionsRes.data?.data?.questions ?? [];
+//       const fetchedCategories = categoriesRes.data?.category_details ?? [];
+
+//       setQuestions(fetchedQuestions);
+//       setCategories(fetchedCategories);
+
+//       const assignments = {};
+//       await Promise.all(
+//         fetchedCategories.map(async (category) => {
+//           try {
+//             const endpoint = `/question_management/get_questions_assigned_to_category/${formId}/categories/${category.id}/questions/`;
+//             const res = await backendApi.get(endpoint, {
+//               headers: { Authorization: `Token ${authToken}` },
+//             });
+//             // Ensure the response structure is consistently handled
+//             const assignedQuestions = res.data?.questions || res.data?.data?.questions || [];
+//             assignments[category.id] = new Set(assignedQuestions.map(q => q.id));
+//           } catch (err) {
+//             console.error(`Error fetching assignments for category ${category.id}:`, err);
+//             assignments[category.id] = new Set();
+//           }
+//         })
+//       );
+//       // This line is crucial: ensure this update happens AFTER all fetches
+//       setCategoryAssignments(assignments);
+//     } catch (err) {
+//       console.error("Data fetching failed:", err);
+//       setError("Failed to load questions or categories.");
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   fetchData();
+// }, [authToken, formId]); // Dependencies are correct
+
+//   const updateCategoryAssignment = (categoryId, questionId, isAssigned) => {
+//     setCategoryAssignments(prev => {
+//       const newAssignments = { ...prev };
+//       const categorySet = new Set(prev[categoryId] || []);
+
+//       if (isAssigned) {
+//         categorySet.add(questionId);
+//       } else {
+//         categorySet.delete(questionId);
+//       }
+
+//       newAssignments[categoryId] = categorySet;
+//       return newAssignments;
+//     });
+//   };
+
+//   const updateCategoryAssignmentsBulk = (categoryId, questionIds, isAssigned) => {
+//     setCategoryAssignments(prev => {
+//       const newAssignments = { ...prev };
+//       const categorySet = new Set(prev[categoryId] || []);
+
+//       questionIds.forEach(questionId => {
+//         if (isAssigned) {
+//           categorySet.add(questionId);
+//         } else {
+//           categorySet.delete(questionId);
+//         }
+//       });
+
+//       newAssignments[categoryId] = categorySet;
+//       return newAssignments;
+//     });
+//   };
+
+//   return (
+//     <div
+//       className="fixed inset-0 bg-black/30 flex items-center justify-center z-50"
+//       onClick={() => onClose(true)}
+//     >
+//       <div
+//         className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl max-h-[85vh] overflow-auto"
+//         onClick={(e) => e.stopPropagation()}
+//       >
+//         <div className="flex justify-between items-center mb-4">
+//           <h2 className="text-xl font-semibold">Assign Questions to Categories</h2>
+//           <button
+//             onClick={() => onClose(true)}
+//             className="text-gray-500 hover:text-gray-700 text-2xl"
+//             aria-label="Close modal"
+//           >
+//             &times;
+//           </button>
+//         </div>
+
+//         {loading ? (
+//           <div className="text-center py-6">
+//             <div className="animate-spin h-6 w-6 border-4 border-gray-300 border-t-blue-600 rounded-full mb-2"></div>
+//             <p>Loading...</p>
+//           </div>
+//         ) : error ? (
+//           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+//             <p className="font-bold">Error:</p>
+//             <p>{error}</p>
+//           </div>
+//         ) : categories.length === 0 ? (
+//           <p className="p-4 text-center text-gray-500">No categories available.</p>
+//         ) : (
+//           categories.map((category) => (
+//             <CategoryAccordion
+//               key={category.id}
+//               category={category}
+//               questions={questions}
+//               formId={formId}
+//               authToken={authToken}
+//               assignedIds={categoryAssignments[category.id] || new Set()}
+//               onAssignmentUpdate={updateCategoryAssignment}
+//               onBulkAssignmentUpdate={updateCategoryAssignmentsBulk}
+//             />
+//           ))
+//         )}
+
+//         <div className="flex justify-end mt-6">
+//           <button
+//             onClick={() => onClose(true)}
+//             className="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded"
+//             type="button"
+//           >
+//             Close
+//           </button>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
+
+"use client";
+
+import React, { useEffect, useState } from "react";
+import backendApi from "../../../../utils/backendApi";
+import Swal from "sweetalert2";
+import CategoryAccordion from "./category_accordion";
+import { useAuth } from "../../../../AuthContext";
+
+
+export default function AssignQuestionToCategoryModal({ formId, onClose }) {
+  const { authToken } = useAuth();
+  
+  const [questions, setQuestions] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [categoryAssignments, setCategoryAssignments] = useState({});
+
+  // useEffect(() => {
+  //   if (!formId) return;
+
+  //   const fetchData = async () => {
+  //     setLoading(true);
+  //     try {
+  //       const [questionsRes, categoriesRes] = await Promise.all([
+  //         backendApi.get("/question_management/get_questions/", {
+  //           headers: { Authorization: `Token ${authToken}` },
+  //         }),
+  //         backendApi.get(`/application_management/get_form_categories/${formId}/`, {
+  //           headers: { Authorization: `Token ${authToken}` },
+  //         }),
+  //       ]);
+
+  //       const fetchedQuestions = questionsRes.data?.data?.questions ?? [];
+  //       const fetchedCategories = categoriesRes.data?.category_details ?? [];
+
+  //       setQuestions(fetchedQuestions);
+  //       setCategories(fetchedCategories);
+
+  //       const assignments = {};
+  //       await Promise.all(
+  //         fetchedCategories.map(async (category) => {
+  //           try {
+  //             const endpoint = `/question_management/get_questions_assigned_to_category/${formId}/categories/${category.id}/questions/`;
+  //             const res = await backendApi.get(endpoint, {
+  //               headers: { Authorization: `Token ${authToken}` },
+  //             });
+  //             const assignedQuestions = res.data?.questions || res.data?.data?.questions || [];
+  //             assignments[category.id] = new Set(assignedQuestions.map(q => q.id));
+  //           } catch (err) {
+  //             console.error(`Error fetching assignments for category ${category.id}:`, err);
+  //             assignments[category.id] = new Set();
+  //           }
+  //         })
+  //       );
+
+  //       setCategoryAssignments(assignments);
+  //     } catch (err) {
+  //       console.error("Data fetching failed:", err);
+  //       setError("Failed to load questions or categories.");
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
+
+  //   fetchData();
+  // }, [authToken, formId]);
+// ... (inside AssignQuestionToCategoryModal)
+useEffect(() => {
+  if (!formId) return;
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [questionsRes, categoriesRes] = await Promise.all([
+        backendApi.get("/question_management/get_questions/", {
+          headers: { Authorization: `Token ${authToken}` },
+        }),
+        backendApi.get(`/application_management/get_form_categories/${formId}/`, {
+          headers: { Authorization: `Token ${authToken}` },
+        }),
+      ]);
+
+      const fetchedQuestions = questionsRes.data?.data?.questions ?? [];
+      const fetchedCategories = categoriesRes.data?.category_details ?? [];
+
+      setQuestions(fetchedQuestions);
+      setCategories(fetchedCategories);
+
+      const assignments = {};
+      await Promise.all(
+        fetchedCategories.map(async (category) => {
+          try {
+            const endpoint = `/question_management/get_questions_assigned_to_category/${formId}/categories/${category.id}/questions/`;
+            const res = await backendApi.get(endpoint, {
+              headers: { Authorization: `Token ${authToken}` },
+            });
+            // Ensure the response structure is consistently handled
+            const assignedQuestions = res.data?.questions || res.data?.data?.questions || [];
+            assignments[category.id] = new Set(assignedQuestions.map(q => q.id));
+          } catch (err) {
+            console.error(`Error fetching assignments for category ${category.id}:`, err);
+            assignments[category.id] = new Set();
+          }
+        })
+      );
+      // This line is crucial: ensure this update happens AFTER all fetches
+      setCategoryAssignments(assignments);
+    } catch (err) {
+      console.error("Data fetching failed:", err);
+      setError("Failed to load questions or categories.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchData();
+}, [authToken, formId]); // Dependencies are correct
+
+// ... (inside AssignQuestionToCategoryModal)
+const updateCategoryAssignment = (categoryId, questionId, isAssigned) => {
+  setCategoryAssignments(prev => {
+    const newAssignments = { ...prev }; // Create a new object to trigger re-render
+    const categorySet = new Set(prev[categoryId] || []);
+
+    if (isAssigned) {
+      categorySet.add(questionId);
+    } else {
+      categorySet.delete(questionId);
+    }
+
+    newAssignments[categoryId] = categorySet; // Assign the new Set
+    return newAssignments;
+  });
+};
+
+const updateCategoryAssignmentsBulk = (categoryId, questionIds, isAssigned) => {
+  setCategoryAssignments(prev => {
+    const newAssignments = { ...prev }; // Create a new object
+    const categorySet = new Set(prev[categoryId] || []);
+
+    questionIds.forEach(questionId => {
+      if (isAssigned) {
+        categorySet.add(questionId);
+      } else {
+        categorySet.delete(questionId);
+      }
+    });
+
+    newAssignments[categoryId] = categorySet; // Assign the new Set
+    return newAssignments;
+  });
+};
+
+  // const updateCategoryAssignment = (categoryId, questionId, isAssigned) => {
+  //   setCategoryAssignments(prev => {
+  //     const newAssignments = { ...prev };
+  //     const categorySet = new Set(prev[categoryId] || []);
+
+  //     if (isAssigned) {
+  //       categorySet.add(questionId);
+  //     } else {
+  //       categorySet.delete(questionId);
+  //     }
+
+  //     newAssignments[categoryId] = categorySet;
+  //     return newAssignments;
+  //   });
+  // };
+
+  // const updateCategoryAssignmentsBulk = (categoryId, questionIds, isAssigned) => {
+  //   setCategoryAssignments(prev => {
+  //     const newAssignments = { ...prev };
+  //     const categorySet = new Set(prev[categoryId] || []);
+
+  //     questionIds.forEach(questionId => {
+  //       if (isAssigned) {
+  //         categorySet.add(questionId);
+  //       } else {
+  //         categorySet.delete(questionId);
+  //       }
+  //     });
+
+  //     newAssignments[categoryId] = categorySet;
+  //     return newAssignments;
+  //   });
+  // };
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/30 flex items-center justify-center z-50"
+      onClick={() => onClose(true)}
+    >
+      <div
+        className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl max-h-[85vh] overflow-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Assign Questions to Categories</h2>
+          <button
+            onClick={() => onClose(true)}
+            className="text-gray-500 hover:text-gray-700 text-2xl"
+            aria-label="Close modal"
+          >
+            ×
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="text-center py-6">
+            <div className="animate-spin h-6 w-6 border-4 border-gray-300 border-t-blue-600 rounded-full mb-2"></div>
+            <p>Loading...</p>
+          </div>
+        ) : error ? (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            <p className="font-bold">Error:</p>
+            <p>{error}</p>
+          </div>
+        ) : categories.length === 0 ? (
+          <p className="p-4 text-center text-gray-500">No categories available.</p>
+        ) : (
+          categories.map((category) => (
+            <CategoryAccordion
+              key={category.id}
+              category={category}
+              questions={questions}
+              formId={formId}
+              authToken={authToken}
+              assignedIds={categoryAssignments[category.id] || new Set()}
+              onAssignmentUpdate={updateCategoryAssignment}
+              onBulkAssignmentUpdate={updateCategoryAssignmentsBulk}
+            />
+          ))
+        )}
+        <div className="flex justify-end mt-6">
+          <button
+            onClick={() => onClose(true)}
+            className="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded"
+            type="button"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
+  and "use client";
+import React, { useState } from "react";
+import backendApi from "../../../../utils/backendApi";
+import Swal from "sweetalert2";
+import { ChevronDown, ChevronUp } from "lucide-react";
+
+export default function CategoryAccordion({ 
+  category, 
+  questions, 
+  formId, 
+  authToken,
+  assignedIds,
+  onAssignmentUpdate,
+  onBulkAssignmentUpdate
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const toggleQuestion = async (questionId) => {
+    const isCurrentlyAssigned = assignedIds.has(questionId);
+    const assign = !isCurrentlyAssigned;
+    
+    // Optimistically update the UI
+    onAssignmentUpdate(category.id, questionId, assign);
+    setIsSaving(true);
+
+    try {
+      const url = assign
+        ? "/question_management/add_or_assign_questions_to_category/"
+        : "/question_management/remove_assigned_question/";
+      const payload = assign
+        ? { category_id: category.id, question_ids: [questionId], form_type_id: formId }
+        : { main_category_id: category.id, question_id: questionId, form_type_id: formId };
+
+      await backendApi.post(url, payload, {
+        headers: {
+          Authorization: `Token ${authToken}`,
+          "Content-Type": "application/json",
+        },
+      });
+      
+    } catch (err) {
+      console.error("Error updating question assignment:", err);
+      Swal.fire("Error", `Could not ${assign ? "assign" : "unassign"} question`, "error");
+      // Revert the optimistic update on error
+      onAssignmentUpdate(category.id, questionId, !assign);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const bulkUpdate = async (assign = true) => {
+    const targetQuestions = questions.filter((q) => 
+      assign ? !assignedIds.has(q.id) : assignedIds.has(q.id)
+    );
+    const ids = targetQuestions.map((q) => q.id);
+    
+    if (ids.length === 0) return;
+
+    // Optimistically update the UI
+    onBulkAssignmentUpdate(category.id, ids, assign);
+    setIsSaving(true);
+
+    try {
+      if (assign) {
+        await backendApi.post(
+          "/question_management/add_or_assign_questions_to_category/",
+          { category_id: category.id, question_ids: ids, form_type_id: formId },
+          { headers: { Authorization: `Token ${authToken}`, "Content-Type": "application/json" } }
+        );
+      } else {
+        await Promise.all(
+          ids.map((id) =>
+            backendApi.post(
+              "/question_management/remove_assigned_question/",
+              { main_category_id: category.id, question_id: id, form_type_id: formId },
+              { headers: { Authorization: `Token ${authToken}`, "Content-Type": "application/json" } }
+            )
+          )
+        );
+      }
+    } catch (err) {
+      console.error("Error in bulk update:", err);
+      Swal.fire("Error", `Bulk ${assign ? "assignment" : "removal"} failed`, "error");
+      // Revert the optimistic update on error
+      onBulkAssignmentUpdate(category.id, ids, !assign);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="mb-4 border border-gray-200 rounded-lg">
+      <button
+        className="w-full px-4 py-2 bg-gray-100 flex justify-between items-center hover:bg-gray-200 transition-colors"
+        onClick={() => setIsOpen((prev) => !prev)}
+      >
+        <span className="font-semibold">{category.name}</span>
+        {isOpen ? <ChevronUp /> : <ChevronDown />}
+      </button>
+
+      {isOpen && (
+        <div className="p-4 border-t border-gray-200">
+          <div className="flex justify-end space-x-2 mb-4">
+            <button
+              onClick={() => bulkUpdate(true)}
+              className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              disabled={isSaving}
+            >
+              Select All
+            </button>
+            <button
+              onClick={() => bulkUpdate(false)}
+              className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              disabled={isSaving}
+            >
+              Deselect All
+            </button>
+          </div>
+
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {questions.map((question) => (
+              <label 
+                key={question.id} 
+                className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={assignedIds.has(question.id)}
+                  onChange={() => toggleQuestion(question.id)}
+                  disabled={isSaving}
+                  className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm">{question.text}</span>
+              </label>
+            ))}
+          </div>
+          
+          {isSaving && (
+            <div className="mt-2 text-sm text-blue-600 text-center">
+              Saving changes...
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+} 

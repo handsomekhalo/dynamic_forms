@@ -18,6 +18,8 @@ def get_question_type_and_questions_api(request):
     """
     question_type_data = QuestionType.objects.all()
     questions_data = Question.objects.all().order_by('-id')
+    # questions_data = Question.objects.filter(is_active=True).order_by('-id')
+
 
     question_type_serializer = QuestionTypeSerializer(question_type_data, many=True)
     question_serializer = QuestionSerializer(questions_data, many=True)
@@ -509,37 +511,43 @@ def remove_assigned_question_api(request):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+
 @api_view(['GET'])
 def get_questions_assigned_to_category_api(request, form_type_id, main_category_id):
     """
-    Get questions assigned to a specific category within a form type.
+    Get all questions assigned to a specific category within a form type (including inactive ones).
     Use ?detail=true to get full question data instead of just IDs.
     """
     try:
         assignments = FormQuestionAssignment.objects.filter(
             form_type_id=form_type_id,
             main_category_id=main_category_id
+            # Removed question__is_active=True to show ALL questions (active + inactive)
         ).order_by('order')
 
         detail = request.query_params.get('detail', 'false').lower() == 'true'
+        print(f"detail param raw value: {request.query_params.get('detail')}")
+
 
         if not assignments.exists():
             return Response({
                 "status": "success",
-                "assigned_questions": []
+                "data": {
+                    "assigned_questions": []
+                }
             }, status=status.HTTP_200_OK)
 
         if detail:
-            # Get actual Question instances via related field
             questions = [assignment.question for assignment in assignments]
             serialized_questions = GetAssignedQuestionToCategorySerializer(questions, many=True).data
         else:
-            # Only return question IDs
             serialized_questions = [assignment.question_id for assignment in assignments]
-
+            print('serialized questions',serialized_questions)
         return Response({
             "status": "success",
-            "assigned_questions": serialized_questions
+            "data": {
+                "assigned_questions": serialized_questions
+            }
         }, status=status.HTTP_200_OK)
 
     except Exception as e:
@@ -547,3 +555,4 @@ def get_questions_assigned_to_category_api(request, form_type_id, main_category_
             "status": "error",
             "message": f"An unexpected error occurred: {str(e)}"
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
