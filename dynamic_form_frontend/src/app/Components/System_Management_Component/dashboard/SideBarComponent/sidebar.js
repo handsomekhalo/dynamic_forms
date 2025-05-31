@@ -12,6 +12,10 @@ const Sidebar = () => {
       title: 'Dashboard',
       links: [{ href: '/Components/System_Management_Component/dashboard', icon: 'bx bx-home', label: 'Dashboard' }],
     },
+        {
+      title: 'Client Portal',
+      links: [{ href: '/Components/Form_Portal_Management_Component/', icon: 'bx bx-home', label: 'Client Portal' }],
+    },
     {
       title: 'Manage Users',
       links: [
