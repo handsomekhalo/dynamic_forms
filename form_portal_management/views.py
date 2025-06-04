@@ -45,7 +45,6 @@ def get_all_form_details(request, formId):
         response.raise_for_status()
 
         response_data = response.json()
-        print('response_data get_form_details:', response_data)
 
         return JsonResponse({
             "status": "success",
