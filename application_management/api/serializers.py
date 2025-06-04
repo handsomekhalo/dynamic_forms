@@ -33,6 +33,28 @@ class AssignQuestionToFormSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("This question is already assigned to this category and form.")
         return data
 
+# # serializers.py
+# class AssignQuestionToFormSerializer(serializers.Serializer):
+#     form_type_id = serializers.IntegerField()
+#     main_category_id = serializers.IntegerField()
+#     question_text = serializers.CharField(max_length=1000)
+
+#     def validate(self, data):
+#         form_type_id = data['form_type_id']
+#         main_category_id = data['main_category_id']
+
+#         # Ensure the category belongs to the form
+#         try:
+#             form_type = FormType.objects.get(id=form_type_id)
+#         except FormType.DoesNotExist:
+#             raise serializers.ValidationError("Form type does not exist.")
+
+#         if not form_type.categories.filter(id=main_category_id).exists():
+#             raise serializers.ValidationError("Main category is not assigned to this form.")
+
+#         data['form_type'] = form_type
+#         data['main_category'] = MainCategory.objects.get(id=main_category_id)
+#         return data
 
 
 class SelectAllCategoriesSerializer(serializers.ModelSerializer):

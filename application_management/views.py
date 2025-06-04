@@ -665,8 +665,6 @@ def get_form_categories(request, formId):
         else:
             token = auth_header
 
-        print('token extracted:', token)
-
         if not token:
             return JsonResponse({
                 "status": "error",

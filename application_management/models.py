@@ -32,6 +32,7 @@ class MainCategory(models.Model):
         return self.name
 
 
+
 class FormQuestionAssignment(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE)
     main_category = models.ForeignKey(MainCategory, on_delete=models.CASCADE)
@@ -40,9 +41,6 @@ class FormQuestionAssignment(models.Model):
 
     class Meta:
         ordering = ['order']
-
-
-
 class FormSubmission(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)  # applicant
     form_type = models.ForeignKey(FormType, on_delete=models.CASCADE)

@@ -44,6 +44,7 @@ INSTALLED_APPS = [
      'system_management',
      'question_management',
      'application_management',
+     'form_portal_management',
      'corsheaders',
      
 ]

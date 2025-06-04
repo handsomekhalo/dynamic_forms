@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.core.exceptions import ObjectDoesNotExist
 from application_management.models import FormQuestionAssignment, FormType, MainCategory
-from question_management.api.serializers import AssignQuestionToCategorySerializer, FormQuestionAssignmentSerializer, GetAssignedQuestionToCategoryQuestionSerializer, GetAssignedQuestionToCategorySerializer, GetQuestionSerializer, QuestionSerializer, QuestionTypeSerializer, QuestionUpdateSerializer, RemoveQuestionAssignmentSerializer
+from question_management.api.serializers import AssignQuestionToCategorySerializer, FormQuestionAssignmentSerializer,GetAssignedQuestionToCategoryQuestionSerializer, GetAssignedQuestionToCategorySerializer, GetQuestionSerializer, QuestionSerializer, QuestionTypeSerializer, QuestionUpdateSerializer, RemoveQuestionAssignmentSerializer
 from question_management.models import Option, Question, QuestionType
 logger = logging.getLogger(__name__)
 
@@ -182,53 +182,106 @@ def get_question_detail_api(request, question_id):
     except Question.DoesNotExist:
         return Response({'status': 'error', 'message': 'Question not found'}, status=status.HTTP_404_NOT_FOUND)
 
-    serializer = GetQuestionSerializer(question)
-    return Response({'status': 'success', 'data': serializer.data}, status=status.HTTP_200_OK)
+   
+    serializer = GetQuestionSerializer(question).data
+    print('serializer',serializer)
+    
+    return Response({'status': 'success', 'data': serializer}, status=status.HTTP_200_OK)
 
 
 
+# @api_view(['PUT'])
+# def update_question_api(request, question_id):
+#     try:
+#         # Try fetching the Question
+#         try:
+#             question = Question.objects.get(pk=question_id)
+#         except Question.DoesNotExist:
+#             logger.warning(f"Question with ID {question_id} not found.")
+#             return Response({"error": "Question not found."}, status=status.HTTP_404_NOT_FOUND)
+
+#         # Deserialize and validate data
+#         serializer = QuestionUpdateSerializer(question, data=request.data, partial=True)
+
+#         if serializer.is_valid():
+#             serializer.save()
+#             logger.info(f"Question ID {question_id} updated successfully.")
+#             return Response({
+#                 "success": "Question updated successfully.",
+#                 "data": serializer.data
+#             }, status=status.HTTP_200_OK)
+
+#         # Log validation errors
+#         logger.error(f"Validation failed for question ID {question_id}: {serializer.errors}")
+#         print('invalid')
+#         return Response({
+#             "error": "Validation failed.",
+#             "details": serializer.errors
+#         }, status=status.HTTP_400_BAD_REQUEST)
+
+#     except ValidationError as ve:
+#         logger.exception(f"Validation error occurred for question ID {question_id}: {ve}")
+#         return Response({
+#             "error": "Invalid input.",
+#             "details": str(ve)
+#         }, status=status.HTTP_400_BAD_REQUEST)
+
+#     except Exception as e:
+#         logger.exception(f"Unexpected error occurred while updating question ID {question_id}: {e}")
+#         return Response({
+#             "error": "An unexpected error occurred.",
+#             "details": str(e)
+#         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 @api_view(['PUT'])
 def update_question_api(request, question_id):
     try:
-        # Try fetching the Question
-        try:
-            question = Question.objects.get(pk=question_id)
-        except Question.DoesNotExist:
-            logger.warning(f"Question with ID {question_id} not found.")
-            return Response({"error": "Question not found."}, status=status.HTTP_404_NOT_FOUND)
-
-        # Deserialize and validate data
+        question = Question.objects.get(pk=question_id)
+        
+        print(f"Received data: {request.data}")
+        print(f"Current question values:")
+        print(f"  text: {question.text}")
+        print(f"  question_type: {question.question_type.id if question.question_type else None}")
+        print(f"  input_type: {question.input_type}")
+        print(f"  order: {question.order}")
+        print(f"  is_active: {question.is_active}")
+        print(f"  is_required: {question.is_required}")
+        print(f"  allow_other_option: {question.allow_other_option}")
+        
         serializer = QuestionUpdateSerializer(question, data=request.data, partial=True)
-
+        
         if serializer.is_valid():
-            serializer.save()
-            logger.info(f"Question ID {question_id} updated successfully.")
+            updated_question = serializer.save()
+            print(f"Successfully updated question {question_id}")
+            
+            # Return the updated data
             return Response({
                 "success": "Question updated successfully.",
-                "data": serializer.data
+                "data": {
+                    'id': updated_question.id,
+                    'text': updated_question.text,
+                    'question_type': updated_question.question_type.id,
+                    'input_type': updated_question.input_type,
+                    'order': updated_question.order,
+                    'is_active': updated_question.is_active,
+                    'is_required': updated_question.is_required,
+                    'allow_other_option': updated_question.allow_other_option,
+                }
             }, status=status.HTTP_200_OK)
-
-        # Log validation errors
-        logger.error(f"Validation failed for question ID {question_id}: {serializer.errors}")
-        return Response({
-            "error": "Validation failed.",
-            "details": serializer.errors
-        }, status=status.HTTP_400_BAD_REQUEST)
-
-    except ValidationError as ve:
-        logger.exception(f"Validation error occurred for question ID {question_id}: {ve}")
-        return Response({
-            "error": "Invalid input.",
-            "details": str(ve)
-        }, status=status.HTTP_400_BAD_REQUEST)
-
+        else:
+            print(f"Validation errors: {serializer.errors}")
+            return Response({
+                "error": "Validation failed.",
+                "details": serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+    except Question.DoesNotExist:
+        return Response({"error": "Question not found."}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
-        logger.exception(f"Unexpected error occurred while updating question ID {question_id}: {e}")
+        logger.exception(f"Error updating question {question_id}: {e}")
         return Response({
             "error": "An unexpected error occurred.",
             "details": str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @api_view(['POST'])
 def change_question_status_api(request):
@@ -381,41 +434,98 @@ def assign_or_update_question_api(request):
         response_serializer = GetAssignedQuestionToCategoryQuestionSerializer(response_data)
         return Response(response_serializer.data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
-# @api_view(['GET'])
-# def get_questions_assigned_to_category_api(request, form_type_id, main_category_id):
+# @api_view(['POST'])
+# def assign_or_update_question_api(request):
 #     """
-#     Get all questions assigned to a specific category within a form type
+#     Assign a question to a category and ensure the category is linked to the form type.
+#     Also supports updating a question by deactivating the old and activating the new one.
     
-#     URL: /api/forms/{form_type_id}/categories/{main_category_id}/questions/
+#     Request Body:
+#     {
+#         "form_type_id": 1,
+#         "main_category_id": 2,
+#         "question_id": 3,
+#         "old_question_id": 4,  // Optional - for update
+#         "order": 0  // Optional - ignored unless you store ordering separately
+#     }
 #     """
+#     serializer = AssignQuestionToCategorySerializer(data=request.data)
+#     if not serializer.is_valid():
+#         return Response({
+#             "status": "error",
+#             "message": "Invalid input data",
+#             "errors": serializer.errors
+#         }, status=status.HTTP_400_BAD_REQUEST)
+
+#     data = serializer.validated_data
+#     form_type_id = data['form_type_id']
+#     main_category_id = data['main_category_id']
+#     question_id = data['question_id']
+#     old_question_id = data.get('old_question_id')
+
 #     try:
-#         # Get all assignments for this form type and category
-#         assignments = FormQuestionAssignment.objects.filter(
-#             form_type_id=form_type_id,
-#             main_category_id=main_category_id
-#         ).order_by('order')
-        
-#         # Extract just the question IDs
-#         assigned_question_ids = [assignment.question_id for assignment in assignments]
-        
-#         # Prepare response data and format using serializer
+#         form_type = FormType.objects.get(id=form_type_id)
+#         main_category = MainCategory.objects.get(id=main_category_id)
+#         question = Question.objects.get(id=question_id)
+
+#         # Step 1: Ensure category is linked to the form
+#         form_type.categories.add(main_category)
+
+#         # Step 2: Update logic — deactivate old question if provided
+#         if old_question_id:
+#             try:
+#                 old_question = Question.objects.get(id=old_question_id, main_category=main_category)
+#                 old_question.is_active = False
+#                 old_question.save()
+#             except Question.DoesNotExist:
+#                 return Response({
+#                     "status": "error",
+#                     "message": "Old question not found in this category."
+#                 }, status=status.HTTP_404_NOT_FOUND)
+
+#         # Step 3: Assign or reactivate the new question
+#         question.main_category = main_category
+#         question.is_active = True
+#         question.save()
+
+#         # Step 4: Fetch all active questions for this form + category
+#         assigned_questions = Question.objects.filter(
+#             main_category=main_category,
+#             is_active=True
+#         )
+
 #         response_data = {
 #             "status": "success",
-#             "assigned_questions": assigned_question_ids
+#             "message": "Question assigned to category successfully.",
+#             "assigned_questions": [q.id for q in assigned_questions]
 #         }
-        
-#         # Use the serializer to format the response
-#         serializer = GetAssignedQuestionToCategoryQuestionSerializer(response_data)
-#         return Response(serializer.data, status=status.HTTP_200_OK)
-        
-#     except Exception as e:
-#         response_data = {
+
+#         return Response(response_data, status=status.HTTP_200_OK)
+
+#     except FormType.DoesNotExist:
+#         return Response({
 #             "status": "error",
-#             "message": f"An unexpected error occurred: {str(e)}"
-#         }
-#         serializer = GetAssignedQuestionToCategoryQuestionSerializer(response_data)
-#         return Response(serializer.data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+#             "message": "Form type not found."
+#         }, status=status.HTTP_404_NOT_FOUND)
+
+#     except MainCategory.DoesNotExist:
+#         return Response({
+#             "status": "error",
+#             "message": "Main category not found."
+#         }, status=status.HTTP_404_NOT_FOUND)
+
+#     except Question.DoesNotExist:
+#         return Response({
+#             "status": "error",
+#             "message": "Question not found."
+#         }, status=status.HTTP_404_NOT_FOUND)
+
+#     except Exception as e:
+#         return Response({
+#             "status": "error",
+#             "message": f"Unexpected error: {str(e)}"
+#         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 # Optional: Additional API to get all questions for a form type (across all categories)
@@ -451,6 +561,39 @@ def get_all_questions_assigned_to_all_categories_api(request, form_type_id):
             "message": f"An unexpected error occurred: {str(e)}"
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+# @api_view(['GET'])
+# def get_all_questions_assigned_to_all_categories_api(request, form_type_id):
+#     """
+#     Get all active questions grouped by categories for a given form type.
+    
+#     URL: /api/forms/{form_type_id}/questions/
+#     """
+#     try:
+#         form_type = FormType.objects.get(id=form_type_id)
+#         categories = form_type.categories.all()
+
+#         questions_by_category = {}
+#         for category in categories:
+#             active_questions = category.question_set.filter(is_active=True).order_by('id')
+#             questions_by_category[category.id] = [q.id for q in active_questions]
+
+#         return Response({
+#             "status": "success",
+#             "questions_by_category": questions_by_category
+#         }, status=status.HTTP_200_OK)
+
+#     except FormType.DoesNotExist:
+#         return Response({
+#             "status": "error",
+#             "message": "Form type not found."
+#         }, status=status.HTTP_404_NOT_FOUND)
+
+#     except Exception as e:
+#         return Response({
+#             "status": "error",
+#             "message": f"An unexpected error occurred: {str(e)}"
+#         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['POST'])
@@ -510,6 +653,66 @@ def remove_assigned_question_api(request):
             "message": f"An unexpected error occurred: {str(e)}"
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+# @api_view(['POST'])
+# def remove_assigned_question_api(request):
+#     """
+#     Deactivate a question from a category within a form type
+#     """
+#     serializer = RemoveQuestionAssignmentSerializer(data=request.data)
+#     if not serializer.is_valid():
+#         return Response({
+#             "status": "error",
+#             "errors": serializer.errors
+#         }, status=status.HTTP_400_BAD_REQUEST)
+
+#     form_type_id = serializer.validated_data['form_type_id']
+#     main_category_id = serializer.validated_data['main_category_id']
+#     question_id = serializer.validated_data['question_id']
+
+#     try:
+#         form_type = FormType.objects.get(id=form_type_id)
+#         category = form_type.categories.filter(id=main_category_id).first()
+
+#         if not category:
+#             return Response({
+#                 "status": "error",
+#                 "message": "Category not assigned to this form type."
+#             }, status=status.HTTP_404_NOT_FOUND)
+
+#         question = category.question_set.filter(id=question_id).first()
+
+#         if not question:
+#             return Response({
+#                 "status": "error",
+#                 "message": "Question not found in this category."
+#             }, status=status.HTTP_404_NOT_FOUND)
+
+#         # Soft delete
+#         question.is_active = False
+#         question.save()
+
+#         # Return remaining active questions
+#         active_questions = category.question_set.filter(is_active=True)
+#         assigned_question_ids = [q.id for q in active_questions]
+
+#         return Response({
+#             "status": "success",
+#             "message": "Question assignment removed successfully.",
+#             "assigned_questions": assigned_question_ids
+#         }, status=status.HTTP_200_OK)
+
+#     except FormType.DoesNotExist:
+#         return Response({
+#             "status": "error",
+#             "message": "Form type not found."
+#         }, status=status.HTTP_404_NOT_FOUND)
+
+#     except Exception as e:
+#         return Response({
+#             "status": "error",
+#             "message": f"An unexpected error occurred: {str(e)}"
+#         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 @api_view(['GET'])
@@ -555,4 +758,49 @@ def get_questions_assigned_to_category_api(request, form_type_id, main_category_
             "status": "error",
             "message": f"An unexpected error occurred: {str(e)}"
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
+
+# @api_view(['GET'])
+# def get_questions_assigned_to_category_api(request, form_type_id, main_category_id):
+#     """
+#     Get all questions in a category under a form type. Use ?detail=true to include full data.
+#     Shows active and inactive questions.
+#     """
+#     try:
+#         form_type = FormType.objects.get(id=form_type_id)
+#         category = form_type.categories.filter(id=main_category_id).first()
+
+#         if not category:
+#             return Response({
+#                 "status": "success",
+#                 "data": {
+#                     "assigned_questions": []
+#                 }
+#             }, status=status.HTTP_200_OK)
+
+#         questions = category.question_set.all().order_by('id')  # adjust ordering if needed
+
+#         detail = request.query_params.get('detail', 'false').lower() == 'true'
+
+#         if detail:
+#             serialized_questions = GetAssignedQuestionToCategorySerializer(questions, many=True).data
+#         else:
+#             serialized_questions = [q.id for q in questions]
+
+#         return Response({
+#             "status": "success",
+#             "data": {
+#                 "assigned_questions": serialized_questions
+#             }
+#         }, status=status.HTTP_200_OK)
+
+#     except FormType.DoesNotExist:
+#         return Response({
+#             "status": "error",
+#             "message": "Form type not found."
+#         }, status=status.HTTP_404_NOT_FOUND)
+
+#     except Exception as e:
+#         return Response({
+#             "status": "error",
+#             "message": f"An unexpected error occurred: {str(e)}"
+#         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

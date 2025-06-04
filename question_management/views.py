@@ -184,76 +184,76 @@ def get_question_detail(request, question_id):
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
 
 
-@csrf_exempt
-def update_question(request, question_id):
-    if request.method != 'PUT':
-        return JsonResponse({
-            "status": "error",
-            "message": "Method not allowed"
-        }, status=405)
+# @csrf_exempt
+# def update_question(request, question_id):
+#     if request.method != 'PUT':
+#         return JsonResponse({
+#             "status": "error",
+#             "message": "Method not allowed"
+#         }, status=405)
 
-    try:
-        # Extract token
-        auth_header = request.headers.get("Authorization", "")
-        token = None
-        if auth_header.startswith("Token "):
-            token = auth_header.split("Token ")[-1]
-        elif auth_header.startswith("Bearer "):
-            token = auth_header.split("Bearer ")[-1]
+#     try:
+#         # Extract token
+#         auth_header = request.headers.get("Authorization", "")
+#         token = None
+#         if auth_header.startswith("Token "):
+#             token = auth_header.split("Token ")[-1]
+#         elif auth_header.startswith("Bearer "):
+#             token = auth_header.split("Bearer ")[-1]
 
-        if not token:
-            return JsonResponse({
-                "status": "error",
-                "message": "Authorization token is required."
-            }, status=401)
+#         if not token:
+#             return JsonResponse({
+#                 "status": "error",
+#                 "message": "Authorization token is required."
+#             }, status=401)
 
-        request.session["token"] = token
-        request.session.modified = True
+#         request.session["token"] = token
+#         request.session.modified = True
 
-        # Parse JSON
-        try:
-            data = json.loads(request.body)
-        except json.JSONDecodeError:
-            return JsonResponse({'status': 'error', 'message': 'Invalid JSON data'}, status=400)
+#         # Parse JSON
+#         try:
+#             data = json.loads(request.body)
+#         except json.JSONDecodeError:
+#             return JsonResponse({'status': 'error', 'message': 'Invalid JSON data'}, status=400)
 
-        # Construct payload (without question_id, since it's in URL)
-        payload = {
-            'question': data.get('question'),
-            'question_number': data.get('question_number'),
-            'question_type': data.get('question_type'),
-            'mandatory': data.get('mandatory'),
-            'other_field': data.get('other_field'),
-            'options': data.get('options', []),
-            'delete_options': data.get('delete_options', False),
-        }
+#         # Construct payload (without question_id, since it's in URL)
+#         payload = {
+#             'question': data.get('question'),
+#             'question_number': data.get('question_number'),
+#             'question_type': data.get('question_type'),
+#             'mandatory': data.get('mandatory'),
+#             'other_field': data.get('other_field'),
+#             'options': data.get('options', []),
+#             'delete_options': data.get('delete_options', False),
+#         }
 
-        # Call the internal API using PUT
-        url = f"{host_url(request)}{reverse('update_question_api', args=[question_id])}"
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Token {token}",
-        }
+#         # Call the internal API using PUT
+#         url = f"{host_url(request)}{reverse('update_question_api', args=[question_id])}"
+#         headers = {
+#             "Content-Type": "application/json",
+#             "Authorization": f"Token {token}",
+#         }
 
-        try:
-            response = requests.put(url, headers=headers, json=payload, timeout=10)
-            response.raise_for_status()
-        except requests.exceptions.RequestException as e:
-            return JsonResponse({'status': 'error', 'message': f'Error while sending data to API: {str(e)}'}, status=500)
+#         try:
+#             response = requests.put(url, headers=headers, json=payload, timeout=10)
+#             response.raise_for_status()
+#         except requests.exceptions.RequestException as e:
+#             return JsonResponse({'status': 'error', 'message': f'Error while sending data to API: {str(e)}'}, status=500)
 
-        try:
-            response_data = response.json()
-        except ValueError:
-            return JsonResponse({'status': 'error', 'message': 'Invalid JSON response from API'}, status=500)
+#         try:
+#             response_data = response.json()
+#         except ValueError:
+#             return JsonResponse({'status': 'error', 'message': 'Invalid JSON response from API'}, status=500)
 
-        return JsonResponse(response_data, status=response.status_code)
+#         return JsonResponse(response_data, status=response.status_code)
 
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return JsonResponse({
-            "status": "error",
-            "message": f"Unexpected server error: {str(e)}"
-        }, status=500)
+#     except Exception as e:
+#         import traceback
+#         traceback.print_exc()
+#         return JsonResponse({
+#             "status": "error",
+#             "message": f"Unexpected server error: {str(e)}"
+#         }, status=500)
 
 @csrf_exempt
 def update_question(request, question_id):
@@ -288,18 +288,30 @@ def update_question(request, question_id):
         except json.JSONDecodeError:
             return JsonResponse({'status': 'error', 'message': 'Invalid JSON data'}, status=400)
         
-        # Prepare payload (unchanged)
+    #     # Prepare payload (unchanged)
+    #     payload = {
+    #     'text': data.get('text'),
+    #     'order': data.get('order'),
+    #     'input_type': data.get('input_type'),
+    #     'is_required': data.get('is_required'),
+    #     'allow_other_option': data.get('allow_other_option'),
+    #     'is_active': data.get('is_active', True),
+    #     'options': data.get('options', []),
+    #     'delete_options': data.get('delete_options', False),
+    # }
+        
         payload = {
         'text': data.get('text'),
         'order': data.get('order'),
         'input_type': data.get('input_type'),
+        'question_type': data.get('question_type'),  # This should be an ID
         'is_required': data.get('is_required'),
         'allow_other_option': data.get('allow_other_option'),
         'is_active': data.get('is_active', True),
         'options': data.get('options', []),
         'delete_options': data.get('delete_options', False),
     }
-        
+        payload = {k: v for k, v in payload.items() if v is not None}
 
         url = request.build_absolute_uri(reverse('update_question_api', kwargs={'question_id': question_id}))
   
@@ -634,88 +646,6 @@ def remove_assigned_question(request):
             "status": "error",
             "message": f"Server error occurred: {str(e)}"
         }, status=500)
-
-# @csrf_exempt
-# def get_questions_assigned_to_category(request, formId, category):
-#     if request.method != 'GET':
-#         return JsonResponse({
-#             "status": "error",
-#             "message": "Method not allowed"
-#         }, status=405)
-    
-#     try:
-#         # Step 1: Extract token from headers
-#         auth_header = request.headers.get("Authorization", "")
-#         token = None
-#         if auth_header.startswith("Token "):
-#             token = auth_header[6:]
-#         elif auth_header.startswith("Bearer "):
-#             token = auth_header[7:]
-#         else:
-#             token = auth_header
-
-#         if not token:
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "Authorization token is required."
-#             }, status=401)
-
-#         # Step 2: Prepare the internal API URL
-#         base_url = host_url(request)
-#         query_string = ""
-#         if request.GET.get("detail", "").lower() == "true":
-#             query_string = f"?{urlencode({'detail': 'true'})}"
-
-#         api_path = reverse_lazy('get_questions_assigned_to_category_api', kwargs={
-#             'form_type_id': formId,
-#             'main_category_id': category  
-#         })
-#         api_url = f"{base_url}{api_path}{query_string}"
-
-#         # Step 3: Try different auth header formats
-#         auth_formats = [
-#             {"Authorization": f"Token {token}"},
-#             {"Authorization": f"Bearer {token}"},
-#             {"Authorization": token},
-#         ]
-
-#         response = None
-#         for auth_format in auth_formats:
-#             headers = {"Content-Type": "application/json", **auth_format}
-#             try:
-#                 print(f"Final API URL being called: {api_url}")
-#                 response = requests.get(api_url, headers=headers, timeout=10)
-#                 if response.status_code != 401:
-#                     break
-#             except requests.RequestException as e:
-#                 print(f"Request failed with headers {auth_format}: {str(e)}")
-
-#         if not response or response.status_code == 401:
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "Failed to authenticate with the internal API."
-#             }, status=401)
-        
-#         response.raise_for_status()
-
-#         response_data = response.json()
-#         questions = response_data.get("data", {}).get("assigned_questions", [])
-
-#         print('response_data',response_data)
-#         return JsonResponse({
-#             "status": "success",
-#             "data": response_data
-#         }, status=200)
-
-
-#     except Exception as e:
-#         import traceback
-#         traceback.print_exc()
-#         return JsonResponse({
-#             "status": "error",
-#             "message": f"Server error occurred: {str(e)}"
-#         }, status=500)
-
 
 
 @csrf_exempt

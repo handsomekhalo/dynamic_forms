@@ -1,4 +1,5 @@
 from rest_framework import serializers
+# from application_management.models import FormQuestionAssignment
 from application_management.models import FormQuestionAssignment
 from question_management.models import QuestionType, Question, Option
 
@@ -75,10 +76,34 @@ class GetQuestionSerializer(serializers.ModelSerializer):
             'date_created',
             'question_type',
             'options',
+            
         ]
 
 
+# class QuestionUpdateSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = Question
+#         fields = [
+#             'text', 'question_type', 'input_type', 'order',
+#             'is_active', 'is_required', 'allow_other_option'
+#         ]
+#         extra_kwargs = {
+#             'text': {'required': False},
+#             'question_type': {'required': False},
+#             'input_type': {'required': False},
+#             'order': {'required': False},
+#             'is_active': {'required': False},
+#             'is_required': {'required': False},
+#             'allow_other_option': {'required': False},
+#         }
+
+
 class QuestionUpdateSerializer(serializers.ModelSerializer):
+    question_type = serializers.PrimaryKeyRelatedField(
+        queryset=QuestionType.objects.all(), 
+        required=False
+    )
+    
     class Meta:
         model = Question
         fields = [
@@ -87,16 +112,12 @@ class QuestionUpdateSerializer(serializers.ModelSerializer):
         ]
         extra_kwargs = {
             'text': {'required': False},
-            'question_type': {'required': False},
             'input_type': {'required': False},
             'order': {'required': False},
             'is_active': {'required': False},
             'is_required': {'required': False},
             'allow_other_option': {'required': False},
         }
-
-
-
 class AssignQuestionToCategorySerializer(serializers.Serializer):
     form_type_id = serializers.IntegerField(required=True)
     main_category_id = serializers.IntegerField(required=True)
@@ -126,6 +147,7 @@ class GetAssignedQuestionToCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Question
         fields = '__all__'
+
 
 class FormQuestionAssignmentSerializer(serializers.ModelSerializer):
     class Meta:

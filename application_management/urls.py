@@ -18,17 +18,7 @@ urlpatterns = [
       path('get_form_categories/<int:formId>/', views.get_form_categories,
            name="get_form_categories"),
       path('remove_category_assignment/', views.remove_category_assignment,name="remove_category_assignment"),
- 
-        # path('unassign_category/',views.unassign_category, name='unassign_category'),
-            
       path('get_unassigned_categories/<int:form_type_id>/', views.get_unassigned_categories, name='get_unassigned_categories'),
-         # path('get_assigned_categories/', views.get_assigned_categories, name='get_assigned_categories'),
       path('get_assigned_categories/<int:form_type_id>/', views.get_assigned_categories, name='get_assigned_categories'),
-
-
-             # path('get_unassigned_categories/<int:formId>/',views.unassign_category, name='unassign_category'),
-
-    #  path('update_questions/',views.update_questions,name='update_questions'),
-    #  path('deactivate_question/', views.deactivate_question, name='deactivate_question'),
-    #  path('activate_question/', views.activate_question, name='activate_question')
+   
 ]
