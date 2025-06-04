@@ -29,231 +29,42 @@ export default function FormPortal_Management() {
   }, []);
 
   const handleFormSelect = async (formId) => {
-  if (formId === selectedFormId) return; // Don't reload the same form
+    if (formId === selectedFormId) return; // Don't reload the same form
 
-  setSelectedFormId(formId);
-  setFormDetails([]);
-  setOpenAccordions({}); // Reset open accordions
-  try {
-    const res = await backendApi.get(`/form_portal_management/get_all_form_details/${formId}/`);
-    const formDetailsData = res.data.formDetails || res.data || [];
-    setFormDetails(formDetailsData);
+    setSelectedFormId(formId);
+    setFormDetails([]);
+    setOpenAccordions({}); // Reset open accordions
+    try {
+      const res = await backendApi.get(`/form_portal_management/get_all_form_details/${formId}/`);
+      const formDetailsData = res.data.formDetails || res.data || [];
+      setFormDetails(formDetailsData);
 
-    // Open the first accordion only
-    if (formDetailsData.length > 0) {
-      setOpenAccordions({ [formDetailsData[0].id]: true });
+      // Open the first accordion only
+      if (formDetailsData.length > 0) {
+        setOpenAccordions({ [formDetailsData[0].id]: true });
+      }
+    } catch (err) {
+      console.error("Error fetching form details:", err);
+      setError("Failed to load form details.");
     }
-  } catch (err) {
-    console.error("Error fetching form details:", err);
-    setError("Failed to load form details.");
-  }
-};
-
-  // const handleFormSelect = async (formId) => {
-  //   setSelectedFormId(formId);
-  //   setOpenAccordions({}); // Reset accordion states
-  //   try {
-  //     const res = await backendApi.get(`/form_portal_management/get_all_form_details/${formId}/`);
-  //     console.log("Full API response:", res.data);
-      
-  //     // Extract the formDetails array from the response
-  //     const formDetailsData = res.data.formDetails || res.data || [];
-  //     setFormDetails(formDetailsData);
-      
-  //     // Auto-open all accordions when form is selected
-  //     const initialAccordionState = {};
-  //     if (Array.isArray(formDetailsData)) {
-  //       formDetailsData.forEach(category => {
-  //         initialAccordionState[category.id] = true;
-  //       });
-  //     }
-  //     setOpenAccordions(initialAccordionState);
-  //   } catch (err) {
-  //     console.error("Error fetching form details:", err);
-  //     setError("Failed to load form details.");
-  //   }
-  // };
-
-  // const toggleAccordion = (categoryId) => {
-  //   setOpenAccordions(prev => ({
-  //     ...prev,
-  //     [categoryId]: !prev[categoryId]
-  //   }));
-  // };
-  const toggleAccordion = (categoryId) => {
-  setOpenAccordions((prev) => {
-    const isCurrentlyOpen = !!prev[categoryId];
-    return isCurrentlyOpen ? {} : { [categoryId]: true };
-  });
-};
-
-
-  const handleInputChange = (questionId, value) => {
-    setFormAnswers((prev) => ({ ...prev, [questionId]: value }));
   };
 
-  // const renderInputField = (question) => {
-  //   const commonClasses = "border p-2 rounded w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
-    
-  //   switch (question.input_type) {
-  //     case "text":
-  //       return (
-  //         <input
-  //           type="text"
-  //           className={commonClasses}
-  //           value={formAnswers[question.id] || ""}
-  //           onChange={(e) => handleInputChange(question.id, e.target.value)}
-  //           required={question.is_required}
-  //           placeholder="Enter text..."
-  //         />
-  //       );
-      
-  //     case "number":
-  //       return (
-  //         <input
-  //           type="number"
-  //           className={commonClasses}
-  //           value={formAnswers[question.id] || ""}
-  //           onChange={(e) => handleInputChange(question.id, e.target.value)}
-  //           required={question.is_required}
-  //           placeholder="Enter number..."
-  //         />
-  //       );
-      
-  //     case "textarea":
-  //       return (
-  //         <textarea
-  //           className={`${commonClasses} h-24 resize-vertical`}
-  //           value={formAnswers[question.id] || ""}
-  //           onChange={(e) => handleInputChange(question.id, e.target.value)}
-  //           required={question.is_required}
-  //           placeholder="Enter your response..."
-  //         />
-  //       );
-      
-  //     case "checkbox":
-  //       if (question.options && question.options.length > 0) {
-  //         // Multiple checkbox options
-  //         return (
-  //           <div className="space-y-2">
-  //             {question.options.map((option) => (
-  //               <label key={option.id} className="flex items-center space-x-2">
-  //                 <input
-  //                   type="checkbox"
-  //                   className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-  //                   checked={formAnswers[question.id]?.includes(option.id) || false}
-  //                   onChange={(e) => {
-  //                     const currentValues = formAnswers[question.id] || [];
-  //                     if (e.target.checked) {
-  //                       handleInputChange(question.id, [...currentValues, option.id]);
-  //                     } else {
-  //                       handleInputChange(question.id, currentValues.filter(id => id !== option.id));
-  //                     }
-  //                   }}
-  //                 />
-  //                 <span>{option.text}</span>
-  //               </label>
-  //             ))}
-  //           </div>
-  //         );
-  //       } else {
-  //         // Single checkbox
-  //         return (
-  //           <label className="flex items-center space-x-2">
-  //             <input
-  //               type="checkbox"
-  //               className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-  //               checked={!!formAnswers[question.id]}
-  //               onChange={(e) => handleInputChange(question.id, e.target.checked)}
-  //             />
-  //             <span>Yes</span>
-  //           </label>
-  //         );
-  //       }
-      
-  //     case "select":
-  //       return (
-  //         <select
-  //           className={commonClasses}
-  //           value={formAnswers[question.id] || ""}
-  //           onChange={(e) => handleInputChange(question.id, e.target.value)}
-  //           required={question.is_required}
-  //         >
-  //           <option value="">-- Select an option --</option>
-  //           {question.options?.map((option) => (
-  //             <option key={option.id} value={option.id}>
-  //               {option.text}
-  //             </option>
-  //           ))}
-  //         </select>
-  //       );
-      
-  //     case "file":
-  //       return (
-  //         <input
-  //           type="file"
-  //           className="border p-2 rounded w-full file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-  //           onChange={(e) => handleInputChange(question.id, e.target.files[0])}
-  //           required={question.is_required}
-  //         />
-  //       );
-      
-  //     case "date":
-  //       return (
-  //         <input
-  //           type="date"
-  //           className={commonClasses}
-  //           value={formAnswers[question.id] || ""}
-  //           onChange={(e) => handleInputChange(question.id, e.target.value)}
-  //           required={question.is_required}
-  //         />
-  //       );
-      
-  //     case "email":
-  //       return (
-  //         <input
-  //           type="email"
-  //           className={commonClasses}
-  //           value={formAnswers[question.id] || ""}
-  //           onChange={(e) => handleInputChange(question.id, e.target.value)}
-  //           required={question.is_required}
-  //           placeholder="Enter email address..."
-  //         />
-  //       );
-      
-  //     case "":
-  //     case null:
-  //     case undefined:
-  //       return (
-  //         <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
-  //           <p className="text-yellow-800 text-sm">
-  //             ⚠️ Input type not specified for this question
-  //           </p>
-  //           <input
-  //             type="text"
-  //             className={`${commonClasses} mt-2`}
-  //             value={formAnswers[question.id] || ""}
-  //             onChange={(e) => handleInputChange(question.id, e.target.value)}
-  //             placeholder="Default text input..."
-  //           />
-  //         </div>
-  //       );
-      
-  //     default:
-  //       return (
-  //         <div className="bg-red-50 border border-red-200 rounded p-3">
-  //           <p className="text-red-600 text-sm">
-  //             ❌ Unsupported input type: {question.input_type}
-  //           </p>
-  //         </div>
-  //       );
-  //   }
-  // };
+  const toggleAccordion = (categoryId) => {
+    setOpenAccordions((prev) => {
+      const isCurrentlyOpen = !!prev[categoryId];
+      return isCurrentlyOpen ? {} : { [categoryId]: true };
+    });
+  };
 
-  const renderInputField = (question) => {
-  const value = formAnswers[question.id] || "";
+  const handleInputChange = (formId, categoryId, questionId, value) => {
+    const compositeKey = `${formId}-${categoryId}-${questionId}`;
+    setFormAnswers((prev) => ({ ...prev, [compositeKey]: value }));
+  };
 
-  const getField = () => {
+  const renderInputField = (question, formId, categoryId) => {
+    const compositeKey = `${formId}-${categoryId}-${question.id}`;
+    const value = formAnswers[compositeKey] || "";
+
     switch (question.input_type) {
       case "text":
       case "number":
@@ -266,7 +77,7 @@ export default function FormPortal_Management() {
               type={question.input_type}
               className="form-control"
               value={value}
-              onChange={(e) => handleInputChange(question.id, e.target.value)}
+              onChange={(e) => handleInputChange(formId, categoryId, question.id, e.target.value)}
               required={question.is_required}
             />
           </div>
@@ -280,59 +91,16 @@ export default function FormPortal_Management() {
               className="form-control"
               rows={4}
               value={value}
-              onChange={(e) => handleInputChange(question.id, e.target.value)}
+              onChange={(e) => handleInputChange(formId, categoryId, question.id, e.target.value)}
               required={question.is_required}
             />
-          </div>
-        );
-
-      case "file":
-        return (
-          <div className="mb-3">
-            <label className="form-label">{question.label}</label>
-            <input
-              type="file"
-              className="form-control"
-              onChange={(e) => handleInputChange(question.id, e.target.files[0])}
-              required={question.is_required}
-            />
-          </div>
-        );
-
-      case "select":
-        return (
-          <div className="mb-3">
-            <label className="form-label">{question.label}</label>
-            <select
-              className="form-select"
-              value={value}
-              onChange={(e) => handleInputChange(question.id, e.target.value)}
-              required={question.is_required}
-            >
-              <option value="">-- Select --</option>
-              {question.options?.map((opt) => (
-                <option key={opt.id} value={opt.id}>
-                  {opt.text}
-                </option>
-              ))}
-            </select>
           </div>
         );
 
       default:
-        return <div>Unsupported input type</div>;
+        return null;
     }
   };
-
-  // Full width for textarea and file, half for others
-  const colClass =
-    question.input_type === "textarea" || question.input_type === "file"
-      ? "col-12"
-      : "col-md-6";
-
-  return <div className={colClass}>{getField()}</div>;
-};
-
 
   const sortQuestionsByOrder = (questions) => {
     return [...questions].sort((a, b) => a.order - b.order);
@@ -416,7 +184,8 @@ export default function FormPortal_Management() {
                           </div>
                           
                           <div className="mt-2">
-                            {renderInputField(question)}
+                            {/* FIXED: Pass formId and categoryId to renderInputField */}
+                            {renderInputField(question, selectedFormId, category.id)}
                           </div>
                           
                           {question.is_required && (
