@@ -51,15 +51,38 @@ class FormSubmission(models.Model):
         return f"{self.user.email} - {self.form_type.name}"
 
 
+# class FormResponse(models.Model):
+#     submission = models.ForeignKey(FormSubmission, on_delete=models.CASCADE, related_name='responses')
+#     question = models.ForeignKey(Question, on_delete=models.CASCADE)
+#     response_text = models.TextField(blank=True, null=True) 
+#     # selected_option = models.ForeignKey('question_management.Option', null=True, blank=True, on_delete=models.SET_NULL)
+#     file_upload = models.FileField(upload_to="form_uploads/", null=True, blank=True)  # if file type
+
+#     def __str__(self):
+#         return f"{self.submission.user.email} - {self.question.text[:30]}"
+
 class FormResponse(models.Model):
-    submission = models.ForeignKey(FormSubmission, on_delete=models.CASCADE, related_name='responses')
+    submission = models.ForeignKey(FormSubmission, on_delete=models.CASCADE, related_name='responses')   
+    form_type = models.ForeignKey(FormType, on_delete=models.CASCADE, null=True, blank=True)
+    category = models.ForeignKey(MainCategory, on_delete=models.SET_NULL, null=True, blank=True)
     question = models.ForeignKey(Question, on_delete=models.CASCADE)
-    response_text = models.TextField(blank=True, null=True) 
-    file_upload = models.FileField(upload_to="form_uploads/", null=True, blank=True)  # if file type
+
+    response_text = models.TextField(blank=True, null=True)
+    file_upload = models.FileField(upload_to="form_uploads/", null=True, blank=True)
+    selected_option = models.ForeignKey('question_management.Option', null=True, blank=True, on_delete=models.SET_NULL)
+    response_number = models.FloatField(null=True, blank=True)
+    response_date = models.DateField(null=True, blank=True)
+    response_boolean = models.BooleanField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+
+    class Meta:
+        unique_together = ('submission', 'form_type', 'category', 'question')
+        
 
     def __str__(self):
         return f"{self.submission.user.email} - {self.question.text[:30]}"
-
 
 # Model for linking FormType with MainCategory
 class FormCategoryAssignment(models.Model):
@@ -73,15 +96,6 @@ class FormCategoryAssignment(models.Model):
     def __str__(self):
         return f"Form: {self.form_type.name} - Category: {self.main_category.name}"
     
-
-# class Document(models.Model):
-#     name = models.CharField(max_length=255)
-#     file = models.FileField(upload_to="documents/")
-#     uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE)
-#     form_submission = models.ForeignKey(FormSubmission, on_delete=models.SET_NULL, null=True, blank=True)
-#     uploaded_at = models.DateTimeField(default=timezone.now)
-#     last_modified = models.DateTimeField(auto_now=True)
-
 
 
 
