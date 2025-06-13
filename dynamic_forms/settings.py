@@ -28,7 +28,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -183,6 +182,7 @@ CSRF_TRUSTED_ORIGINS = [
 
 CORS_ALLOW_CREDENTIALS = True  # Important for sending cookies cross-domain
 
+
 # If you need to expose specific headers:
 CORS_EXPOSE_HEADERS = ["Content-Type", "X-CSRFToken"]
 
@@ -191,3 +191,11 @@ CORS_EXPOSE_HEADERS = ["Content-Type", "X-CSRFToken"]
 
 SESSION_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_SECURE = False
+
+
+
+# BACKBLAZE
+BACK_BLAZE_KEY_ID = config('BACK_BLAZE_KEY_ID')
+BACK_BLAZE_KEY_NAME = config('BACK_BLAZE_KEY_NAME')
+BACK_BLAZE_BUCKET_NAME = config('BACK_BLAZE_BUCKET_NAME')
+BACK_BLAZE_APLLICATION_KEY =config('BACK_BLAZE_APLLICATION_KEY')

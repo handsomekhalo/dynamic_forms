@@ -4,6 +4,11 @@ from . import views
 urlpatterns = [
     path('get_all_form_details_api/<int:form_id>/',views.get_all_form_details_api,
          name='get_all_form_details_api'),
+    
+    # path('get_form_details_api/<int:form_id>/',views.get_form_details_api,
+    #      name='get_form_details_api'),
+    path('get_form_answers_from_user_api/<int:form_id>/<int:client_id>/',views.get_form_answers_from_user_api,
+         name='get_form_answers_from_user_api'),
   
-
+  
 ]

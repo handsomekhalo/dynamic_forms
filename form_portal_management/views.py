@@ -1,13 +1,20 @@
 import json
+from urllib.parse import urlencode
 from django.forms import ValidationError
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.urls import reverse_lazy
 import requests
    # Import your models
+import base64
+from django.core.files.base import ContentFile
 from application_management.models import FormType, MainCategory, FormSubmission, FormResponse, FormQuestionAssignment, FormCategoryAssignment
-    
+from application_management.models import FormType, MainCategory, FormResponse, FormQuestionAssignment
+from question_management.models import Question
+       
 from application_management.models import FormCategoryAssignment, FormQuestionAssignment, FormResponse, FormSubmission, FormType, MainCategory
+from form_portal_management.models import Document
+from system_management.backblazes3 import upload_to_backblaze_s3
 from system_management.general_func_classes import host_url
 from rest_framework.response import Response
 from django.http import JsonResponse
@@ -16,6 +23,11 @@ from django.db import IntegrityError
 from django.core.validators import validate_email
 from datetime import datetime
 import requests
+from rest_framework.authtoken.models import Token
+from django.db import transaction
+
+from system_management.models import User  # or your custom one
+
 
 
 @csrf_exempt
@@ -78,6 +90,8 @@ def get_all_form_details(request, formId):
         }, status=500)
 
 
+
+
 @csrf_exempt
 def submit_category_answers(request):
     try:
@@ -91,7 +105,6 @@ def submit_category_answers(request):
         # Load and debug the data
         try:
             data = json.loads(request.body)
-            print('Raw data:', data)
         except json.JSONDecodeError:
             return JsonResponse({
                 "status": "error",
@@ -121,7 +134,6 @@ def submit_category_answers(request):
             }, status=401)
 
         # Authenticate user based on token
-        from rest_framework.authtoken.models import Token
         try:
             token_obj = Token.objects.get(key=token)
             user = token_obj.user
@@ -147,7 +159,7 @@ def submit_category_answers(request):
         category_id = payload_data.get("category_id")
         answers = payload_data.get("answers", [])
 
-
+        print('answers', answers)
 
         # Validation
         if form_id is None:
@@ -167,7 +179,6 @@ def submit_category_answers(request):
             }, status=400)
 
         # Validate that the form and category exist
-        from application_management.models import FormType, MainCategory, FormSubmission, FormCategoryAssignment
 
         try:
             form_type = FormType.objects.get(id=form_id)
@@ -193,7 +204,7 @@ def submit_category_answers(request):
         )
 
         # Save the answers
-        saved_count = save_category_answers(submission, form_id, category_id, answers, request)
+        saved_count = save_category_answers(submission, form_id, category_id, answers, request, user)
 
         return JsonResponse({
             "status": "success",
@@ -212,21 +223,23 @@ def submit_category_answers(request):
         }, status=500)
 
 
-def save_category_answers(submission, form_id, category_id, answers, request):
+
+def save_category_answers(submission, form_id, category_id, answers, request, user):
     """
     Save category answers and return count of successfully saved answers
     """
-    from application_management.models import FormType, MainCategory, FormResponse, FormQuestionAssignment
-    from question_management.models import Question
-    
+
     saved_count = 0
     
     for answer in answers:
         question_id = answer.get("question_id")
         response_text = answer.get("answer", "")
+        print('Processing answer for question_id:', question_id)
+        print('response_text:', response_text)
         other_option = answer.get("other_option")
 
         if not question_id:
+            print("Skipping answer - no question_id")
             continue
 
         try:
@@ -256,14 +269,142 @@ def save_category_answers(submission, form_id, category_id, answers, request):
                 'file_upload': None,
             }
 
-            # Handle different input types and store in appropriate field
+            # Handle file uploads
             if question.input_type == 'file':
-                uploaded_file = request.FILES.get(f"file_{question_id}")
-                if uploaded_file:
-                    response_data['file_upload'] = uploaded_file
-                    response_data['response_text'] = uploaded_file.name
-                else:
+                print(f"Processing file upload for question {question_id}")
+                
+                # Check if this is a base64 encoded file
+                if answer.get('is_file') and response_text and response_text.startswith('data:'):
+                    try:
+                        print(f"Processing base64 file upload for question {question_id}")
+                        
+                        # Validate base64 format
+                        if ';base64,' not in response_text:
+                            print(f"Invalid base64 format for question {question_id}")
+                            continue
+                            
+                        # Handle base64 encoded file
+                        format_part, imgstr = response_text.split(';base64,', 1)
+                        
+                        # Extract file extension from MIME type
+                        if 'data:' in format_part:
+                            mime_type = format_part.replace('data:', '')
+                            ext_map = {
+                                'application/pdf': 'pdf',
+                                'image/jpeg': 'jpg',
+                                'image/jpg': 'jpg',
+                                'image/png': 'png',
+                                'image/gif': 'gif',
+                                'text/plain': 'txt',
+                                'application/msword': 'doc',
+                                'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx'
+                            }
+                            ext = ext_map.get(mime_type, 'bin')
+                        else:
+                            ext = 'pdf'  # default fallback
+                        
+                        # Get filename from answer or generate one
+                        filename = answer.get('filename')
+                        if not filename:
+                            filename = f'file_{question_id}_{submission.id}.{ext}'
+                        
+                        # Ensure filename has correct extension
+                        if not filename.lower().endswith(f'.{ext}'):
+                            filename = f"{os.path.splitext(filename)[0]}.{ext}"
+                        
+                        print(f'Processing file: {filename}')
+                        
+                        # Decode base64 - add padding if needed
+                        try:
+                            # Add padding if needed
+                            missing_padding = len(imgstr) % 4
+                            if missing_padding:
+                                imgstr += '=' * (4 - missing_padding)
+                            
+                            file_data = base64.b64decode(imgstr)
+                            print(f'Decoded file size: {len(file_data)} bytes')
+                            
+                            if len(file_data) == 0:
+                                print(f"Decoded file is empty for question {question_id}")
+                                continue
+                                
+                        except Exception as decode_error:
+                            print(f"Base64 decode error for question {question_id}: {decode_error}")
+                            continue
+                        
+                        # Create a Django file object
+                        django_file = ContentFile(file_data, name=filename)
+                        
+                        # Upload to S3 and get the public file URL
+                        try:
+                            full_s3_url = upload_to_backblaze_s3(django_file, filename)
+                            
+                            if not full_s3_url:
+                                continue
+
+                            # Save Document record
+                            document = Document.objects.create(
+                                name=filename,
+                                file=full_s3_url,
+                                uploaded_by=user,  # Use the passed user parameter
+                                form_submission=submission,
+                            )
+
+                            # Save to FormResponse
+                            response_data['file_upload'] = full_s3_url
+                            response_data['response_text'] = filename
+                            
+                        except Exception as upload_error:
+                            print(f"S3 upload failed for question {question_id}: {upload_error}")
+                            continue
+                            
+                    except Exception as e:
+                        print(f"Base64 file processing failed for question {question_id}: {e}")
+                        import traceback
+                        traceback.print_exc()
+                        continue
+                        
+                elif answer.get('is_file'):
+                    # File was expected but base64 data is missing or invalid
+                    print(f"File expected but invalid base64 data for question {question_id}")
                     continue
+                    
+                else:
+                    # Look for file in request.FILES (for multipart uploads)
+                    uploaded_file = request.FILES.get(f"file_{question_id}")
+                    
+                    if uploaded_file:
+                        try:
+                            # Upload to S3 and get the public file URL
+                            file_name = uploaded_file.name
+                            full_s3_url = upload_to_backblaze_s3(uploaded_file, file_name)
+                            
+                            if not full_s3_url:
+                                continue
+
+                            # Save Document record
+                            Document.objects.create(
+                                name=file_name,
+                                # file=uploaded_file,
+                                file=full_s3_url,  # ✅ The URL returned from your manual S3 upload
+
+                                uploaded_by=user,
+                                form_submission=submission,
+                            )
+
+                            # Save to FormResponse
+                            response_data['file_upload'] = full_s3_url
+                            response_data['response_text'] = file_name
+                            print('Multipart file uploaded successfully:', response_data)
+                        except Exception as e:
+                            print(f"Multipart file upload failed for question {question_id}: {e}")
+                            continue
+                    else:
+                        # No file found
+                        print(f"No file found for file question {question_id}")
+                        if response_text and response_text.strip():
+                            print(f"Received text instead: {response_text}")
+                        continue
 
             elif question.input_type == 'checkbox':
                 if isinstance(response_text, list):
@@ -317,8 +458,9 @@ def save_category_answers(submission, form_id, category_id, answers, request):
             if hasattr(question, 'allow_other_option') and question.allow_other_option and other_option:
                 response_data['response_text'] = str(other_option).strip()
 
-            # Skip empty required fields
-            if hasattr(question, 'is_required') and question.is_required:
+            # Skip empty required fields (but not for file uploads which are handled above)
+            if (hasattr(question, 'is_required') and question.is_required and 
+                question.input_type != 'file'):
                 if (not response_data['response_text'] or 
                     (response_data['response_text'] and response_data['response_text'].strip() == "")):
                     print(f"Required question {question_id} has empty response")
@@ -358,50 +500,85 @@ def save_category_answers(submission, form_id, category_id, answers, request):
 
 
 
+@csrf_exempt
+def get_form_answers_from_user(request, formId):
+    if request.method != 'GET':
+        return JsonResponse({
+            "status": "error",
+            "message": "Method not allowed"
+        }, status=405)
 
+    try:
+        # Extract token from Authorization header
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Token "):
+            token = auth_header[6:]
+        elif auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+        else:
+            token = auth_header.strip()
 
+        if not token:
+            return JsonResponse({
+                "status": "error",
+                "message": "Authorization token is required."
+            }, status=401)
 
-# def get_form_details_directly(request, form_id):
-#     try:
-#         form = FormType.objects.get(id=form_id)
+        # Get user from token - simplified approach
+        try:
+            user = Token.objects.select_related('user').get(key=token).user
+            client_id = user.id
+            
+        except Token.DoesNotExist:
+            return JsonResponse({
+                "status": "error",
+                "message": "Invalid or expired token."
+            }, status=401)
 
-#         # Step 1: Get all categories assigned to this form
-#         category_assignments = FormCategoryAssignment.objects.filter(form_type=form).select_related('main_category')
+        # Build internal API URL
+        base_url = host_url(request)
+        query_string = ""
+        if request.GET.get("detail", "").lower() == "true":
+            query_string = f"?{urlencode({'detail': 'true'})}"
 
-#         form_data = []
+        api_path = reverse_lazy('get_form_answers_from_user_api', kwargs={
+            'form_id': formId,
+            'client_id': client_id
+        })
+        api_url = f"{base_url}{api_path}{query_string}"
 
-#         for assignment in category_assignments:
-#             category = assignment.main_category
+        # Make the internal API call
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Token {token}"
+        }
+        
+        try:
+            response = requests.get(api_url, headers=headers, timeout=10)
+            response.raise_for_status()
+            response_data = response.json()
+            
+            answers = response_data.get("data", {}).get("answers", [])
+            
+            return JsonResponse({
+                "status": "success",
+                "data": {
+                    "answers": answers
+                },
+                "message": "Answers retrieved successfully." if answers else "No answers submitted yet."
+            }, status=200)
+            
+        except requests.RequestException as e:
+            return JsonResponse({
+                "status": "error",
+                "message": f"Failed to retrieve answers: {str(e)}"
+            }, status=500)
 
-#             # Step 2: Get all questions linked to this form + category
-#             question_assignments = FormQuestionAssignment.objects.filter(
-#                 form_type=form,
-#                 main_category=category
-#             ).select_related('question')
-
-#             questions = []
-#             for q_ass in question_assignments:
-#                 question = q_ass.question
-#                 questions.append({
-#                     "question_id": question.id,
-#                     "question_text": question.text,
-#                     "input_type": question.input_type,
-#                     "is_required": question.is_required,
-#                     "allow_other_option": question.allow_other_option,
-#                     # Add more if needed
-#                 })
-
-#             form_data.append({
-#                 "category_id": category.id,
-#                 "category_name": category.name,
-#                 "questions": questions
-#             })
-
-#         return JsonResponse({
-#             "status": "success",
-#             "formId": form_id,
-#             "formDetails": form_data
-#         }, status=200)
-
-#     except FormType.DoesNotExist:
-#         return JsonResponse({"status": "error", "message": "Form not found"}, status=404)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            "status": "error",
+            "message": f"Server error occurred: {str(e)}"
+        }, status=500)
+    

@@ -1,4 +1,5 @@
-    """
+
+"""
 File for the separation of S3 file management.
 """
 import boto3
@@ -14,7 +15,9 @@ def upload_to_s3(file, file_name):
     s3_file_name = f"{path}/{file_name}"
     s3 = boto3.client('s3')
 
-    bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+    # bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+    bucket_name = settings.BACK_BLAZE_BUCKET_NAME
+
 
     try:
         # Upload the file to S3

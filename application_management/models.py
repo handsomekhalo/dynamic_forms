@@ -69,6 +69,8 @@ class FormResponse(models.Model):
 
     response_text = models.TextField(blank=True, null=True)
     file_upload = models.FileField(upload_to="form_uploads/", null=True, blank=True)
+    # file_upload = models.CharField(max_length=500, null=True, blank=True)
+
     selected_option = models.ForeignKey('question_management.Option', null=True, blank=True, on_delete=models.SET_NULL)
     response_number = models.FloatField(null=True, blank=True)
     response_date = models.DateField(null=True, blank=True)
