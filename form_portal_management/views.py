@@ -10,11 +10,12 @@ import base64
 from django.core.files.base import ContentFile
 from application_management.models import FormType, MainCategory, FormSubmission, FormResponse, FormQuestionAssignment, FormCategoryAssignment
 from application_management.models import FormType, MainCategory, FormResponse, FormQuestionAssignment
+from form_portal_management.api.serailizers import RetreiveDocumentSerializer
 from question_management.models import Question
        
 from application_management.models import FormCategoryAssignment, FormQuestionAssignment, FormResponse, FormSubmission, FormType, MainCategory
 from form_portal_management.models import Document
-from system_management.backblazes3 import upload_to_backblaze_s3
+from system_management.backblazes3 import upload_to_backblaze_s3,open_back_blaze_s3_file
 from system_management.general_func_classes import host_url
 from rest_framework.response import Response
 from django.http import JsonResponse
@@ -25,7 +26,10 @@ from datetime import datetime
 import requests
 from rest_framework.authtoken.models import Token
 from django.db import transaction
-
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+import json, requests
+import pandas as pd
 from system_management.models import User  # or your custom one
 
 
@@ -256,6 +260,17 @@ def save_category_answers(submission, form_id, category_id, answers, request, us
                 print(f"Question {question_id} not assigned to form {form_id}, category {category_id}")
                 continue
 
+            # assignment_qs = FormQuestionAssignment.objects.filter(
+            #     form_type_id=form_id,
+            #     question_id=question_id
+            # )
+
+            # # If the question is assigned to multiple categories, allow saving if current category matches any
+            # if not assignment_qs.filter(main_category_id=category_id).exists():
+            #     print(f"Skipping Question {question_id} — not assigned to category {category_id} in form {form_id}")
+            #     continue
+
+
             # Get form_type and category objects
             form_type = FormType.objects.get(id=form_id)
             main_category = MainCategory.objects.get(id=category_id)
@@ -343,14 +358,22 @@ def save_category_answers(submission, form_id, category_id, answers, request, us
                                 continue
 
                             # Save Document record
-                            document = Document.objects.create(
+                            # document = Document.objects.create(
+                            #     name=filename,
+                            #     file=full_s3_url,
+                            #     uploaded_by=user,  # Use the passed user parameter
+                            #     form_submission=submission,
+                            # )
+                            Document.objects.create(
                                 name=filename,
                                 file=full_s3_url,
-                                uploaded_by=user,  # Use the passed user parameter
+                                uploaded_by=user, 
                                 form_submission=submission,
+                                question=question,  # ← you must now explicitly store the question
+                                main_category=main_category,  # ← and the main category
                             )
 
-                            # Save to FormResponse
+                                                        # Save to FormResponse
                             response_data['file_upload'] = full_s3_url
                             response_data['response_text'] = filename
                             
@@ -499,7 +522,6 @@ def save_category_answers(submission, form_id, category_id, answers, request, us
     return saved_count
 
 
-
 @csrf_exempt
 def get_form_answers_from_user(request, formId):
     if request.method != 'GET':
@@ -582,3 +604,107 @@ def get_form_answers_from_user(request, formId):
             "message": f"Server error occurred: {str(e)}"
         }, status=500)
     
+
+@csrf_exempt
+def get_all_documents_for_user(request):
+    """
+    View to retrieve documents for a user using their token.
+    Calls the DRF API endpoint and adds presigned URLs.
+    """
+    if request.method != 'GET':
+        return JsonResponse({
+            "status": "error",
+            "message": "Method not allowed"
+        }, status=405)
+
+    try:
+        # 1. Extract token
+        auth_header = request.headers.get("Authorization", "")
+        token = None
+        if auth_header.startswith("Token "):
+            token = auth_header.split("Token ")[-1]
+        elif auth_header.startswith("Bearer "):
+            token = auth_header.split("Bearer ")[-1]
+
+        if not token:
+            return JsonResponse({
+                "status": "error",
+                "message": "Authorization token is required."
+            }, status=401)
+
+        # 2. Get the user to pass user_id to the API
+        try:
+            user = Token.objects.select_related('user').get(key=token).user
+        except Token.DoesNotExist:
+            return JsonResponse({
+                "status": "error",
+                "message": "Invalid or expired token."
+            }, status=401)
+
+        # 3. Save token in session (optional)
+        request.session["token"] = token
+        request.session.modified = True
+
+        # 4. Prepare headers and payload for API call
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Token {token}",
+        }
+
+        # 5. Prepare the payload with user_id
+        payload = {
+            "user_id": user.id
+        }
+
+        # 6. URL to your DRF API endpoint
+        url = f"{host_url(request)}{reverse_lazy('get_all_documents_for_user_api')}"
+
+        # 7. Call the DRF API
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        response.raise_for_status()
+
+        response_data = response.json()
+
+        # 8. Check if API call was successful
+        if response_data.get("status") != "success":
+            return JsonResponse({
+                "status": "error",
+                "message": response_data.get("message", "API call failed")
+            }, status=400)
+
+        # 9. Get documents from API response (already serialized)
+        documents_list = response_data.get("documents", [])
+
+        # 10. Apply presigned URL generation (only presentation logic)
+        if documents_list:
+            for document in documents_list:
+                # Generate presigned URLs for file fields
+                if 'file' in document and document['file']:
+                    document['file'] = open_back_blaze_s3_file(document['file'])
+                
+                if 'response' in document and document['response']:
+                    document['response'] = open_back_blaze_s3_file(document['response'])
+
+        return JsonResponse({
+            "status": "success",
+            "data": documents_list,
+            "message": "Documents retrieved successfully."
+        }, status=200)
+
+    except requests.exceptions.RequestException as e:
+        return JsonResponse({
+            'status': 'error', 
+            'message': f'Request failed: {str(e)}'
+        }, status=500)
+    except ValueError:
+        return JsonResponse({
+            'status': 'error', 
+            'message': 'Invalid JSON response from API'
+        }, status=500)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            "status": "error",
+            "message": f"Server error occurred: {str(e)}"
+        }, status=500)
