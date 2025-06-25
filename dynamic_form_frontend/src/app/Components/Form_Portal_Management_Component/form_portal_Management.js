@@ -15,6 +15,10 @@ export default function FormPortal_Management() {
   const [submittingCategory, setSubmittingCategory] = useState(null);
   const [loadingAnswers, setLoadingAnswers] = useState(false);
   const [documentList, setDocumentList] = useState([]);
+  const [selectedFileUrl, setSelectedFileUrl] = useState(null);
+  // const [selectedFileUrl, setSelectedFileUrl] = useState(null);
+const [isDocumentLoading, setIsDocumentLoading] = useState(false);
+
 
   const { authToken, isAuthenticated, navigate, isLoading } = useAuth();
 
@@ -196,93 +200,163 @@ export default function FormPortal_Management() {
     }
   };
 
+  // const fetchFormAnswers = async (formId) => {
+  //   setLoadingAnswers(true);
+  //   try {
+  //     const res = await backendApi.get(
+  //       `/form_portal_management/get_form_answers_from_user/${formId}/`,
+  //       {
+  //         headers: { Authorization: `Token ${authToken}` },
+  //       }
+  //     );
+
+  //     if (res.data.status === "success") {
+  //       const answers = res.data.data.answers || [];
+  //       console.log("📦 API returns answers response:", answers);
+
+  //       const answersMap = {};
+
+  //       answers.forEach((answer) => {
+  //         // Composite key: formId-categoryId-questionId
+  //         const compositeKey = `${formId}-${answer.category_id}-${answer.question_id}`;
+  //         let answerValue = "";
+
+  //         // Handle file uploads
+  //         if (answer.input_type === "file" && answer.file_upload) {
+  //           let url = answer.file_upload;
+
+  //           // Remove leading slash if present
+  //           if (url.startsWith("/")) {
+  //             url = url.substring(1);
+  //           }
+
+  //           // Decode URL if encoded
+  //           try {
+  //             url = decodeURIComponent(url);
+  //           } catch (e) {
+  //             console.warn("⚠️ Could not decode URL:", url);
+  //           }
+
+  //           // If URL is still incomplete, prefix it
+  //           if (!url.startsWith("http")) {
+  //             url = `https://${url.replace(/^https?:\/?/, "")}`;
+  //           }
+
+  //           answerValue = url;
+  //         }
+
+  //         // Handle other input types
+  //         else if (answer.response_text) {
+  //           answerValue = answer.response_text;
+  //         } else if (answer.selected_option_text) {
+  //           answerValue = answer.selected_option_text;
+  //         } else if (answer.response_number !== null) {
+  //           answerValue = answer.response_number.toString();
+  //         } else if (answer.response_date) {
+  //           answerValue = answer.response_date;
+  //         } else if (answer.response_boolean !== null) {
+  //           answerValue = answer.response_boolean ? "checked" : "";
+  //         }
+
+  //         // Optional: Warn about duplicate keys
+  //         if (answersMap[compositeKey]) {
+  //           console.warn(`⚠️ Duplicate answer for key ${compositeKey}`);
+  //         }
+
+  //         answersMap[compositeKey] = answerValue;
+  //       });
+
+  //       // Debug output
+  //       Object.entries(answersMap).forEach(([key, val]) => {
+  //         console.log(`→ ${key}: ${val}`);
+  //       });
+  //       console.log("✅ Final answersMap:", answersMap);
+
+  //       // Set to state
+  //       setFormAnswers((prevAnswers) => ({ ...prevAnswers, ...answersMap }));
+  //     }
+  //   } catch (error) {
+  //     console.error("❌ Error fetching form answers:", error);
+  //     if (error.response && error.response.status !== 404) {
+  //       console.warn(
+  //         "⚠️ Failed to load existing answers:",
+  //         error.response?.data?.message
+  //       );
+  //     }
+  //   } finally {
+  //     setLoadingAnswers(false);
+  //   }
+  // };
+
   const fetchFormAnswers = async (formId) => {
-    setLoadingAnswers(true);
-    try {
-      const res = await backendApi.get(
-        `/form_portal_management/get_form_answers_from_user/${formId}/`,
-        {
-          headers: { Authorization: `Token ${authToken}` },
+  setLoadingAnswers(true);
+  try {
+    const res = await backendApi.get(
+      `/form_portal_management/get_form_answers_from_user/${formId}/`,
+      {
+        headers: { Authorization: `Token ${authToken}` },
+      }
+    );
+
+    if (res.data.status === "success") {
+      const answers = res.data.data.answers || [];
+      console.log("📦 API returns answers response:", answers);
+
+      const answersMap = {};
+
+      answers.forEach((answer) => {
+        // Composite key: formId-categoryId-questionId
+        const compositeKey = `${formId}-${answer.category_id}-${answer.question_id}`;
+        let answerValue = "";
+
+        // Handle file preview links using file_preview_url from backend
+        if (answer.input_type === "file") {
+          answerValue = answer.file_preview_url || answer.file_upload || "";
         }
-      );
 
-      if (res.data.status === "success") {
-        const answers = res.data.data.answers || [];
-        console.log("📦 API returns answers response:", answers);
+        // Handle other input types
+        else if (answer.response_text) {
+          answerValue = answer.response_text;
+        } else if (answer.selected_option_text) {
+          answerValue = answer.selected_option_text;
+        } else if (answer.response_number !== null) {
+          answerValue = answer.response_number.toString();
+        } else if (answer.response_date) {
+          answerValue = answer.response_date;
+        } else if (answer.response_boolean !== null) {
+          answerValue = answer.response_boolean ? "checked" : "";
+        }
 
-        const answersMap = {};
+        // Optional: Warn about duplicate keys
+        if (answersMap[compositeKey]) {
+          console.warn(`⚠️ Duplicate answer for key ${compositeKey}`);
+        }
 
-        answers.forEach((answer) => {
-          // Composite key: formId-categoryId-questionId
-          const compositeKey = `${formId}-${answer.category_id}-${answer.question_id}`;
-          let answerValue = "";
+        answersMap[compositeKey] = answerValue;
+      });
 
-          // Handle file uploads
-          if (answer.input_type === "file" && answer.file_upload) {
-            let url = answer.file_upload;
+      // Debug output
+      Object.entries(answersMap).forEach(([key, val]) => {
+        console.log(`→ ${key}: ${val}`);
+      });
+      console.log("✅ Final answersMap:", answersMap);
 
-            // Remove leading slash if present
-            if (url.startsWith("/")) {
-              url = url.substring(1);
-            }
-
-            // Decode URL if encoded
-            try {
-              url = decodeURIComponent(url);
-            } catch (e) {
-              console.warn("⚠️ Could not decode URL:", url);
-            }
-
-            // If URL is still incomplete, prefix it
-            if (!url.startsWith("http")) {
-              url = `https://${url.replace(/^https?:\/?/, "")}`;
-            }
-
-            answerValue = url;
-          }
-
-          // Handle other input types
-          else if (answer.response_text) {
-            answerValue = answer.response_text;
-          } else if (answer.selected_option_text) {
-            answerValue = answer.selected_option_text;
-          } else if (answer.response_number !== null) {
-            answerValue = answer.response_number.toString();
-          } else if (answer.response_date) {
-            answerValue = answer.response_date;
-          } else if (answer.response_boolean !== null) {
-            answerValue = answer.response_boolean ? "checked" : "";
-          }
-
-          // Optional: Warn about duplicate keys
-          if (answersMap[compositeKey]) {
-            console.warn(`⚠️ Duplicate answer for key ${compositeKey}`);
-          }
-
-          answersMap[compositeKey] = answerValue;
-        });
-
-        // Debug output
-        Object.entries(answersMap).forEach(([key, val]) => {
-          console.log(`→ ${key}: ${val}`);
-        });
-        console.log("✅ Final answersMap:", answersMap);
-
-        // Set to state
-        setFormAnswers((prevAnswers) => ({ ...prevAnswers, ...answersMap }));
-      }
-    } catch (error) {
-      console.error("❌ Error fetching form answers:", error);
-      if (error.response && error.response.status !== 404) {
-        console.warn(
-          "⚠️ Failed to load existing answers:",
-          error.response?.data?.message
-        );
-      }
-    } finally {
-      setLoadingAnswers(false);
+      // Set to state
+      setFormAnswers((prevAnswers) => ({ ...prevAnswers, ...answersMap }));
     }
-  };
+  } catch (error) {
+    console.error("❌ Error fetching form answers:", error);
+    if (error.response && error.response.status !== 404) {
+      console.warn(
+        "⚠️ Failed to load existing answers:",
+        error.response?.data?.message
+      );
+    }
+  } finally {
+    setLoadingAnswers(false);
+  }
+};
+
 
   const handleDocumentUpdate = async (docId, file) => {
     const formData = new FormData();
@@ -608,60 +682,88 @@ export default function FormPortal_Management() {
           </div>
         );
 
-      case "file":
-        const compositeKey = `${formId}-${categoryId}-${question.id}`;
-        // console.log(`Composite key: ${compositeKey} →`, answerValue);
+     
+// case "file":
+//   const fileKey = `${formId}-${categoryId}-${question.id}`;
+//   const existingFileUrl = formAnswers[fileKey];
 
-        const existingFileUrl = formAnswers[compositeKey];
+//   return (
+//     <div className="mb-3">
+//       <label className="form-label">
+//         {question.label || question.question_text}
+//       </label>
 
-        return (
-          <div className="mb-3">
-            <label className="form-label">
-              {question.label || question.question_text}
-            </label>
+//       {/* View Existing File */}
+//       {existingFileUrl &&
+//         typeof existingFileUrl === "string" &&
+//         existingFileUrl.startsWith("http") && (
+//           <div className="mb-2 flex items-center space-x-4">
+//             <button
+//               type="button"
+//               onClick={() => setSelectedFileUrl(existingFileUrl)}
+//               className="text-blue-600 underline text-sm"
+//             >
+//               View uploaded file
+//             </button>
+//           </div>
+//         )}
 
-            {/* Show existing uploaded file */}
-            {/* {existingFileUrl && (
-        <div className="mb-2">
-          <a
-            href={existingFileUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 underline text-sm"
-          >
-            View uploaded file
-          </a>
-        </div>
-      )} */}
-            {existingFileUrl &&
-              typeof existingFileUrl === "string" &&
-              existingFileUrl.startsWith("http") && (
-                <div className="mb-2">
-                  <a
-                    href={existingFileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 underline text-sm"
-                  >
-                    View uploaded file
-                  </a>
-                </div>
-              )}
+//       {/* File Input */}
+//       <input
+//         type="file"
+//         className="form-control w-full p-2 border border-gray-300 rounded"
+//         onChange={(e) => {
+//           const file = e.target.files[0];
+//           if (file) {
+//             handleInputChange(formId, categoryId, question.id, file);
+//           }
+//         }}
+//         required={question.is_required}
+//       />
+//     </div>
+//   );
+case "file":
+  const fileKey = `${formId}-${categoryId}-${question.id}`;
+  const existingFileUrl = formAnswers[fileKey];
 
-            {/* File input */}
-            <input
-              type="file"
-              className="form-control w-full p-2 border border-gray-300 rounded"
-              onChange={(e) => {
-                const file = e.target.files[0];
-                if (file) {
-                  handleInputChange(formId, categoryId, question.id, file);
-                }
+  return (
+    <div className="mb-3">
+      <label className="form-label">
+        {question.label || question.question_text}
+      </label>
+
+      {/* View Existing File */}
+      {existingFileUrl &&
+        typeof existingFileUrl === "string" &&
+        existingFileUrl.startsWith("http") && (
+          <div className="mb-2 flex items-center space-x-4">
+            <button
+              type="button"
+              onClick={() => {
+                setIsDocumentLoading(true);
+                setSelectedFileUrl(existingFileUrl);
               }}
-              required={question.is_required}
-            />
+              className="text-blue-600 underline text-sm"
+            >
+              View uploaded file
+            </button>
           </div>
-        );
+        )}
+
+      {/* File Input */}
+      <input
+        type="file"
+        className="form-control w-full p-2 border border-gray-300 rounded"
+        onChange={(e) => {
+          const file = e.target.files[0];
+          if (file) {
+            handleInputChange(formId, categoryId, question.id, file);
+          }
+        }}
+        required={question.is_required}
+      />
+    </div>
+  );
 
       default:
         return (
@@ -688,6 +790,7 @@ export default function FormPortal_Management() {
     }
   };
 
+  
   const sortQuestionsByOrder = (questions) => {
     return [...questions].sort((a, b) => (a.order || 0) - (b.order || 0));
   };
@@ -735,6 +838,8 @@ export default function FormPortal_Management() {
           Loading existing answers...
         </div>
       )}
+
+
 
       {formDetails.length > 0 && (
         <div className="space-y-4">
@@ -964,6 +1069,58 @@ export default function FormPortal_Management() {
           </div>
         </div>
       )}
+
+{selectedFileUrl && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="bg-white rounded-lg shadow-lg w-[95%] max-w-5xl p-4 relative">
+      {/* Close Button */}
+      <button
+        onClick={() => setSelectedFileUrl(null)}
+        className="absolute top-2 right-2 text-gray-600 hover:text-black"
+      >
+        ✕
+      </button>
+
+      {/* Modal Title */}
+      <div className="text-center font-semibold text-lg mb-3">
+        Document Preview
+      </div>
+
+      {/* Loader */}
+      {isDocumentLoading && (
+        <div className="text-center text-sm text-blue-500 mb-4">
+          Loading document...
+        </div>
+      )}
+
+      {/* Iframe Preview */}
+      <iframe
+        id="document_frame"
+        src={selectedFileUrl}
+        title="Document Preview"
+        className="w-full h-[70vh] border rounded"
+        onLoad={() => setIsDocumentLoading(false)}
+      />
+
+      {/* Optional fallback */}
+      {!selectedFileUrl.includes(".pdf") && (
+        <div className="text-center mt-4">
+          <a
+            href={selectedFileUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 underline"
+          >
+            Open in new tab
+          </a>
+        </div>
+      )}
+    </div>
+  </div>
+)}
+
+
+      
     </div>
   );
 }

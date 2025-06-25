@@ -562,39 +562,6 @@ def get_all_questions_assigned_to_all_categories_api(request, form_type_id):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-# @api_view(['GET'])
-# def get_all_questions_assigned_to_all_categories_api(request, form_type_id):
-#     """
-#     Get all active questions grouped by categories for a given form type.
-    
-#     URL: /api/forms/{form_type_id}/questions/
-#     """
-#     try:
-#         form_type = FormType.objects.get(id=form_type_id)
-#         categories = form_type.categories.all()
-
-#         questions_by_category = {}
-#         for category in categories:
-#             active_questions = category.question_set.filter(is_active=True).order_by('id')
-#             questions_by_category[category.id] = [q.id for q in active_questions]
-
-#         return Response({
-#             "status": "success",
-#             "questions_by_category": questions_by_category
-#         }, status=status.HTTP_200_OK)
-
-#     except FormType.DoesNotExist:
-#         return Response({
-#             "status": "error",
-#             "message": "Form type not found."
-#         }, status=status.HTTP_404_NOT_FOUND)
-
-#     except Exception as e:
-#         return Response({
-#             "status": "error",
-#             "message": f"An unexpected error occurred: {str(e)}"
-#         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @api_view(['POST'])
 def remove_assigned_question_api(request):

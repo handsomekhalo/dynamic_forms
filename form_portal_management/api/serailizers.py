@@ -80,12 +80,36 @@ class GetCategoryWithQuestionsAssignedSerializer(serializers.ModelSerializer):
 #             return None
 
 
+# class GetAnsweredQuestionFromFormResponseSerializer(serializers.ModelSerializer):
+#     question_id = serializers.IntegerField(source="question.id")
+#     category_id = serializers.IntegerField(source="category.id", required=False)
+#     form_type_id = serializers.IntegerField(source="form_type.id")
+#     input_type = serializers.CharField(source="question.input_type")
+#     question_text = serializers.CharField(source="question.text")
+
+#     class Meta:
+#         model = FormResponse
+#         fields = [
+#             "question_id",
+#             "category_id",
+#             "form_type_id",
+#             "input_type",
+#             "question_text",
+#             "response_text",
+#             "file_upload",
+#             "response_number",
+#             "response_date",
+#             "response_boolean",
+#         ]
+
 class GetAnsweredQuestionFromFormResponseSerializer(serializers.ModelSerializer):
     question_id = serializers.IntegerField(source="question.id")
     category_id = serializers.IntegerField(source="category.id", required=False)
     form_type_id = serializers.IntegerField(source="form_type.id")
     input_type = serializers.CharField(source="question.input_type")
     question_text = serializers.CharField(source="question.text")
+
+    file_upload = serializers.SerializerMethodField()
 
     class Meta:
         model = FormResponse
@@ -102,6 +126,11 @@ class GetAnsweredQuestionFromFormResponseSerializer(serializers.ModelSerializer)
             "response_boolean",
         ]
 
+    def get_file_upload(self, obj):
+        if obj.file_upload:
+            from system_management.backblazes3 import open_back_blaze_s3_file  # adjust import
+            return open_back_blaze_s3_file(obj.file_upload)
+        return None
 
 # class RetreiveDocumentSerializer(serializers.ModelSerializer):
 #     class Meta:

@@ -522,88 +522,260 @@ def save_category_answers(submission, form_id, category_id, answers, request, us
     return saved_count
 
 
+# @csrf_exempt
+# def get_form_answers_from_user(request, formId):
+#     if request.method != 'GET':
+#         return JsonResponse({
+#             "status": "error",
+#             "message": "Method not allowed"
+#         }, status=405)
+
+#     try:
+#         # Extract token from Authorization header
+#         auth_header = request.headers.get("Authorization", "")
+#         if auth_header.startswith("Token "):
+#             token = auth_header[6:]
+#         elif auth_header.startswith("Bearer "):
+#             token = auth_header[7:]
+#         else:
+#             token = auth_header.strip()
+
+#         if not token:
+#             return JsonResponse({
+#                 "status": "error",
+#                 "message": "Authorization token is required."
+#             }, status=401)
+
+#         # Get user from token - simplified approach
+#         try:
+#             user = Token.objects.select_related('user').get(key=token).user
+#             client_id = user.id
+            
+#         except Token.DoesNotExist:
+#             return JsonResponse({
+#                 "status": "error",
+#                 "message": "Invalid or expired token."
+#             }, status=401)
+
+#         # Build internal API URL
+#         base_url = host_url(request)
+#         query_string = ""
+#         if request.GET.get("detail", "").lower() == "true":
+#             query_string = f"?{urlencode({'detail': 'true'})}"
+
+#         api_path = reverse_lazy('get_form_answers_from_user_api', kwargs={
+#             'form_id': formId,
+#             'client_id': client_id
+#         })
+#         api_url = f"{base_url}{api_path}{query_string}"
+
+#         # Make the internal API call
+#         headers = {
+#             "Content-Type": "application/json",
+#             "Authorization": f"Token {token}"
+#         }
+        
+#         try:
+#             response = requests.get(api_url, headers=headers, timeout=10)
+#             response.raise_for_status()
+#             response_data = response.json()
+            
+#             answers = response_data.get("data", {}).get("answers", [])
+
+#             # print('***********************--------------------------------',answers)
+#             if answers:
+#                 for answer in answers:
+#                     print('Processing answer:', answer)
+#                     if 'file' in answer and answer['file']:
+#                         answer['file_upload'] = open_back_blaze_s3_file(answer['file'])
+#                         print('the document ans wer',answer['file'] )
+#                     if 'response' in answer and answer['response']:
+#                         answer['response'] = open_back_blaze_s3_file(answer['response'])
+#                         print('the response ans wer',answer['response'] )
+                        
+            
+#             return JsonResponse({
+#                 "status": "success",
+#                 "data": {
+#                     "answers": answers
+#                 },
+#                 "message": "Answers retrieved successfully." if answers else "No answers submitted yet."
+#             }, status=200)
+            
+#         except requests.RequestException as e:
+#             return JsonResponse({
+#                 "status": "error",
+#                 "message": f"Failed to retrieve answers: {str(e)}"
+#             }, status=500)
+
+#     except Exception as e:
+#         import traceback
+#         traceback.print_exc()
+#         return JsonResponse({
+#             "status": "error",
+#             "message": f"Server error occurred: {str(e)}"
+#         }, status=500)
+
+# @csrf_exempt
+# def get_form_answers_from_user(request, formId):
+#     if request.method != 'GET':
+#         return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
+
+#     try:
+#         auth_header = request.headers.get("Authorization", "")
+#         token = auth_header.replace("Token ", "").replace("Bearer ", "").strip()
+
+#         if not token:
+#             return JsonResponse({"status": "error", "message": "Authorization token is required."}, status=401)
+
+#         try:
+#             user = Token.objects.select_related('user').get(key=token).user
+#             client_id = user.id
+#         except Token.DoesNotExist:
+#             return JsonResponse({"status": "error", "message": "Invalid or expired token."}, status=401)
+
+#         base_url = host_url(request)
+#         query_string = f"?{urlencode({'detail': 'true'})}" if request.GET.get("detail", "").lower() == "true" else ""
+
+#         api_path = reverse_lazy('get_form_answers_from_user_api', kwargs={'form_id': formId, 'client_id': client_id})
+#         api_url = f"{base_url}{api_path}{query_string}"
+
+#         headers = {
+#             "Content-Type": "application/json",
+#             "Authorization": f"Token {token}"
+#         }
+
+#         response = requests.get(api_url, headers=headers, timeout=10)
+#         response.raise_for_status()
+#         response_data = response.json()
+
+#         answers = response_data.get("data", {}).get("answers", [])
+
+#         return JsonResponse({
+#             "status": "success",
+#             "data": {"answers": answers},
+#             "message": "Answers retrieved successfully." if answers else "No answers submitted yet."
+#         }, status=200)
+
+#     except requests.RequestException as e:
+#         return JsonResponse({"status": "error", "message": f"Failed to retrieve answers: {str(e)}"}, status=500)
+
+#     except Exception as e:
+#         import traceback
+#         traceback.print_exc()
+#         return JsonResponse({"status": "error", "message": f"Server error occurred: {str(e)}"}, status=500)
+
+# @csrf_exempt
+# def get_form_answers_from_user(request, formId):
+#     if request.method != 'GET':
+#         return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
+
+#     try:
+#         auth_header = request.headers.get("Authorization", "")
+#         token = auth_header.replace("Token ", "").replace("Bearer ", "").strip()
+
+#         if not token:
+#             return JsonResponse({"status": "error", "message": "Authorization token is required."}, status=401)
+
+#         try:
+#             user = Token.objects.select_related('user').get(key=token).user
+#             client_id = user.id
+#         except Token.DoesNotExist:
+#             return JsonResponse({"status": "error", "message": "Invalid or expired token."}, status=401)
+
+#         base_url = host_url(request)
+#         query_string = f"?{urlencode({'detail': 'true'})}" if request.GET.get("detail", "").lower() == "true" else ""
+
+#         api_path = reverse_lazy('get_form_answers_from_user_api', kwargs={'form_id': formId, 'client_id': client_id})
+#         api_url = f"{base_url}{api_path}{query_string}"
+
+#         headers = {
+#             "Content-Type": "application/json",
+#             "Authorization": f"Token {token}"
+#         }
+
+#         response = requests.get(api_url, headers=headers, timeout=10)
+#         response.raise_for_status()
+#         response_data = response.json()
+
+#         answers = response_data.get("data", {}).get("answers", [])
+
+#         return JsonResponse({
+#             "status": "success",
+#             "data": {"answers": answers},
+#             "message": "Answers retrieved successfully." if answers else "No answers submitted yet."
+#         }, status=200)
+
+#     except requests.RequestException as e:
+#         return JsonResponse({"status": "error", "message": f"Failed to retrieve answers: {str(e)}"}, status=500)
+
+#     except Exception as e:
+#         import traceback
+#         traceback.print_exc()
+#         return JsonResponse({"status": "error", "message": f"Server error occurred: {str(e)}"}, status=500)
+
 @csrf_exempt
 def get_form_answers_from_user(request, formId):
     if request.method != 'GET':
-        return JsonResponse({
-            "status": "error",
-            "message": "Method not allowed"
-        }, status=405)
+        return JsonResponse({"status": "error", "message": "Method not allowed"}, status=405)
 
     try:
-        # Extract token from Authorization header
         auth_header = request.headers.get("Authorization", "")
-        if auth_header.startswith("Token "):
-            token = auth_header[6:]
-        elif auth_header.startswith("Bearer "):
-            token = auth_header[7:]
-        else:
-            token = auth_header.strip()
+        token = auth_header.replace("Token ", "").replace("Bearer ", "").strip()
 
         if not token:
-            return JsonResponse({
-                "status": "error",
-                "message": "Authorization token is required."
-            }, status=401)
+            return JsonResponse({"status": "error", "message": "Authorization token is required."}, status=401)
 
-        # Get user from token - simplified approach
         try:
             user = Token.objects.select_related('user').get(key=token).user
             client_id = user.id
-            
+            print('client_id', client_id)
         except Token.DoesNotExist:
-            return JsonResponse({
-                "status": "error",
-                "message": "Invalid or expired token."
-            }, status=401)
+            return JsonResponse({"status": "error", "message": "Invalid or expired token."}, status=401)
 
-        # Build internal API URL
         base_url = host_url(request)
-        query_string = ""
-        if request.GET.get("detail", "").lower() == "true":
-            query_string = f"?{urlencode({'detail': 'true'})}"
+        query_string = f"?{urlencode({'detail': 'true'})}" if request.GET.get("detail", "").lower() == "true" else ""
 
-        api_path = reverse_lazy('get_form_answers_from_user_api', kwargs={
-            'form_id': formId,
-            'client_id': client_id
-        })
+        api_path = reverse_lazy('get_form_answers_from_user_api', kwargs={'form_id': formId, 'client_id': client_id})
         api_url = f"{base_url}{api_path}{query_string}"
 
-        # Make the internal API call
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Token {token}"
         }
-        
-        try:
-            response = requests.get(api_url, headers=headers, timeout=10)
-            response.raise_for_status()
-            response_data = response.json()
-            
-            answers = response_data.get("data", {}).get("answers", [])
-            
-            return JsonResponse({
-                "status": "success",
-                "data": {
-                    "answers": answers
-                },
-                "message": "Answers retrieved successfully." if answers else "No answers submitted yet."
-            }, status=200)
-            
-        except requests.RequestException as e:
-            return JsonResponse({
-                "status": "error",
-                "message": f"Failed to retrieve answers: {str(e)}"
-            }, status=500)
+
+        response = requests.get(api_url, headers=headers, timeout=60)
+        print('client_id', client_id)
+
+        response.raise_for_status()
+        response_data = response.json()
+
+        answers = response_data.get("data", {}).get("answers", [])
+        print('answers', answers)
+        # Enhance file answers with viewable links
+        for ans in answers:
+            file_url = ans.get("file") or ans.get("value")
+            if file_url and any(file_url.endswith(ext) for ext in [".pdf", ".jpg", ".jpeg", ".png", ".mp4", ".docx", ".xlsx"]):
+                try:
+                    ans["file_preview_url"] = open_back_blaze_s3_file(str(file_url))
+                except Exception as e:
+                    print(f"[Preview URL Error] {e}")
+                    ans["file_preview_url"] = file_url
+
+        return JsonResponse({
+            "status": "success",
+            "data": {"answers": answers},
+            "message": "Answers retrieved successfully." if answers else "No answers submitted yet."
+        }, status=200)
+
+    except requests.RequestException as e:
+        return JsonResponse({"status": "error", "message": f"Failed to retrieve answers: {str(e)}"}, status=500)
 
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return JsonResponse({
-            "status": "error",
-            "message": f"Server error occurred: {str(e)}"
-        }, status=500)
-    
+        return JsonResponse({"status": "error", "message": f"Server error occurred: {str(e)}"}, status=500)
+
 
 @csrf_exempt
 def get_all_documents_for_user(request):
