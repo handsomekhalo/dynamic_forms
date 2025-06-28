@@ -15,8 +15,6 @@ from pathlib import Path
 from decouple import config
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-from dynamic_forms import env
-env()
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -29,6 +27,9 @@ DEBUG = True
 
 # ALLOWED_HOSTS = []
 ALLOWED_HOSTS = config("ALLOWED_HOSTS").split(",")
+print("ALLOWED_HOSTS =", ALLOWED_HOSTS)
+
+
 
 
 # Application definition
