@@ -77,7 +77,9 @@ def set_csrf_token(request):
 
 # View that redirects to Next.js
 def login_view(request):
-    return redirect("http://localhost:3000/")  # Next.js is running here
+    # return redirect("http://localhost:3000/")  # Next.js is running here
+    return redirect('http://56.228.24.233:3000/')  # or your real domain
+
 
 
 
