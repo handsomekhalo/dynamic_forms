@@ -3,7 +3,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     reactStrictMode: true,
-    swcMinify: true,
+    compiler: {
+  removeConsole: false,
+},
     // You can remove or comment out rewrites to let Next.js handle routing automatically
     // async rewrites() {
     //   return [
