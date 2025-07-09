@@ -4,7 +4,8 @@ import axios from 'axios';
 const backendApi = axios.create({
   // baseURL: "http://127.0.0.1:8000",
   // baseURL: "http://52.14.111.23",
-  baseURL: "http://52.14.111.23/api/",
+  baseURL: "http://52.14.111.23/",
+
 
 
   // baseURL: "56.228.24.233",
