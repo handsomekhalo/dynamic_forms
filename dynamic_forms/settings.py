@@ -196,7 +196,6 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:8000",
     "http://56.228.24.233",
     "http://52.14.111.23",
-    "https://52.14.111.23", 
 
 ]
 
@@ -206,6 +205,11 @@ CORS_ALLOW_CREDENTIALS = True  # Important for sending cookies cross-domain
 # If you need to expose specific headers:
 CORS_EXPOSE_HEADERS = ["Content-Type", "X-CSRFToken"]
 
+# Tell Django it's behind a trusted proxy (NGINX)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'http')
+
+# Ensure you're not forcing SSL unless you're using HTTPS via AWS ACM/Load Balancer
+SECURE_SSL_REDIRECT = False
 
 #for dhango cross site  settings
 
