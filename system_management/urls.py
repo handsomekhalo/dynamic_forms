@@ -7,8 +7,6 @@ from django.conf.urls.static import static
 
 
 urlpatterns = [
-
-
     path('login_view/', views.login_view, name='login_view'),
     path('register_user/', views.register_user, name='register_user'),
     path('csrf/', views.csrf, name='csrf'),
@@ -16,22 +14,7 @@ urlpatterns = [
     path('get_roles/', views.get_roles, name='get_roles'),
     path('get_all_users/', views.get_all_users, name='get_all_users'),
     # path('update_user/', views.update_user, name='update_user'),
-    path('update_user/<int:user_id>/', views.update_user, name='update_user'),
-
-
-
-    
-    # path('login/', views.login, name='login'),
-    # path('get_all_users/', views.get_all_users, name='get_all_users'),
-    # path('create_user/', views.create_user, name='create_user'),
-    # path('get_roles/', views.get_roles, name='get_roles'),
-    # # path('update_user/', views.update_user, name='update_user'),
-    # path('update_user/<int:user_id>/', views.update_user, name='update_user'),
-    # path('delete_user/<int:user_id>/', views.delete_user, name='delete_user'),
-
-    # path('csrf/', views.csrf, name='csrf'),
-
-    # re_path(r'^.*$', views.serve_react),  # Catch-all route for React
+    path('update_user/<int:user_id>/', views.update_user, name='update_user')
 
 ] 
 
