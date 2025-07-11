@@ -86,7 +86,9 @@ useEffect(() => {
       });
   
       console.log('Roles data received:', res.data);
-      setRoles(res.data.roles || []); // FIXED: was user_types
+      // setRoles(res.data.roles || []); // FIXED: was user_types
+      setRoles(res.data?.data?.roles || []);
+
       return true;
     } catch (err) {
       console.error('Failed to fetch roles:', err);
