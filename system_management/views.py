@@ -308,12 +308,13 @@ def get_all_users(request):
     })
 
 
-@session_timeout
+@csrf_exempt
 def get_roles(request):
     """
     View function to get all roles/user types.
     Handles both session and header-based token authentication.
     """
+
     if request.method != "GET":
         return JsonResponse({
             'status': 'error',
