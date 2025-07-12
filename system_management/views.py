@@ -380,9 +380,6 @@ def get_roles(request):
         }, status=500)
 
 
-
-
-
 @csrf_exempt
 def update_user(request, user_id):
     
