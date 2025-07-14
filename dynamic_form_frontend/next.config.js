@@ -1,21 +1,14 @@
-// next.config.js
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    reactStrictMode: true,
-    compiler: {
-  removeConsole: false,
-},
-    // You can remove or comment out rewrites to let Next.js handle routing automatically
-    // async rewrites() {
-    //   return [
-    //     {
-    //       source: '/users',
-    //       destination: '/Components/System_Management_Component/Usermanagement', 
-    //     },
-    //   ];
-    // },
-  };
-  
-  module.exports = nextConfig;
-  
+  output: 'export', // ← critical for static export to /out folder
+  reactStrictMode: true,
+  compiler: {
+    removeConsole: false,
+  },
+  images: {
+    unoptimized: true, // ← required if you're using <Image> in static mode
+  },
+};
+
+module.exports = nextConfig;
