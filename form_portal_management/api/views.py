@@ -12,6 +12,12 @@ from django.db.models import Max
 
 from form_portal_management.models import Document
 from question_management.models import Question
+from rest_framework.permissions import AllowAny
+from rest_framework.decorators import (
+    # api_view,
+    # authentication_classes,
+    permission_classes
+)
 
 
 
@@ -40,6 +46,8 @@ def get_all_form_details_api(request, form_id):
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
+
 def get_form_answers_from_user_api(request, form_id, client_id):
     """
     Get answers submitted by a specific user for a given form,
