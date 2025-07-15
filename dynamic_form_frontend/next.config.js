@@ -1,3 +1,4 @@
+"use client"; // Ensure this is a client component
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {

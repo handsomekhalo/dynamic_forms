@@ -1,8 +1,13 @@
-"use client";
+"use client"; // Ensure this is a client component
+
 import React, { useState, useEffect } from "react";
 import backendApi from "../../../../utils/backendApi";
 import { useAuth } from "../../../../AuthContext";
 import Swal from "sweetalert2";
+// import { useLocation } from "react-router-dom"; // Import useLocation to access the URL
+// import { useRouter } from "next/router"; // Import useRouter from next/router
+import { useRouter } from 'next/navigation'; // 
+
 
 export default function FormPortal_Management() {
   const [forms, setForms] = useState([]);
@@ -21,12 +26,23 @@ const [isDocumentLoading, setIsDocumentLoading] = useState(false);
 
 
   const { authToken, isAuthenticated, navigate, isLoading } = useAuth();
+    const router = useRouter(); // Get the router object
 
-  useEffect(() => {
+  // const location = useLocation(); // Get the current location
+
+  // const isPublic = new URLSearchParams(location.search).get("public") === "true";
+  // Check if the public query parameter is present
+    const isPublic = router.query?.public === "true"; // Use optional chaining to avoid errors
+
+
+ useEffect(() => {
     const fetchForms = async () => {
       try {
         const res = await backendApi.get(
-          "/application_management/get_all_forms/"
+          "/application_management/get_all_forms/",
+          {
+            headers: isPublic ? {} : { Authorization: `Token ${authToken}` }, // Add auth token only if not public
+          }
         );
         console.log("Forms API response:", res.data);
         setForms(res.data.forms || []);
@@ -34,9 +50,23 @@ const [isDocumentLoading, setIsDocumentLoading] = useState(false);
         console.error("Error fetching forms:", error);
       }
     };
-
     fetchForms();
-  }, []);
+  }, [authToken, isPublic]);
+  // useEffect(() => {
+  //   const fetchForms = async () => {
+  //     try {
+  //       const res = await backendApi.get(
+  //         "/application_management/get_all_forms/"
+  //       );
+  //       console.log("Forms API response:", res.data);
+  //       setForms(res.data.forms || []);
+  //     } catch (error) {
+  //       console.error("Error fetching forms:", error);
+  //     }
+  //   };
+
+  //   fetchForms();
+  // }, []);
 
   const getDocumentUrl = (fileUrl) => {
     if (!fileUrl) return "";
@@ -54,78 +84,7 @@ const [isDocumentLoading, setIsDocumentLoading] = useState(false);
     return fileUrl;
   };
 
-  // const fetchDocumentAnswers = async () => {
-  //   setLoadingAnswers(true);
-  //   try {
-  //     const res = await backendApi.get(`/form_portal_management/get_all_documents_for_user/`, {
-  //       headers: { Authorization: `Token ${authToken}` },
-  //     });
-
-  //     if (res.data.status === "success") {
-  //       setDocumentList(res.data.data || []);
-  //       console.log("API document_list response:", res.data.data);
-  //     }
-  //   } catch (error) {
-  //     console.error("Error fetching documents:", error);
-  //   } finally {
-  //     setLoadingAnswers(false);
-  //   }
-  // };
-
-  // const fetchDocumentAnswers = async () => {
-  //   setLoadingAnswers(true);
-  //   try {
-  //     const res = await backendApi.get(`/form_portal_management/get_all_documents_for_user/`, {
-  //       headers: { Authorization: `Token ${authToken}` },
-  //     });
-
-  //     if (res.data.status === "success") {
-  //       const documents = res.data.documents || [];
-  //       console.log("Fetched documents:", documents);
-
-  //       // Build file answers map
-  //       const documentMap = {};
-  //       documents.forEach(doc => {
-  //         if (doc.question && doc.main_category && doc.file) {
-  //           const compositeKey = `${selectedFormId}-${doc.main_category}-${doc.question}`;
-  //           documentMap[compositeKey] = doc.file;
-  //         }
-  //       });
-
-  //       // Merge with existing form answers
-  //       setFormAnswers(prev => ({ ...prev, ...documentMap }));
-  //     }
-  //   } catch (error) {
-  //     console.error("Error fetching documents:", error);
-  //   } finally {
-  //     setLoadingAnswers(false);
-  //   }
-  // };
-
-  //here is correct
-
-  // const fetchDocumentAnswers= async () => {
-  //   setLoadingAnswers(true);
-  //   try {
-  //     const res = await backendApi.get(`/form_portal_management/get_all_documents_for_user/`, {
-  //       headers: { Authorization: `Token ${authToken}` }
-  //     });
-
-  //     if (res.data.status === "success") {
-  //       const document_list = res.data || [];
-  //       console.log('API document_list response:', document_list);
-
-  //     }
-  //   } catch (error) {
-  //     console.error("Error fetching form answers:", error);
-  //     // Don't show error for missing answers - it's normal for new forms
-  //     if (error.response && error.response.status !== 404) {
-  //       console.warn("Failed to load existing answers:", error.response?.data?.message);
-  //     }
-  //   } finally {
-  //     setLoadingAnswers(false);
-  //   }
-  // };
+  
 
   const fetchDocumentAnswers = async () => {
     setLoadingAnswers(true);
