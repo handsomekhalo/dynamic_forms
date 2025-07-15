@@ -23,7 +23,6 @@ from rest_framework.decorators import (
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
-
 def get_all_form_details_api(request, form_id):
     try:
         # Get all MainCategories assigned to this form
