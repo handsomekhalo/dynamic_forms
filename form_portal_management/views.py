@@ -94,6 +94,45 @@ def get_all_form_details(request, formId):
         }, status=500)
 
 
+@csrf_exempt
+def get_all_form_details_no_token(request, formId):
+    if request.method != 'GET':
+        return JsonResponse({
+            "status": "error",
+            "message": "Method not allowed"
+        }, status=405)
+
+    try:
+        # 👇 Remove token check completely
+        # Save token in session (optional)
+        # request.session["token"] = token
+        # request.session.modified = True
+
+        # Directly call the API without Authorization
+        url = f"{host_url(request)}{reverse_lazy('get_all_form_details_api', kwargs={'form_id': formId})}"
+
+        response = requests.get(url, timeout=10)  # 👈 No headers here
+        response.raise_for_status()
+
+        response_data = response.json()
+
+        return JsonResponse({
+            "status": "success",
+            "formId": formId,
+            "formDetails": response_data
+        }, status=200)
+
+    except requests.exceptions.RequestException as e:
+        return JsonResponse({'status': 'error', 'message': f'Request failed: {str(e)}'}, status=500)
+    except ValueError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON response from API'}, status=500)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            "status": "error",
+            "message": f"Server error occurred: {str(e)}"
+        }, status=500)
 
 
 @csrf_exempt
