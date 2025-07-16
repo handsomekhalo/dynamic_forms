@@ -390,7 +390,7 @@ def get_roles(request):
     Handles both session and header-based token authentication.
     Returns consistent response format like get_questions_assigned_to_category.
     """
-    if request.method != "GET":
+    if request.method!= "GET":
         return JsonResponse({
             "status": "error",
             "message": "Only GET requests are allowed"
@@ -398,24 +398,24 @@ def get_roles(request):
 
     try:
         # Get token from header or session
-        auth_header = request.headers.get("Authorization", "")
-        token = None
-        if auth_header.startswith("Token "):
-            token = auth_header[6:]
-        elif auth_header.startswith("Bearer "):
-            token = auth_header[7:]
-        else:
-            token = request.session.get("token")
+        # auth_header = request.headers.get("Authorization", "")
+        # token = None
+        # if auth_header.startswith("Token "):
+        #     token = auth_header[6:]
+        # elif auth_header.startswith("Bearer "):
+        #     token = auth_header[7:]
+        # else:
+        #     token = request.session.get("token")
 
-        if not token:
-            return JsonResponse({
-                "status": "error",
-                "message": "Authorization token is required."
-            }, status=401)
+        # if not token:
+        #     return JsonResponse({
+        #         "status": "error",
+        #         "message": "Authorization token is required."
+        #     }, status=401)
 
         # Persist token in session for later use
-        request.session["token"] = token
-        request.session.modified = True
+        # request.session["token"] = token
+        # request.session.modified = True
 
         # Construct internal API call
         url = f"{host_url(request)}{reverse('get_user_types_api')}"

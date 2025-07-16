@@ -205,7 +205,7 @@ def login_api(request):
 
 
 
-
+@permission_classes([AllowAny])
 @api_view(['GET'])
 def get_user_types_api(request):
     """
