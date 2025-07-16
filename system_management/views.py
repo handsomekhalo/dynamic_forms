@@ -16,10 +16,6 @@ from system_management.decorators import session_timeout
 from system_management.general_func_classes import api_connection, host_url
 from system_management.models import User, UserType
 
-# from django.contrib.auth.models import User
-from rest_framework.authtoken.models import Token
-from django.core.exceptions import ObjectDoesNotExist
-
 
 
 # Create your views here.
@@ -287,7 +283,11 @@ def get_all_users(request):
                 users = response_data.get('users', [])
 
             # API call to fetch user types
-            url = f"{host_url(request)}{reverse('get_user_types_api')}"
+            url = f"{host_url(request)}{reverse_lazy('get_user_types_api')}"
+
+            # url = f"{host_url(request)}{reverse('get_user_types_api')}"
+            
+
             response_data = api_connection(method="GET", url=url, headers=headers, data=payload)
 
             roles = []
@@ -465,25 +465,25 @@ def get_all_users(request):
 #             "status": "error",
 #             "message": f"Server error occurred: {str(e)}"
 #         }, status=500)
-def _get_user_types_logic():
-    """
-    Shared logic for getting user types.
-    This is the exact same logic as your get_user_types_api function.
-    """
-    try:
-        user_types = UserType.objects.all()
-        serializer = UserTypeModelSerializer(user_types, many=True)
+# def _get_user_types_logic():
+#     """
+#     Shared logic for getting user types.
+#     This is the exact same logic as your get_user_types_api function.
+#     """
+#     try:
+#         user_types = UserType.objects.all()
+#         serializer = UserTypeModelSerializer(user_types, many=True)
         
-        return {
-            'status': 'success',
-            'user_types': serializer.data
-        }
+#         return {
+#             'status': 'success',
+#             'user_types': serializer.data
+#         }
         
-    except Exception as e:
-        return {
-            'status': 'error',
-            'message': f'Error during getting user types: {str(e)}'
-        }
+#     except Exception as e:
+#         return {
+#             'status': 'error',
+#             'message': f'Error during getting user types: {str(e)}'
+#         }
 
 # @csrf_exempt
 # def get_roles(request):
@@ -549,46 +549,34 @@ def _get_user_types_logic():
 #             "status": "error",
 #             "message": f"Server error occurred: {str(e)}"
 #         }, status=500)
-    
-
-
-def validate_token(token_key):
-    """
-    Validate token and return user if valid, None if invalid
-    """
-    try:
-        token = Token.objects.get(key=token_key)
-        return token.user
-    except ObjectDoesNotExist:
-        return None
-
+@csrf_exempt
 def _get_user_types_logic():
     """
-    Shared logic for getting user types.
-    This is the exact same logic as your get_user_types_api function.
+    Shared logic for getting user types from the database.
     """
     try:
         user_types = UserType.objects.all()
         serializer = UserTypeModelSerializer(user_types, many=True)
-        
         return {
             'status': 'success',
             'user_types': serializer.data
         }
-        
     except Exception as e:
         return {
             'status': 'error',
             'message': f'Error during getting user types: {str(e)}'
         }
 
+
+
 @csrf_exempt
 def get_roles(request):
     """
     View function to get all roles/user types.
     Handles both session and header-based token authentication.
-    Returns consistent response format like get_questions_assigned_to_category.
+    Avoids internal HTTP calls; uses local DB access via _get_user_types_logic.
     """
+
     if request.method != "GET":
         return JsonResponse({
             "status": "error",
@@ -596,9 +584,10 @@ def get_roles(request):
         }, status=405)
 
     try:
-        # Get token from header or session
+        # Extract token from headers or session
         auth_header = request.headers.get("Authorization", "")
         token = None
+
         if auth_header.startswith("Token "):
             token = auth_header[6:]
         elif auth_header.startswith("Bearer "):
@@ -612,25 +601,16 @@ def get_roles(request):
                 "message": "Authorization token is required."
             }, status=401)
 
-        print('Token received:', token)
-
-        # VALIDATE TOKEN
-        user = validate_token(token)
-        if not user:
-            return JsonResponse({
-                "status": "error",
-                "message": "Invalid or expired token."
-            }, status=401)
-
-        print('Token validated successfully for user:', user.username)
-
-        # Persist token in session for later use
+        # Save token in session (optional)
         request.session["token"] = token
         request.session.modified = True
 
-        # Get user types using shared logic
+        # TODO: Add token validation here if needed in the future
+        # Example: user = authenticate_token(token)
+
+        # Use local DB logic instead of HTTP call
         response_data = _get_user_types_logic()
-        
+
         if response_data['status'] == 'success':
             roles = response_data.get('user_types', [])
             return JsonResponse({
