@@ -16,6 +16,10 @@ from system_management.decorators import session_timeout
 from system_management.general_func_classes import api_connection, host_url
 from system_management.models import User, UserType
 
+# from django.contrib.auth.models import User
+from rest_framework.authtoken.models import Token
+from django.core.exceptions import ObjectDoesNotExist
+
 
 
 # Create your views here.
@@ -481,6 +485,103 @@ def _get_user_types_logic():
             'message': f'Error during getting user types: {str(e)}'
         }
 
+# @csrf_exempt
+# def get_roles(request):
+#     """
+#     View function to get all roles/user types.
+#     Handles both session and header-based token authentication.
+#     Returns consistent response format like get_questions_assigned_to_category.
+#     """
+#     if request.method != "GET":
+#         return JsonResponse({
+#             "status": "error",
+#             "message": "Only GET requests are allowed"
+#         }, status=405)
+
+#     try:
+#         # Get token from header or session
+#         auth_header = request.headers.get("Authorization", "")
+#         token = None
+#         if auth_header.startswith("Token "):
+#             token = auth_header[6:]
+#         elif auth_header.startswith("Bearer "):
+#             token = auth_header[7:]
+#         else:
+#             token = request.session.get("token")
+
+#         if not token:
+#             return JsonResponse({
+#                 "status": "error",
+#                 "message": "Authorization token is required."
+#             }, status=401)
+
+#         # Persist token in session for later use
+#         request.session["token"] = token
+#         print('here we are',token)
+#         request.session.modified = True
+
+#         # TODO: Add token validation here if needed
+#         # You might want to validate the token before proceeding
+#         # user = authenticate_token(token)  # Your token validation logic
+
+#         # FIXED: Use shared logic instead of HTTP call
+#         response_data = _get_user_types_logic()
+        
+#         if response_data['status'] == 'success':
+#             roles = response_data.get('user_types', [])
+#             return JsonResponse({
+#                 "status": "success",
+#                 "data": {
+#                     "roles": roles
+#                 },
+#                 "message": "No roles found." if not roles else ""
+#             }, status=200)
+#         else:
+#             return JsonResponse({
+#                 "status": "error",
+#                 "message": response_data.get('message', 'Failed to fetch roles')
+#             }, status=400)
+
+#     except Exception as e:
+#         import traceback
+#         traceback.print_exc()
+#         return JsonResponse({
+#             "status": "error",
+#             "message": f"Server error occurred: {str(e)}"
+#         }, status=500)
+    
+
+
+def validate_token(token_key):
+    """
+    Validate token and return user if valid, None if invalid
+    """
+    try:
+        token = Token.objects.get(key=token_key)
+        return token.user
+    except ObjectDoesNotExist:
+        return None
+
+def _get_user_types_logic():
+    """
+    Shared logic for getting user types.
+    This is the exact same logic as your get_user_types_api function.
+    """
+    try:
+        user_types = UserType.objects.all()
+        serializer = UserTypeModelSerializer(user_types, many=True)
+        
+        return {
+            'status': 'success',
+            'user_types': serializer.data
+        }
+        
+    except Exception as e:
+        return {
+            'status': 'error',
+            'message': f'Error during getting user types: {str(e)}'
+        }
+
 @csrf_exempt
 def get_roles(request):
     """
@@ -511,15 +612,23 @@ def get_roles(request):
                 "message": "Authorization token is required."
             }, status=401)
 
+        print('Token received:', token)
+
+        # VALIDATE TOKEN
+        user = validate_token(token)
+        if not user:
+            return JsonResponse({
+                "status": "error",
+                "message": "Invalid or expired token."
+            }, status=401)
+
+        print('Token validated successfully for user:', user.username)
+
         # Persist token in session for later use
         request.session["token"] = token
         request.session.modified = True
 
-        # TODO: Add token validation here if needed
-        # You might want to validate the token before proceeding
-        # user = authenticate_token(token)  # Your token validation logic
-
-        # FIXED: Use shared logic instead of HTTP call
+        # Get user types using shared logic
         response_data = _get_user_types_logic()
         
         if response_data['status'] == 'success':
@@ -544,7 +653,8 @@ def get_roles(request):
             "status": "error",
             "message": f"Server error occurred: {str(e)}"
         }, status=500)
-    
+
+
 @csrf_exempt
 def update_user(request, user_id):
     
