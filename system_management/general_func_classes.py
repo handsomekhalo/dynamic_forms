@@ -3,6 +3,7 @@ General functions and classes are stored here to remove duplicated accross the s
 """
 
 import json
+from django.conf import settings
 import requests
 from rest_framework import serializers
 
@@ -17,14 +18,27 @@ class BaseFormSerializer(serializers.Serializer):
         """Override create method to do nothing"""
 
 
+# def host_url(request):
+#     """
+#     This function is used to get the base url of the application.
+#     """
+#     protocol = request.scheme
+#     host = request.get_host()
+#     base_url = f"{protocol}://{host}"
+#     return base_url
+
+# def host_url(request):
+#     scheme = "https" if settings.USE_HTTPS else "http"
+#     host = request.get_host()
+#     return f"{scheme}://{host}"
 def host_url(request):
-    """
-    This function is used to get the base url of the application.
-    """
-    protocol = request.scheme
+    if hasattr(settings, "USE_HTTPS"):
+        scheme = "https" if settings.USE_HTTPS else "http"
+    else:
+        scheme = "https" if request.is_secure() else "http"
+
     host = request.get_host()
-    base_url = f"{protocol}://{host}"
-    return base_url
+    return f"{scheme}://{host}"
 
 
 def api_connection(method, url, headers, data):
