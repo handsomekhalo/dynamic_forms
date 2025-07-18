@@ -312,178 +312,179 @@ def get_all_users(request):
     })
 
 
-# @csrf_exempt
-# def get_roles(request):
-#     """
-#     View function to get all roles/user types.
-#     Handles both session and header-based token authentication.
-#     """
-
-#     if request.method != "GET":
-#         return JsonResponse({
-#             'status': 'error',
-#             'message': 'Only GET requests are allowed'
-#         }, status=405)
-
-#     try:
-#         # Get token from session or Authorization header
-#         token = request.session.get("token")
-#             # token = request.headers.get("Authorization", "").split("Token ")[-1]
-#         auth_header = request.headers.get("Authorization", "")
-#         if auth_header.startswith("Token "):
-#             token = auth_header.split("Token ")[-1]
-#         elif auth_header.startswith("Bearer "):
-#             token = auth_header.split("Bearer ")[-1]
-#         else:
-#             token = None
-
-
-#         if token:
-#             request.session["token"] = token
-#             request.session.modified = True
-
-#         if not token:
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "Token not found in session or headers"
-#             }, status=401)
-
-#         url = f"{host_url(request)}{reverse('get_user_types_api')}"
-
-#         payload = json.dumps({
-#             'token': token
-#         })
-
-#         headers = {
-#             'Authorization': f'Token {token}',
-#             'Content-Type': constants.JSON_APPLICATION
-#         }
-
-#         response_data = api_connection(
-#             method="GET",
-#             url=url,
-#             headers=headers,
-#             data=payload
-#         )
-
-#         if response_data.get('status') == 'success':
-#             return JsonResponse({
-#                 'status': 'success',
-#                 'roles': response_data.get('user_types', [])
-#             })
-        
-#         return JsonResponse({
-#             'status': 'error',
-#             'message': response_data.get('message', 'Failed to fetch roles')
-#         }, status=400)
-
-#     except Exception as e:
-#         return JsonResponse({
-#             'status': 'error',
-#             'message': str(e)
-#         }, status=500)
-
 @csrf_exempt
 def get_roles(request):
     """
     View function to get all roles/user types.
     Handles both session and header-based token authentication.
-    Returns consistent response format like get_questions_assigned_to_category.
     """
-    if request.method!= "GET":
+
+    if request.method != "GET":
         return JsonResponse({
-            "status": "error",
-            "message": "Only GET requests are allowed"
+            'status': 'error',
+            'message': 'Only GET requests are allowed'
         }, status=405)
 
     try:
-        # Get token from header or session
-        # auth_header = request.headers.get("Authorization", "")
-        # token = None
-        # if auth_header.startswith("Token "):
-        #     token = auth_header[6:]
-        # elif auth_header.startswith("Bearer "):
-        #     token = auth_header[7:]
-        # else:
-        #     token = request.session.get("token")
+        # Get token from session or Authorization header
+        token = request.session.get("token")
+            # token = request.headers.get("Authorization", "").split("Token ")[-1]
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Token "):
+            token = auth_header.split("Token ")[-1]
+        elif auth_header.startswith("Bearer "):
+            token = auth_header.split("Bearer ")[-1]
+        else:
+            token = None
 
-        # if not token:
-        #     return JsonResponse({
-        #         "status": "error",
-        #         "message": "Authorization token is required."
-        #     }, status=401)
 
-        # Persist token in session for later use
-        # request.session["token"] = token
-        # request.session.modified = True
+        if token:
+            request.session["token"] = token
+            request.session.modified = True
 
-        # Construct internal API call
-        url = f"{host_url(request)}{reverse('get_user_types_api')}"
-        headers = {
-            "Authorization": f"Token {token}",
-            "Content-Type": constants.JSON_APPLICATION
-        }
-
-        # Attempt calling internal API
-        auth_variants = [
-            {"Authorization": f"Token {token}"},
-            {"Authorization": f"Bearer {token}"},
-            {"Authorization": token}
-        ]
-
-        response = None
-        for auth in auth_variants:
-            try:
-                response = requests.get(url, headers={**headers, **auth}, timeout=10)
-                if response.status_code != 401:
-                    break
-            except requests.RequestException as e:
-                print(f"Token attempt failed using headers {auth}: {str(e)}")
-
-        if not response or response.status_code == 401:
+        if not token:
             return JsonResponse({
                 "status": "error",
-                "message": "Failed to authenticate with the internal API."
+                "message": "Token not found in session or headers"
             }, status=401)
 
-        response.raise_for_status()
-        response_data = response.json()
-        roles = response_data.get("user_types", [])
+        url = f"{host_url(request)}{reverse('get_user_types_api')}"
 
-        return JsonResponse({
-            "status": "success",
-            "data": {
-                "roles": roles
-            },
-            "message": "No roles found." if not roles else ""
-        }, status=200)
+        payload = json.dumps({
+            'token': token
+        })
 
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return JsonResponse({
-            "status": "error",
-            "message": f"Server error occurred: {str(e)}"
-        }, status=500)
-def _get_user_types_logic():
-    """
-    Shared logic for getting user types.
-    This is the exact same logic as your get_user_types_api function.
-    """
-    try:
-        user_types = UserType.objects.all()
-        serializer = UserTypeModelSerializer(user_types, many=True)
-        
-        return {
-            'status': 'success',
-            'user_types': serializer.data
+        headers = {
+            'Authorization': f'Token {token}',
+            'Content-Type': constants.JSON_APPLICATION
         }
+
+        response_data = api_connection(
+            method="GET",
+            url=url,
+            headers=headers,
+            data=payload
+        )
+
+        if response_data.get('status') == 'success':
+            return JsonResponse({
+                'status': 'success',
+                'roles': response_data.get('user_types', [])
+            })
         
-    except Exception as e:
-        return {
+        return JsonResponse({
             'status': 'error',
-            'message': f'Error during getting user types: {str(e)}'
-        }
+            'message': response_data.get('message', 'Failed to fetch roles')
+        }, status=400)
+
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
+
+# @csrf_exempt
+# def get_roles(request):
+#     """
+#     View function to get all roles/user types.
+#     Handles both session and header-based token authentication.
+#     Returns consistent response format like get_questions_assigned_to_category.
+#     """
+#     if request.method!= "GET":
+#         return JsonResponse({
+#             "status": "error",
+#             "message": "Only GET requests are allowed"
+#         }, status=405)
+
+#     try:
+#         # Get token from header or session
+#         auth_header = request.headers.get("Authorization", "")
+#         token = None
+#         if auth_header.startswith("Token "):
+#             token = auth_header[6:]
+#         elif auth_header.startswith("Bearer "):
+#             token = auth_header[7:]
+#         else:
+#             token = request.session.get("token")
+
+#         if not token:
+#             return JsonResponse({
+#                 "status": "error",
+#                 "message": "Authorization token is required."
+#             }, status=401)
+
+#         # Persist token in session for later use
+#         request.session["token"] = token
+#         request.session.modified = True
+
+#         # Construct internal API call
+#         url = f"{host_url(request)}{reverse('get_user_types_api')}"
+#         headers = {
+#             "Authorization": f"Token {token}",
+#             "Content-Type": constants.JSON_APPLICATION
+#         }
+
+#         # Attempt calling internal API
+#         auth_variants = [
+#             {"Authorization": f"Token {token}"},
+#             {"Authorization": f"Bearer {token}"},
+#             {"Authorization": token}
+#         ]
+
+#         response = None
+#         for auth in auth_variants:
+#             try:
+#                 response = requests.get(url, headers={**headers, **auth}, timeout=10)
+#                 if response.status_code != 401:
+#                     break
+#             except requests.RequestException as e:
+#                 print(f"Token attempt failed using headers {auth}: {str(e)}")
+
+#         if not response or response.status_code == 401:
+#             return JsonResponse({
+#                 "status": "error",
+#                 "message": "Failed to authenticate with the internal API."
+#             }, status=401)
+
+#         response.raise_for_status()
+#         response_data = response.json()
+#         roles = response_data.get("user_types", [])
+
+#         return JsonResponse({
+#             "status": "success",
+#             "data": {
+#                 "roles": roles
+#             },
+#             "message": "No roles found." if not roles else ""
+#         }, status=200)
+
+#     except Exception as e:
+#         import traceback
+#         traceback.print_exc()
+#         return JsonResponse({
+#             "status": "error",
+#             "message": f"Server error occurred: {str(e)}"
+#         }, status=500)
+    
+# def _get_user_types_logic():
+#     """
+#     Shared logic for getting user types.
+#     This is the exact same logic as your get_user_types_api function.
+#     """
+#     try:
+#         user_types = UserType.objects.all()
+#         serializer = UserTypeModelSerializer(user_types, many=True)
+        
+#         return {
+#             'status': 'success',
+#             'user_types': serializer.data
+#         }
+        
+#     except Exception as e:
+#         return {
+#             'status': 'error',
+#             'message': f'Error during getting user types: {str(e)}'
+#         }
 
 # @csrf_exempt
 # def get_roles(request):
