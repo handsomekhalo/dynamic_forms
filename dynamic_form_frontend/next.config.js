@@ -3,6 +3,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'export', // ← critical for static export to /out folder
+  distDir: 'out', // Default export directory
+
   reactStrictMode: true,
   compiler: {
     removeConsole: false,
