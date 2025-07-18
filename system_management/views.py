@@ -247,81 +247,176 @@ def login(request):
 
 
 
-@csrf_exempt
-def get_all_users(request):
+# @csrf_exempt
+# def get_all_users(request):
     
-    if request.method == "GET":
-        """Returns all user information for user management template."""
-        try:
-            # user =request.data
-            token = request.session.get("token")
-            # token = request.headers.get("Authorization", "").split("Token ")[-1]
-            auth_header = request.headers.get("Authorization", "")
-            if auth_header.startswith("Token "):
-                token = auth_header.split("Token ")[-1]
-            elif auth_header.startswith("Bearer "):
-                token = auth_header.split("Bearer ")[-1]
-            else:
-                token = None
+#     if request.method == "GET":
+#         """Returns all user information for user management template."""
+#         try:
+#             # user =request.data
+#             token = request.session.get("token")
+#             # token = request.headers.get("Authorization", "").split("Token ")[-1]
+#             auth_header = request.headers.get("Authorization", "")
+#             if auth_header.startswith("Token "):
+#                 token = auth_header.split("Token ")[-1]
+#             elif auth_header.startswith("Bearer "):
+#                 token = auth_header.split("Bearer ")[-1]
+#             else:
+#                 token = None
 
 
-            if token:
-                    request.session["token"] = token
-                    request.session.modified = True
+#             if token:
+#                     request.session["token"] = token
+#                     request.session.modified = True
 
-            if not token:
-                return JsonResponse({
-                    "status": "error",
-                    "message": "Token not found in session or headers"
-                })
+#             if not token:
+#                 return JsonResponse({
+#                     "status": "error",
+#                     "message": "Token not found in session or headers"
+#                 })
 
-            # API call to fetch users
-            url = f"{host_url(request)}{reverse('get_users_api')}"
+#             # API call to fetch users
+#             url = f"{host_url(request)}{reverse('get_users_api')}"
 
-            payload = json.dumps({
-                'token': token  # Adding token to payload
-            })
+#             payload = json.dumps({
+#                 'token': token  # Adding token to payload
+#             })
 
-            headers = {
-                'Authorization': f'Token {token}',
-                'Content-Type': constants.JSON_APPLICATION
-            }
+#             headers = {
+#                 'Authorization': f'Token {token}',
+#                 'Content-Type': constants.JSON_APPLICATION
+#             }
 
-            response_data = api_connection(method="GET", url=url, headers=headers, data=payload)
+#             response_data = api_connection(method="GET", url=url, headers=headers, data=payload)
 
-            users = []
-            if response_data.get('status') == 'success':
-                users = response_data.get('users', [])
+#             users = []
+#             if response_data.get('status') == 'success':
+#                 users = response_data.get('users', [])
 
-            # API call to fetch user types
-            url = f"{host_url(request)}{reverse_lazy('get_user_types_api')}"
+#             # API call to fetch user types
+#             url = f"{host_url(request)}{reverse_lazy('get_user_types_api')}"
 
-            # url = f"{host_url(request)}{reverse('get_user_types_api')}"
+#             # url = f"{host_url(request)}{reverse('get_user_types_api')}"
             
 
-            response_data = api_connection(method="GET", url=url, headers=headers, data=payload)
+#             response_data = api_connection(method="GET", url=url, headers=headers, data=payload)
 
-            roles = []
-            if response_data.get('status') == 'success':
-                roles = response_data.get('user_types', [])
+#             roles = []
+#             if response_data.get('status') == 'success':
+#                 roles = response_data.get('user_types', [])
 
+#             return JsonResponse({
+#                 'status': 'success',
+#                 'users': users,
+#                 'user_types': roles
+#             })
+
+#         except Exception as e:
+#             return JsonResponse({
+#                 'status': 'error',
+#                 'message': str(e)
+#             })
+
+#     return JsonResponse({
+#         'status': 'error',
+#         'message': 'Invalid request method'
+#     })
+@csrf_exempt # Consider removing this if GET request and no state-changing operations
+def get_all_users(request):
+    if request.method != "GET":
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Only GET requests are allowed'
+        }, status=405)
+
+    try:
+        # --- Consolidated Token Retrieval Logic ---
+        token = None # Initialize token to None *before* any checks
+
+        # 1. Try to get token from Authorization header (most common for APIs)
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Token "):
+            token = auth_header.split("Token ")[-1]
+        elif auth_header.startswith("Bearer "):
+            token = auth_header.split("Bearer ")[-1]
+
+        # 2. If no token found in headers, try session
+        if not token:
+            token = request.session.get("token")
+        # --- End of Consolidated Token Retrieval Logic ---
+
+        if not token:
+            logger.warning("Authorization token missing from headers and session for get_all_users.")
             return JsonResponse({
-                'status': 'success',
-                'users': users,
-                'user_types': roles
-            })
+                "status": "error",
+                "message": "Authorization token is required and not found."
+            }, status=401)
 
-        except Exception as e:
-            return JsonResponse({
-                'status': 'error',
-                'message': str(e)
-            })
+        # Persist token in session (optional, but harmless if needed)
+        request.session["token"] = token
+        request.session.modified = True
 
-    return JsonResponse({
-        'status': 'error',
-        'message': 'Invalid request method'
-    })
+        # --- API call to fetch users ---
+        # USE INTERNAL_API_BASE_URL for internal calls
+        users_api_url = f"{settings.INTERNAL_API_BASE_URL}{reverse('get_users_api')}"
+        
+        payload = json.dumps({
+            'token': token  # Adding token to payload
+        })
 
+
+        headers = {
+            'Authorization': f'Token {token}',
+            'Content-Type': constants.JSON_APPLICATION
+        }
+
+        # REMOVE PAYLOAD FOR GET REQUESTS
+        response_data_users = api_connection(method="GET", url=users_api_url, headers=headers,data=payload)
+        # response_data = api_connection(method="GET", url=url, headers=headers, data=payload)
+
+        users = []
+        if response_data_users and response_data_users.get('status') == 'success':
+            users = response_data_users.get('users', [])
+        else:
+            # Log error if internal user API call failed
+            logger.error(f"Internal API call to get_users_api failed: {response_data_users.get('message', 'No message')}")
+            # Potentially return an error here if users data is critical for this endpoint
+            # For now, we'll let it proceed with an empty list.
+
+        # --- API call to fetch user types (roles) ---
+        # USE INTERNAL_API_BASE_URL for internal calls
+        roles_api_url = f"{settings.INTERNAL_API_BASE_URL}{reverse_lazy('get_user_types_api')}"
+
+        # REMOVE PAYLOAD FOR GET REQUESTS
+        response_data_roles = api_connection(method="GET", url=roles_api_url, headers=headers, data=payload)
+
+        roles = []
+        if response_data_roles and response_data_roles.get('status') == 'success':
+            roles = response_data_roles.get('user_types', [])
+        else:
+            # Log error if internal roles API call failed
+            logger.error(f"Internal API call to get_user_types_api failed: {response_data_roles.get('message', 'No message')}")
+            # For now, we'll let it proceed with an empty list.
+
+
+        return JsonResponse({
+            'status': 'success',
+            'users': users,
+            'user_types': roles
+        }, status=200) # Explicitly set status 200 for success
+
+    except requests.exceptions.RequestException as e:
+        logger.exception(f"Network or API call error in get_all_users view: {e}")
+        return JsonResponse({
+            'status': 'error',
+            'message': f"Could not connect to internal service: {str(e)}"
+        }, status=500)
+    except Exception as e:
+        logger.exception("An unexpected server error occurred in get_all_users view.")
+        return JsonResponse({
+            'status': 'error',
+            'message': f"Server error occurred: {str(e)}. Please check server logs."
+        }, status=500)
 
 # @csrf_exempt
 # def get_roles(request):
