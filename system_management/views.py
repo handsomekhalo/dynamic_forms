@@ -1,3 +1,5 @@
+from django.conf import settings # Ensure this import is at the top
+
 import json
 import secrets
 import string
@@ -452,7 +454,8 @@ def get_roles(request):
         # Ensure settings.INTERNAL_API_BASE_URL is defined and correct (as discussed previously)
         # Replacing host_url(request) with settings.INTERNAL_API_BASE_URL is highly recommended for production
         # For this fix, I'll keep host_url(request) as per your provided code, but be aware of its potential issues.
-        url = f"{host_url(request)}{reverse('get_user_types_api')}" # Consider settings.INTERNAL_API_BASE_URL
+        # url = f"{host_url(request)}{reverse('get_user_types_api')}" # Consider settings.INTERNAL_API_BASE_URL
+        url = f"{settings.INTERNAL_API_BASE_URL}{reverse('get_user_types_api')}"
 
         payload = json.dumps({
             'token': token
