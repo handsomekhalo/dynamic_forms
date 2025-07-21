@@ -1,23 +1,24 @@
-// // Create a new file: ProtectedRoute.js
+
 // 'use client';
 
 // import { useEffect, useState } from 'react';
-// // import { useAuth } from './path-to-your-AuthContext';
 // import { useAuth } from '../../AuthContext';
+// import { useRouter } from 'next/navigation';
 
 // export default function ProtectedRoute({ children }) {
-//   const { isAuthenticated, isLoading, navigate } = useAuth();
+//   const { isAuthenticated, isLoading } = useAuth();
 //   const [isChecking, setIsChecking] = useState(true);
+//   const router = useRouter();
 
 //   useEffect(() => {
 //     if (!isLoading) {
 //       if (!isAuthenticated) {
 //         console.log('Not authenticated, redirecting to login');
-//         navigate('/');
+//         router.push('/');
 //       }
 //       setIsChecking(false);
 //     }
-//   }, [isLoading, isAuthenticated, navigate]);
+//   }, [isLoading, isAuthenticated, router]);
 
 //   if (isLoading || isChecking) {
 //     return (
@@ -30,10 +31,8 @@
 //     );
 //   }
 
-//   // Only render children if authenticated
 //   return isAuthenticated ? children : null;
 // }
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -42,20 +41,16 @@ import { useRouter } from 'next/navigation';
 
 export default function ProtectedRoute({ children }) {
   const { isAuthenticated, isLoading } = useAuth();
-  const [isChecking, setIsChecking] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading) {
-      if (!isAuthenticated) {
-        console.log('Not authenticated, redirecting to login');
-        router.push('/');
-      }
-      setIsChecking(false);
+    if (!isLoading && !isAuthenticated) {
+      console.log('Not authenticated, redirecting to login');
+      router.push('/');
     }
   }, [isLoading, isAuthenticated, router]);
 
-  if (isLoading || isChecking) {
+  if (isLoading || (!isAuthenticated && typeof window !== 'undefined')) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
@@ -66,5 +61,5 @@ export default function ProtectedRoute({ children }) {
     );
   }
 
-  return isAuthenticated ? children : null;
+  return children;
 }

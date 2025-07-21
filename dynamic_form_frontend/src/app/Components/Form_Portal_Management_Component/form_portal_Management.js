@@ -25,6 +25,7 @@ export default function FormPortal_Management() {
 const [isDocumentLoading, setIsDocumentLoading] = useState(false);
 
 
+
   const { authToken, isAuthenticated, navigate, isLoading } = useAuth();
     const router = useRouter(); // Get the router object
 
@@ -52,21 +53,7 @@ const [isDocumentLoading, setIsDocumentLoading] = useState(false);
     };
     fetchForms();
   }, [authToken, isPublic]);
-  // useEffect(() => {
-  //   const fetchForms = async () => {
-  //     try {
-  //       const res = await backendApi.get(
-  //         "/application_management/get_all_forms/"
-  //       );
-  //       console.log("Forms API response:", res.data);
-  //       setForms(res.data.forms || []);
-  //     } catch (error) {
-  //       console.error("Error fetching forms:", error);
-  //     }
-  //   };
-
-  //   fetchForms();
-  // }, []);
+ 
 
   const getDocumentUrl = (fileUrl) => {
     if (!fileUrl) return "";
@@ -159,93 +146,6 @@ const [isDocumentLoading, setIsDocumentLoading] = useState(false);
     }
   };
 
-  // const fetchFormAnswers = async (formId) => {
-  //   setLoadingAnswers(true);
-  //   try {
-  //     const res = await backendApi.get(
-  //       `/form_portal_management/get_form_answers_from_user/${formId}/`,
-  //       {
-  //         headers: { Authorization: `Token ${authToken}` },
-  //       }
-  //     );
-
-  //     if (res.data.status === "success") {
-  //       const answers = res.data.data.answers || [];
-  //       console.log("📦 API returns answers response:", answers);
-
-  //       const answersMap = {};
-
-  //       answers.forEach((answer) => {
-  //         // Composite key: formId-categoryId-questionId
-  //         const compositeKey = `${formId}-${answer.category_id}-${answer.question_id}`;
-  //         let answerValue = "";
-
-  //         // Handle file uploads
-  //         if (answer.input_type === "file" && answer.file_upload) {
-  //           let url = answer.file_upload;
-
-  //           // Remove leading slash if present
-  //           if (url.startsWith("/")) {
-  //             url = url.substring(1);
-  //           }
-
-  //           // Decode URL if encoded
-  //           try {
-  //             url = decodeURIComponent(url);
-  //           } catch (e) {
-  //             console.warn("⚠️ Could not decode URL:", url);
-  //           }
-
-  //           // If URL is still incomplete, prefix it
-  //           if (!url.startsWith("http")) {
-  //             url = `https://${url.replace(/^https?:\/?/, "")}`;
-  //           }
-
-  //           answerValue = url;
-  //         }
-
-  //         // Handle other input types
-  //         else if (answer.response_text) {
-  //           answerValue = answer.response_text;
-  //         } else if (answer.selected_option_text) {
-  //           answerValue = answer.selected_option_text;
-  //         } else if (answer.response_number !== null) {
-  //           answerValue = answer.response_number.toString();
-  //         } else if (answer.response_date) {
-  //           answerValue = answer.response_date;
-  //         } else if (answer.response_boolean !== null) {
-  //           answerValue = answer.response_boolean ? "checked" : "";
-  //         }
-
-  //         // Optional: Warn about duplicate keys
-  //         if (answersMap[compositeKey]) {
-  //           console.warn(`⚠️ Duplicate answer for key ${compositeKey}`);
-  //         }
-
-  //         answersMap[compositeKey] = answerValue;
-  //       });
-
-  //       // Debug output
-  //       Object.entries(answersMap).forEach(([key, val]) => {
-  //         console.log(`→ ${key}: ${val}`);
-  //       });
-  //       console.log("✅ Final answersMap:", answersMap);
-
-  //       // Set to state
-  //       setFormAnswers((prevAnswers) => ({ ...prevAnswers, ...answersMap }));
-  //     }
-  //   } catch (error) {
-  //     console.error("❌ Error fetching form answers:", error);
-  //     if (error.response && error.response.status !== 404) {
-  //       console.warn(
-  //         "⚠️ Failed to load existing answers:",
-  //         error.response?.data?.message
-  //       );
-  //     }
-  //   } finally {
-  //     setLoadingAnswers(false);
-  //   }
-  // };
 
   const fetchFormAnswers = async (formId) => {
   setLoadingAnswers(true);
@@ -640,47 +540,8 @@ const [isDocumentLoading, setIsDocumentLoading] = useState(false);
             </select>
           </div>
         );
-
      
-// case "file":
-//   const fileKey = `${formId}-${categoryId}-${question.id}`;
-//   const existingFileUrl = formAnswers[fileKey];
 
-//   return (
-//     <div className="mb-3">
-//       <label className="form-label">
-//         {question.label || question.question_text}
-//       </label>
-
-//       {/* View Existing File */}
-//       {existingFileUrl &&
-//         typeof existingFileUrl === "string" &&
-//         existingFileUrl.startsWith("http") && (
-//           <div className="mb-2 flex items-center space-x-4">
-//             <button
-//               type="button"
-//               onClick={() => setSelectedFileUrl(existingFileUrl)}
-//               className="text-blue-600 underline text-sm"
-//             >
-//               View uploaded file
-//             </button>
-//           </div>
-//         )}
-
-//       {/* File Input */}
-//       <input
-//         type="file"
-//         className="form-control w-full p-2 border border-gray-300 rounded"
-//         onChange={(e) => {
-//           const file = e.target.files[0];
-//           if (file) {
-//             handleInputChange(formId, categoryId, question.id, file);
-//           }
-//         }}
-//         required={question.is_required}
-//       />
-//     </div>
-//   );
 case "file":
   const fileKey = `${formId}-${categoryId}-${question.id}`;
   const existingFileUrl = formAnswers[fileKey];
@@ -765,16 +626,26 @@ case "file":
   };
 
   return (
-    <div className="p-6 bg-white shadow-md rounded-xl max-w-4xl mx-auto">
-      <h2 className="text-2xl font-bold mb-4">Form Answering Portal</h2>
+    <div className="bg-white shadow-md rounded-xl p-6 max-w-4xl mx-auto">
 
-      {error && (
+    <div className="p-6 bg-white shadow-md rounded-xl max-w-4xl mx-auto">
+      {/* <h2 className="text-2xl font-bold mb-4">Form Answering Portal</h2> */}
+        <h2 className="text-3xl font-bold text-gray-800 mb-6 border-b pb-2">
+    📄 Form Answering Portal
+  </h2>
+
+      {/* {error && (
         <div className="bg-red-100 text-red-600 p-3 rounded mb-4 border border-red-200">
           {error}
         </div>
-      )}
+      )} */}
+      {error && (
+  <div className="bg-red-100 text-red-800 p-4 rounded-lg border border-red-200 mb-6">
+    {error}
+  </div>
+)}
 
-      <div className="mb-6">
+      {/* <div className="mb-6">
         <label className="block mb-2 font-medium text-gray-700">
           Select a Form
         </label>
@@ -790,13 +661,37 @@ case "file":
             </option>
           ))}
         </select>
-      </div>
+      </div> */}
 
-      {loadingAnswers && (
+<div className="mb-8">
+  <label className="block text-sm font-semibold text-gray-700 mb-2">
+    Select a Form
+  </label>
+  <select
+    className="border border-gray-300 p-3 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+    value={selectedFormId || ""}
+    onChange={(e) => handleFormSelect(parseInt(e.target.value))}
+  >
+    <option value="">-- Choose Form --</option>
+    {forms?.map?.((form) => (
+      <option key={form.id} value={form.id}>
+        {form.name}
+      </option>
+    ))}
+  </select>
+</div>
+
+      {/* {loadingAnswers && (
         <div className="bg-blue-100 text-blue-600 p-3 rounded mb-4 border border-blue-200">
           Loading existing answers...
         </div>
       )}
+       */}
+      {loadingAnswers && (
+  <div className="bg-blue-50 text-blue-700 p-3 rounded border border-blue-200 mb-4">
+    ⏳ Loading existing answers...
+  </div>
+)}
 
 
 
@@ -816,7 +711,9 @@ case "file":
                 className="border border-gray-200 rounded-lg overflow-hidden"
               >
                 {/* Accordion Header */}
-                <button
+                
+                
+                {/* <button
                   className="w-full px-6 py-4 bg-gray-50 hover:bg-gray-100 flex justify-between items-center"
                   onClick={() => toggleAccordion(category.id)}
                 >
@@ -853,7 +750,39 @@ case "file":
                       d="M19 9l-7 7-7-7"
                     />
                   </svg>
-                </button>
+                </button> */}
+
+<button
+  // className="w-full px-6 py-4 bg-gray-50 hover:bg-gray-100 flex justify-between items-center transition border-b"
+    className="w-full text-left px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-800 font-medium rounded-md transition duration-200 shadow-sm"
+
+  onClick={() => toggleAccordion(category.id)}
+>
+  <div>
+    <h4 className="text-lg font-semibold text-gray-800">{category.name}</h4>
+    {category.description && (
+      <p className="text-sm text-gray-600 mt-1">{category.description}</p>
+    )}
+    <p className="text-xs text-gray-500 mt-1">
+      {totalQuestions} question{totalQuestions !== 1 ? "s" : ""}
+      {answerCount > 0 && (
+        <span className="ml-2 text-green-600 font-medium">
+          ({answerCount} answered)
+        </span>
+      )}
+    </p>
+  </div>
+  <svg
+    className={`w-5 h-5 text-gray-500 transform transition-transform duration-200 ${
+      openAccordions[category.id] ? "rotate-180" : ""
+    }`}
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+  </svg>
+</button>
 
                 {/* Accordion Content */}
                 {openAccordions[category.id] && (
@@ -866,47 +795,35 @@ case "file":
                             const hasExistingAnswer = formAnswers[compositeKey];
 
                             return (
+                              // 
                               <div
-                                key={`${category.id}-${question.id}`}
-                                className={`p-4 rounded-lg ${
-                                  hasExistingAnswer
-                                    ? "bg-green-50 border border-green-200"
-                                    : "bg-gray-50"
-                                }`}
-                              >
-                                <div className="flex items-start justify-between mb-3">
-                                  <label className="block font-medium text-gray-800 flex-1">
-                                    {question.text || question.question_text}
-                                    {question.is_required && (
-                                      <span className="text-red-500 ml-1">
-                                        *
-                                      </span>
-                                    )}
-                                    {hasExistingAnswer && (
-                                      <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                                        Previously answered
-                                      </span>
-                                    )}
-                                  </label>
-                                  <div className="ml-4 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                    {question.input_type || "text"}
-                                  </div>
-                                </div>
+  key={`${category.id}-${question.id}`}
+  className={`p-4 rounded-xl transition ${
+    hasExistingAnswer
+      ? "bg-green-50 border border-green-200"
+      : "bg-gray-50 border border-gray-200"
+  }`}
+>
+  <div className="flex items-start justify-between mb-3">
+    <label className="block font-medium text-gray-800 text-sm flex-1">
+      {question.text || question.question_text}
+      {question.is_required && (
+        <span className="text-red-500 ml-1">*</span>
+      )}
+      {hasExistingAnswer && (
+        <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+          Answered
+        </span>
+      )}
+    </label>
+    <div className="ml-4 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+      {question.input_type || "text"}
+    </div>
+  </div>
 
-                                <div className="mt-2">
-                                  {renderInputField(
-                                    question,
-                                    selectedFormId,
-                                    category.id
-                                  )}
-                                </div>
+  <div className="mt-2">{renderInputField(question, selectedFormId, category.id)}</div>
+</div>
 
-                                {question.is_required && (
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    This field is required
-                                  </p>
-                                )}
-                              </div>
                             );
                           }
                         )}
@@ -918,7 +835,7 @@ case "file":
                     )}
 
                     {/* Submit Button */}
-                    <div className="pt-4 border-t border-gray-200 mt-6">
+                    {/* <div className="pt-4 border-t border-gray-200 mt-6">
                       <button
                         className={`font-medium py-2 px-4 rounded-lg transition-colors duration-200 ${
                           submittingCategory === category.id
@@ -940,7 +857,26 @@ case "file":
                           ready to submit
                         </p>
                       )}
-                    </div>
+                    </div> */}
+                    <div className="pt-4 border-t mt-6">
+  <button
+    className={`py-2 px-5 font-semibold rounded-lg transition duration-200 shadow ${
+      submittingCategory === category.id
+        ? "bg-gray-400 text-white cursor-not-allowed"
+        : "bg-green-600 hover:bg-green-700 text-white"
+    }`}
+    onClick={() => handleCategorySubmit(selectedFormId, category.id)}
+    disabled={submittingCategory === category.id}
+  >
+    {submittingCategory === category.id ? "Submitting..." : "Submit Category"}
+  </button>
+  {answerCount > 0 && (
+    <p className="text-sm text-green-600 mt-2">
+      ✓ {answerCount} answer{answerCount !== 1 ? "s" : ""} ready to submit
+    </p>
+  )}
+</div>
+
                   </div>
                 )}
               </div>
@@ -948,69 +884,117 @@ case "file":
           })}
 
           {documentList.length > 0 && (
-            <div className="mt-10">
-              <h3 className="text-lg font-semibold mb-4">Uploaded Documents</h3>
-              <div className="space-y-4">
-                {documentList.map((doc) => (
-                  <div
-                    key={doc.id}
-                    className="flex justify-between items-center p-4 border rounded bg-gray-50 shadow-sm"
-                  >
-                    <div>
-                      <p className="text-sm text-gray-700">
-                        Document ID: {doc.id}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Uploaded at:{" "}
-                        {new Date(doc.uploaded_at).toLocaleString()}
-                      </p>
-                    </div>
+            // <div className="mt-10">
+            //   <h3 className="text-lg font-semibold mb-4">Uploaded Documents</h3>
+            //   <div className="space-y-4">
+            //     {documentList.map((doc) => (
+            //       <div
+            //         key={doc.id}
+            //         className="flex justify-between items-center p-4 border rounded bg-gray-50 shadow-sm"
+            //       >
+            //         <div>
+            //           <p className="text-sm text-gray-700">
+            //             Document ID: {doc.id}
+            //           </p>
+            //           <p className="text-xs text-gray-500">
+            //             Uploaded at:{" "}
+            //             {new Date(doc.uploaded_at).toLocaleString()}
+            //           </p>
+            //         </div>
 
-                    <div className="flex items-center space-x-3">
-                      {/* View Button */}
-                      {/* <a
-              href={doc.file.startsWith("http") ? doc.file : `${process.env.REACT_APP_BASE_URL}/${doc.file}`}
+            //         <div className="flex items-center space-x-3">
+            //           {/* View Button */}
+            //           {/* <a
+            //   href={doc.file.startsWith("http") ? doc.file : `${process.env.REACT_APP_BASE_URL}/${doc.file}`}
               
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:underline text-sm"
-            >
-              View
-            </a> */}
-                      <a
-                        href={getDocumentUrl(doc.file)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline text-sm"
-                      >
-                        View
-                      </a>
-                      <span className="ml-2 text-xs text-gray-500">
-                        {getDocumentUrl(doc.file).split("/").pop()}
-                      </span>
+            //   target="_blank"
+            //   rel="noopener noreferrer"
+            //   className="text-blue-600 hover:underline text-sm"
+            // >
+            //   View
+            // </a> */}
+            //           <a
+            //             href={getDocumentUrl(doc.file)}
+            //             target="_blank"
+            //             rel="noopener noreferrer"
+            //             className="text-blue-600 hover:underline text-sm"
+            //           >
+            //             View
+            //           </a>
+            //           <span className="ml-2 text-xs text-gray-500">
+            //             {getDocumentUrl(doc.file).split("/").pop()}
+            //           </span>
 
-                      {/* Update Button */}
-                      <label className="text-sm text-green-700 hover:underline cursor-pointer">
-                        Update
-                        <input
-                          type="file"
-                          hidden
-                          onChange={(e) => {
-                            const file = e.target.files[0];
-                            if (file) handleDocumentUpdate(doc.id, file);
-                          }}
-                        />
-                      </label>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            //           {/* Update Button */}
+            //           <label className="text-sm text-green-700 hover:underline cursor-pointer">
+            //             Update
+            //             <input
+            //               type="file"
+            //               hidden
+            //               onChange={(e) => {
+            //                 const file = e.target.files[0];
+            //                 if (file) handleDocumentUpdate(doc.id, file);
+            //               }}
+            //             />
+            //           </label>
+            //         </div>
+            //       </div>
+            //     ))}
+            //   </div>
+            // </div>
+            <div className="mt-10">
+  <h3 className="text-2xl font-semibold mb-6 text-gray-800">📎 Uploaded Documents</h3>
+  <div className="space-y-4">
+    {documentList.map((doc) => (
+      <div
+        key={doc.id}
+        className="flex justify-between items-center p-5 bg-white border border-gray-200 shadow-sm rounded-xl"
+      >
+        <div>
+          <p className="text-sm font-medium text-gray-700">
+            Document ID: <span className="font-semibold text-gray-900">{doc.id}</span>
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            Uploaded at: {new Date(doc.uploaded_at).toLocaleString()}
+          </p>
+        </div>
+
+        <div className="flex items-center space-x-4">
+          <a
+            href={getDocumentUrl(doc.file)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center text-blue-600 hover:text-blue-800 font-medium text-sm"
+          >
+            <span className="mr-1">👁️</span> View
+          </a>
+
+          <span className="text-xs text-gray-500 max-w-[200px] truncate">
+            {getDocumentUrl(doc.file).split("/").pop()}
+          </span>
+
+          <label className="flex items-center text-green-600 hover:text-green-800 font-medium text-sm cursor-pointer">
+            <span className="mr-1">✏️</span> Update
+            <input
+              type="file"
+              hidden
+              onChange={(e) => {
+                const file = e.target.files[0];
+                if (file) handleDocumentUpdate(doc.id, file);
+              }}
+            />
+          </label>
+        </div>
+      </div>
+    ))}
+  </div>
+</div>
+
           )}
 
           {/* Overall Form Submit Button (Optional) */}
           <div className="mt-8 pt-6 border-t border-gray-200">
-            <button
+            {/* <button
               type="button"
               className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200"
               onClick={() => {
@@ -1024,35 +1008,31 @@ case "file":
               }}
             >
               View All Answers (Debug)
-            </button>
+            </button> */}
           </div>
         </div>
       )}
 
 {selectedFileUrl && (
   <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div className="bg-white rounded-lg shadow-lg w-[95%] max-w-5xl p-4 relative">
-      {/* Close Button */}
+    <div className="bg-white rounded-xl shadow-2xl w-[95%] max-w-5xl p-6 relative">
       <button
         onClick={() => setSelectedFileUrl(null)}
-        className="absolute top-2 right-2 text-gray-600 hover:text-black"
+        className="absolute top-3 right-3 text-gray-500 hover:text-black text-xl"
       >
         ✕
       </button>
 
-      {/* Modal Title */}
-      <div className="text-center font-semibold text-lg mb-3">
-        Document Preview
+      <div className="text-center font-bold text-lg mb-4">
+        📑 Document Preview
       </div>
 
-      {/* Loader */}
       {isDocumentLoading && (
-        <div className="text-center text-sm text-blue-500 mb-4">
+        <div className="text-center text-blue-500 mb-4">
           Loading document...
         </div>
       )}
 
-      {/* Iframe Preview */}
       <iframe
         id="document_frame"
         src={selectedFileUrl}
@@ -1061,7 +1041,6 @@ case "file":
         onLoad={() => setIsDocumentLoading(false)}
       />
 
-      {/* Optional fallback */}
       {!selectedFileUrl.includes(".pdf") && (
         <div className="text-center mt-4">
           <a
@@ -1080,6 +1059,7 @@ case "file":
 
 
       
+    </div>
     </div>
   );
 }

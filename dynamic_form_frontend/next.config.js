@@ -4,6 +4,8 @@
 const nextConfig = {
   output: 'export', // ← critical for static export to /out folder
   distDir: 'out', // Default export directory
+  trailingSlash: true, // important for S3 paths
+
 
   reactStrictMode: true,
   compiler: {
