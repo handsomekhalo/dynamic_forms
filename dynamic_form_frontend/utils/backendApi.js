@@ -4,7 +4,7 @@ import axios from 'axios';
 
 // Create an Axios instance with a predefined configuration
 const backendApi = axios.create({
-  baseURL: ' http://3.144.218.251',
+  baseURL:'http://3.144.218.251',
  
   // baseURL: "http://127.0.0.1:8000",
     // 👈 Public IP of your EC2 instance
