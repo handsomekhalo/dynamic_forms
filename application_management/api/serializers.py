@@ -175,3 +175,11 @@ class MainCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = MainCategory
         fields = ['id', 'name', 'description', 'order', 'is_active']
+
+
+
+class UpdateFormeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FormType
+        fields = ['id', 'name', 'description', 'is_active', 'date_created']
+        read_only_fields = ['id', 'date_created']

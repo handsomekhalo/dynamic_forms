@@ -5,7 +5,7 @@ from rest_framework import status
 from application_management.models import FormCategoryAssignment, FormQuestionAssignment, FormType, MainCategory
 
 from rest_framework import status
-from .serializers import AssignCategoryToFormSerializer, AssignQuestionToFormSerializer, CreateMainCategorySerializer, FormCategoriesResponseSerializer, FormCategoryAssignmentSerializer, FormTypeSerializer, GetAllFormTypeSerializer, GetUnassignedCategorySerializer, MainCategorySerializer, RemoveCategoryAssignmentSerializer, SelectAllCategoriesSerializer, SelectCategoryBasedOnIdSerializer, UnassignCategorySerializer, updateAssignCategoryToFormSerializer
+from .serializers import AssignCategoryToFormSerializer, AssignQuestionToFormSerializer, CreateMainCategorySerializer, FormCategoriesResponseSerializer, FormCategoryAssignmentSerializer, FormTypeSerializer, GetAllFormTypeSerializer, GetUnassignedCategorySerializer, MainCategorySerializer, RemoveCategoryAssignmentSerializer, SelectAllCategoriesSerializer, SelectCategoryBasedOnIdSerializer, UnassignCategorySerializer,UpdateFormeSerializer
 from django.db import transaction
 
 
@@ -599,13 +599,6 @@ def get_assigned_categories_api(request, form_type_id):
         # Get the assignments for the given form_type_id
         assignments = FormCategoryAssignment.objects.filter(form_type_id=form_type_id)
         
-        # If no assignments are found
-        # if not assignments.exists():
-        #     return Response({
-        #         "status": "error",
-        #         "message": "No categories assigned to this form type."
-        #     }, status=status.HTTP_404_NOT_FOUND)
-        
         if not assignments.exists():
     # Instead of 404, return empty list with success
             return Response({
@@ -633,3 +626,33 @@ def get_assigned_categories_api(request, form_type_id):
             "status": "error",
             "message": f"An unexpected error occurred: {str(e)}"
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+def update_form_api(request):
+    """
+    Updates an existing form type based on formId.
+    """
+    data = request.data
+    form_id = data.get('formId')
+
+    if not form_id:
+        return Response({"status": "error", "message": "formId is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        form_type = FormType.objects.get(id=form_id)
+    except FormType.DoesNotExist:
+        return Response({"status": "error", "message": "Form not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    # Update fields if provided
+    form_type.name = data.get('name', form_type.name)
+    form_type.description = data.get('description', form_type.description)
+    form_type.is_active = data.get('is_active', form_type.is_active)
+    form_type.save()
+
+    serializer = UpdateFormeSerializer(form_type)
+    return Response({
+        "status": "success",
+        "message": "Form updated successfully.",
+        "form": serializer.data
+    }, status=status.HTTP_200_OK)

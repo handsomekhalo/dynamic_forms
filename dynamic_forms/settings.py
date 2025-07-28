@@ -184,6 +184,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",  # If you're running frontend locally
     "http://localhost:3000",
     "http://52.14.111.23",
+    "http://3.144.218.251"
   # Your Next.js dev server
     
     
@@ -197,6 +198,7 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:8000",
     "http://56.228.24.233",
     "http://52.14.111.23",
+    "http://3.144.218.251"
 
 ]
 

@@ -20,6 +20,8 @@ urlpatterns = [
         path('get_form_categories_api/<int:form_type_id>/',views.get_form_categories_api,name='get_form_categories_api'),
         path('remove_category_assignment_api/',views.remove_category_assignment_api,name='remove_category_assignment_api'),
         path('get_assigned_categories_api/<int:form_type_id>/',views.get_assigned_categories_api,name='get_assigned_categories_api'),
+         path('update_form_api/',views.update_form_api,name='update_form_api'),
+
 
     
      # path('form-types/<int:form_type_id>/unassigned-categories/', views.get_unassigned_categories, name='unassigned-categories'),

@@ -11,6 +11,7 @@ import FormTabs from "./Form_tabs_modal";
 import { EnhancedFormList } from "./Form_tabs_modal";
 import AssignCategoryModal from "./assign_caregories_modal";
 import AssignQuestionToCategoryModal from "../Question_Management_Component/assign_questions_to_category_modal";
+import UpdateFormModal from "./update_form_details_modal";
 
 export default function FormManagement() {
   const [forms, setForms] = useState([]);
@@ -31,6 +32,9 @@ export default function FormManagement() {
   const [activeTab, setActiveTab] = useState("all");
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedFormId, setSelectedFormId] = useState(null);
+    const [showUpdateFormModal, setSShowUpdateFormModal] = useState(false);
+    
+
 
   const { authToken, isAuthenticated, navigate, isLoading } = useAuth();
 
@@ -66,10 +70,37 @@ export default function FormManagement() {
     }
   };
 
+
+const handleFormUpdate = async () => {
+  try {
+    await backendApi.post("/application_management/update_form_details/", {
+      formId: formData.id,
+      name: formData.name,
+      description: formData.description,
+      is_active: formData.is_active,
+    });
+
+    setShowFormModal(false);
+    fetchForms();
+  } catch (err) {
+    setError("Failed to update form.");
+    console.error("Update form error:", err);
+  }
+};
+
+
   const handleAssignClick = (formId) => {
     setSelectedFormId(formId);
     setShowAssignModal(true);
   };
+
+  
+
+  const handleUpdateClick = (form) => {
+  setFormData(form); // preload form data
+  // setShowUpdateFormModal(true);
+  setSShowUpdateFormModal(true)
+}
 
   const handleAssignQuestionsClick = (formId) => {
     setAssignFormId(formId);
@@ -177,7 +208,11 @@ export default function FormManagement() {
             onAssignClick={handleAssignClick}
             key={`form-list-${refreshTrigger}`}
             onAssignQuestionsClick={handleAssignQuestionsClick}
+             onUpdateClick={handleUpdateClick} // <-- pass the handler
+
           />
+
+          
         </>
       )}
 
@@ -200,6 +235,20 @@ export default function FormManagement() {
           </div>
         </div>
       )}
+
+
+
+
+{showUpdateFormModal && (
+  <UpdateFormModal
+    formData={formData}
+    setFormData={setFormData}
+    onUpdate={handleFormUpdate}
+    onClose={() => setSShowUpdateFormModal(false)}
+  />
+)}
+
     </div>
-  );
+  )
 }
+

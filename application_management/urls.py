@@ -20,5 +20,7 @@ urlpatterns = [
       path('remove_category_assignment/', views.remove_category_assignment,name="remove_category_assignment"),
       path('get_unassigned_categories/<int:form_type_id>/', views.get_unassigned_categories, name='get_unassigned_categories'),
       path('get_assigned_categories/<int:form_type_id>/', views.get_assigned_categories, name='get_assigned_categories'),
+     path('update_form_details/', views.update_form_details, name='update_form_details'),
+
    
 ]

@@ -287,6 +287,88 @@ def create_form(request):
 
 
 @csrf_exempt
+def update_form_details(request):
+    if request.method != 'POST':
+        return JsonResponse({
+            "status": "error",
+            "message": "Method not allowed"
+        }, status=405)
+
+    try:
+        # Token extraction
+        auth_header = request.headers.get("Authorization", "")
+        token = None
+        if auth_header.startswith("Token "):
+            token = auth_header[6:]
+        elif auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+
+        if not token:
+            return JsonResponse({"status": "error", "message": "Authorization token is required."}, status=401)
+
+        request.session["token"] = token
+        request.session.modified = True
+
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Token {token}",
+        }
+
+        # Parse JSON payload
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'status': 'error', 'message': 'Invalid JSON data'}, status=400)
+
+        form_id = data.get('formId')
+        name = data.get('name')
+        description = data.get('description', '')
+        is_active = data.get('is_active', True)
+
+        if not form_id:
+            return JsonResponse({"status": "error", "message": "formId is required"}, status=400)
+
+        # Send to internal update API
+        api_url = f"{host_url(request)}{reverse_lazy('update_form_api')}"
+
+        payload = {
+            "formId": form_id,
+            "name": name,
+            "description": description,
+            "is_active": is_active
+        }
+
+        try:
+            response = requests.post(api_url, headers=headers, data=json.dumps(payload), timeout=10)
+            response.raise_for_status()
+        except requests.RequestException as e:
+            return JsonResponse({'status': 'error', 'message': f'Error while updating form: {str(e)}'}, status=500)
+
+        response_data = response.json()
+
+        if response.status_code == 200 and response_data.get('status') == 'success':
+            return JsonResponse({
+                "status": "success",
+                "message": "Form updated successfully",
+                "form": response_data.get('form')
+            }, status=200)
+        else:
+            return JsonResponse({
+                "status": "error",
+                "message": response_data.get('message', 'Failed to update form')
+            }, status=400)
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            "status": "error",
+            "message": f"Server error occurred: {str(e)}"
+        }, status=500)
+
+
+
+@csrf_exempt
 def create_category(request):
     if request.method != 'POST':
         return JsonResponse({
