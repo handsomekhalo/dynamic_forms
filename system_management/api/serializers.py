@@ -8,6 +8,8 @@ from system_management.general_func_classes import BaseFormSerializer
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from system_management.models import UserType
+from django.contrib.auth.password_validation import validate_password
+
 
 User = get_user_model()
 
@@ -296,3 +298,107 @@ class UserUpdateSerializer(BaseFormSerializer):
         }
     )
 
+
+
+class CreateUserSerializer(serializers.ModelSerializer):
+    """
+    Serializer for creating new users with profile information
+    """
+    password = serializers.CharField(write_only=True, validators=[validate_password])
+    confirm_password = serializers.CharField(write_only=True)
+    user_type_id = serializers.IntegerField()
+    
+    # Profile fields
+    id_number = serializers.CharField(max_length=13, required=False, allow_blank=True)
+    passport_number = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    phone_number = serializers.CharField(max_length=10, required=True)
+    street_address = serializers.CharField(max_length=255, required=True)
+    suburb = serializers.CharField(max_length=255, required=True)
+    city = serializers.CharField(max_length=255, required=True)
+    province = serializers.CharField(max_length=255, required=True)
+    postal_code = serializers.CharField(max_length=5, required=False, allow_blank=True)
+
+    class Meta:
+        model = User
+        fields = [
+            'email', 'first_name', 'last_name', 'password', 'confirm_password',
+            'user_type_id', 'id_number', 'passport_number', 'phone_number',
+            'street_address', 'suburb', 'city', 'province', 'postal_code'
+        ]
+
+    def validate(self, attrs):
+        """
+        Validate password confirmation and user type
+        """
+        if attrs['password'] != attrs['confirm_password']:
+            raise serializers.ValidationError("Password and confirm password do not match.")
+        
+        # Validate user type exists
+        try:
+            UserType.objects.get(id=attrs['user_type_id'])
+        except UserType.DoesNotExist:
+            raise serializers.ValidationError("Invalid user type.")
+        
+        # Validate that either id_number or passport_number is provided
+        if not attrs.get('id_number') and not attrs.get('passport_number'):
+            raise serializers.ValidationError("Either ID number or passport number must be provided.")
+        
+        return attrs
+
+    def validate_email(self, value):
+        """
+        Validate email uniqueness
+        """
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
+
+    def validate_phone_number(self, value):
+        """
+        Validate phone number format (assuming South African format)
+        """
+        if not value.isdigit() or len(value) != 10:
+            raise serializers.ValidationError("Phone number must be 10 digits.")
+        return value
+
+    def validate_id_number(self, value):
+        """
+        Validate South African ID number format (13 digits)
+        """
+        if value and (not value.isdigit() or len(value) != 13):
+            raise serializers.ValidationError("ID number must be 13 digits.")
+        return value
+
+    def create(self, validated_data):
+        """
+        Create user and associated profile
+        """
+        # Extract profile data
+        profile_data = {
+            'id_number': validated_data.pop('id_number', ''),
+            'passport_number': validated_data.pop('passport_number', ''),
+            'phone_number': validated_data.pop('phone_number'),
+            'street_address': validated_data.pop('street_address'),
+            'suburb': validated_data.pop('suburb'),
+            'city': validated_data.pop('city'),
+            'province': validated_data.pop('province'),
+            'postal_code': validated_data.pop('postal_code', ''),
+            'first_login': True
+        }
+        
+        # Remove confirm_password as it's not needed for user creation
+        validated_data.pop('confirm_password')
+        
+        # Get user type
+        user_type = UserType.objects.get(id=validated_data.pop('user_type_id'))
+        
+        # Create user
+        user = User.objects.create_user(
+            **validated_data,
+            user_type=user_type
+        )
+        
+        # Create profile
+        Profile.objects.create(user=user, **profile_data)
+        
+        return user

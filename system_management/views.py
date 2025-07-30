@@ -11,17 +11,18 @@ from rest_framework.authtoken.models import Token
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.urls import reverse, reverse_lazy
 from django.views.decorators.csrf import csrf_exempt
-import requests
 from system_management import constants
 from system_management.api.serializers import UserTypeModelSerializer
 from system_management.decorators import session_timeout
 from system_management.general_func_classes import api_connection, host_url
 from system_management.models import User, UserType
-from django.views.decorators.csrf import csrf_exempt # You had this in your code, keeping it for now but remember prior advice to remove for GET.
-import requests
 from django.http import JsonResponse
-from django.urls import reverse
 import json # You're using json.dumps, so ensure this is imported
+from django.shortcuts import redirect
+from django.contrib.sessions.models import Session
+import json
+import requests
+from rest_framework import status # Import DRF status codes for clarity
 # from . import constants # Ensure constants module is correctly imported for JSON_APPLICATION
 import logging
 
@@ -77,20 +78,12 @@ def set_csrf_token(request):
      response.set_cookie('csrftoken', get_token(request)) 
      return response
 
-# @ensure_csrf_cookie     
-# def login_view(request):
-#     """User login function with API."""
 
-#     if request.method == "GET":
-    
-#         # Update this path to point to your React app's index.html
-#         return render(request, 'index.html')  # Adj
-    
 
 # View that redirects to Next.js
 def login_view(request):
-    # return redirect("http://localhost:3000/")  # Next.js is running here
-    return redirect('http://52.14.111.23:3000/')  # or your real domain
+    return redirect("http://localhost:3000/")  # Next.js is running here
+    # return redirect('http://52.14.111.23:3000/')  # or your real domain
 
 
 
@@ -247,80 +240,6 @@ def login(request):
 
 
 
-# @csrf_exempt
-# def get_all_users(request):
-    
-#     if request.method == "GET":
-#         """Returns all user information for user management template."""
-#         try:
-#             # user =request.data
-#             token = request.session.get("token")
-#             # token = request.headers.get("Authorization", "").split("Token ")[-1]
-#             auth_header = request.headers.get("Authorization", "")
-#             if auth_header.startswith("Token "):
-#                 token = auth_header.split("Token ")[-1]
-#             elif auth_header.startswith("Bearer "):
-#                 token = auth_header.split("Bearer ")[-1]
-#             else:
-#                 token = None
-
-
-#             if token:
-#                     request.session["token"] = token
-#                     request.session.modified = True
-
-#             if not token:
-#                 return JsonResponse({
-#                     "status": "error",
-#                     "message": "Token not found in session or headers"
-#                 })
-
-#             # API call to fetch users
-#             url = f"{host_url(request)}{reverse('get_users_api')}"
-
-#             payload = json.dumps({
-#                 'token': token  # Adding token to payload
-#             })
-
-#             headers = {
-#                 'Authorization': f'Token {token}',
-#                 'Content-Type': constants.JSON_APPLICATION
-#             }
-
-#             response_data = api_connection(method="GET", url=url, headers=headers, data=payload)
-
-#             users = []
-#             if response_data.get('status') == 'success':
-#                 users = response_data.get('users', [])
-
-#             # API call to fetch user types
-#             url = f"{host_url(request)}{reverse_lazy('get_user_types_api')}"
-
-#             # url = f"{host_url(request)}{reverse('get_user_types_api')}"
-            
-
-#             response_data = api_connection(method="GET", url=url, headers=headers, data=payload)
-
-#             roles = []
-#             if response_data.get('status') == 'success':
-#                 roles = response_data.get('user_types', [])
-
-#             return JsonResponse({
-#                 'status': 'success',
-#                 'users': users,
-#                 'user_types': roles
-#             })
-
-#         except Exception as e:
-#             return JsonResponse({
-#                 'status': 'error',
-#                 'message': str(e)
-#             })
-
-#     return JsonResponse({
-#         'status': 'error',
-#         'message': 'Invalid request method'
-#     })
 @csrf_exempt # Consider removing this if GET request and no state-changing operations
 def get_all_users(request):
     if request.method != "GET":
@@ -417,77 +336,6 @@ def get_all_users(request):
             'status': 'error',
             'message': f"Server error occurred: {str(e)}. Please check server logs."
         }, status=500)
-
-# @csrf_exempt
-# def get_roles(request):
-#     """
-#     View function to get all roles/user types.
-#     Handles both session and header-based token authentication.
-#     """
-
-#     if request.method != "GET":
-#         return JsonResponse({
-#             'status': 'error',
-#             'message': 'Only GET requests are allowed'
-#         }, status=405)
-
-#     try:
-#         # Get token from session or Authorization header
-#         token = request.session.get("token")
-#             # token = request.headers.get("Authorization", "").split("Token ")[-1]
-#         auth_header = request.headers.get("Authorization", "")
-#         if auth_header.startswith("Token "):
-#             token = auth_header.split("Token ")[-1]
-#         elif auth_header.startswith("Bearer "):
-#             token = auth_header.split("Bearer ")[-1]
-#         else:
-#             token = None
-
-
-#         if token:
-#             request.session["token"] = token
-#             request.session.modified = True
-
-#         if not token:
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "Token not found in session or headers"
-#             }, status=401)
-
-#         url = f"{host_url(request)}{reverse('get_user_types_api')}"
-
-#         payload = json.dumps({
-#             'token': token
-#         })
-
-#         headers = {
-#             'Authorization': f'Token {token}',
-#             'Content-Type': constants.JSON_APPLICATION
-#         }
-
-#         response_data = api_connection(
-#             method="GET",
-#             url=url,
-#             headers=headers,
-#             data=payload
-#         )
-
-#         if response_data.get('status') == 'success':
-#             return JsonResponse({
-#                 'status': 'success',
-#                 'roles': response_data.get('user_types', [])
-#             })
-        
-#         return JsonResponse({
-#             'status': 'error',
-#             'message': response_data.get('message', 'Failed to fetch roles')
-#         }, status=400)
-
-#     except Exception as e:
-#         return JsonResponse({
-#             'status': 'error',
-#             'message': str(e)
-#         }, status=500)
 
 
 
@@ -612,257 +460,10 @@ def get_roles(request):
             'status': 'error',
             'message': f"Server error occurred: {str(e)}. Please check server logs."
         }, status=500)
-# @csrf_exempt
-# def get_roles(request):
-#     """
-#     View function to get all roles/user types.
-#     Handles both session and header-based token authentication.
-#     Returns consistent response format like get_questions_assigned_to_category.
-#     """
-#     if request.method!= "GET":
-#         return JsonResponse({
-#             "status": "error",
-#             "message": "Only GET requests are allowed"
-#         }, status=405)
-
-#     try:
-#         # Get token from header or session
-#         auth_header = request.headers.get("Authorization", "")
-#         token = None
-#         if auth_header.startswith("Token "):
-#             token = auth_header[6:]
-#         elif auth_header.startswith("Bearer "):
-#             token = auth_header[7:]
-#         else:
-#             token = request.session.get("token")
-
-#         if not token:
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "Authorization token is required."
-#             }, status=401)
-
-#         # Persist token in session for later use
-#         request.session["token"] = token
-#         request.session.modified = True
-
-#         # Construct internal API call
-#         url = f"{host_url(request)}{reverse('get_user_types_api')}"
-#         headers = {
-#             "Authorization": f"Token {token}",
-#             "Content-Type": constants.JSON_APPLICATION
-#         }
-
-#         # Attempt calling internal API
-#         auth_variants = [
-#             {"Authorization": f"Token {token}"},
-#             {"Authorization": f"Bearer {token}"},
-#             {"Authorization": token}
-#         ]
-
-#         response = None
-#         for auth in auth_variants:
-#             try:
-#                 response = requests.get(url, headers={**headers, **auth}, timeout=10)
-#                 if response.status_code != 401:
-#                     break
-#             except requests.RequestException as e:
-#                 print(f"Token attempt failed using headers {auth}: {str(e)}")
-
-#         if not response or response.status_code == 401:
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "Failed to authenticate with the internal API."
-#             }, status=401)
-
-#         response.raise_for_status()
-#         response_data = response.json()
-#         roles = response_data.get("user_types", [])
-
-#         return JsonResponse({
-#             "status": "success",
-#             "data": {
-#                 "roles": roles
-#             },
-#             "message": "No roles found." if not roles else ""
-#         }, status=200)
-
-#     except Exception as e:
-#         import traceback
-#         traceback.print_exc()
-#         return JsonResponse({
-#             "status": "error",
-#             "message": f"Server error occurred: {str(e)}"
-#         }, status=500)
     
-# def _get_user_types_logic():
-#     """
-#     Shared logic for getting user types.
-#     This is the exact same logic as your get_user_types_api function.
-#     """
-#     try:
-#         user_types = UserType.objects.all()
-#         serializer = UserTypeModelSerializer(user_types, many=True)
-        
-#         return {
-#             'status': 'success',
-#             'user_types': serializer.data
-#         }
-        
-#     except Exception as e:
-#         return {
-#             'status': 'error',
-#             'message': f'Error during getting user types: {str(e)}'
-#         }
 
 # @csrf_exempt
-# def get_roles(request):
-#     """
-#     View function to get all roles/user types.
-#     Handles both session and header-based token authentication.
-#     Returns consistent response format like get_questions_assigned_to_category.
-#     """
-#     if request.method != "GET":
-#         return JsonResponse({
-#             "status": "error",
-#             "message": "Only GET requests are allowed"
-#         }, status=405)
 
-#     try:
-#         # Get token from header or session
-#         auth_header = request.headers.get("Authorization", "")
-#         token = None
-#         if auth_header.startswith("Token "):
-#             token = auth_header[6:]
-#         elif auth_header.startswith("Bearer "):
-#             token = auth_header[7:]
-#         else:
-#             token = request.session.get("token")
-
-#         if not token:
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "Authorization token is required."
-#             }, status=401)
-
-#         # Persist token in session for later use
-#         request.session["token"] = token
-#         print('here we are',token)
-#         request.session.modified = True
-
-#         # TODO: Add token validation here if needed
-#         # You might want to validate the token before proceeding
-#         # user = authenticate_token(token)  # Your token validation logic
-
-#         # FIXED: Use shared logic instead of HTTP call
-#         response_data = _get_user_types_logic()
-        
-#         if response_data['status'] == 'success':
-#             roles = response_data.get('user_types', [])
-#             return JsonResponse({
-#                 "status": "success",
-#                 "data": {
-#                     "roles": roles
-#                 },
-#                 "message": "No roles found." if not roles else ""
-#             }, status=200)
-#         else:
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": response_data.get('message', 'Failed to fetch roles')
-#             }, status=400)
-
-#     except Exception as e:
-#         import traceback
-#         traceback.print_exc()
-#         return JsonResponse({
-#             "status": "error",
-#             "message": f"Server error occurred: {str(e)}"
-#         }, status=500)
-# @csrf_exempt
-# def _get_user_types_logic():
-#     """
-#     Shared logic for getting user types from the database.
-#     """
-#     try:
-#         user_types = UserType.objects.all()
-#         serializer = UserTypeModelSerializer(user_types, many=True)
-#         return {
-#             'status': 'success',
-#             'user_types': serializer.data
-#         }
-#     except Exception as e:
-#         return {
-#             'status': 'error',
-#             'message': f'Error during getting user types: {str(e)}'
-#         }
-
-
-
-# @csrf_exempt
-# def get_roles(request):
-#     """
-#     View function to get all roles/user types.
-#     Handles both session and header-based token authentication.
-#     Avoids internal HTTP calls; uses local DB access via _get_user_types_logic.
-#     """
-
-#     if request.method != "GET":
-#         return JsonResponse({
-#             "status": "error",
-#             "message": "Only GET requests are allowed"
-#         }, status=405)
-
-#     try:
-#         # Extract token from headers or session
-#         auth_header = request.headers.get("Authorization", "")
-#         token = None
-
-#         if auth_header.startswith("Token "):
-#             token = auth_header[6:]
-#         elif auth_header.startswith("Bearer "):
-#             token = auth_header[7:]
-#         else:
-#             token = request.session.get("token")
-
-#         if not token:
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "Authorization token is required."
-#             }, status=401)
-
-#         # Save token in session (optional)
-#         request.session["token"] = token
-#         request.session.modified = True
-
-#         # TODO: Add token validation here if needed in the future
-#         # Example: user = authenticate_token(token)
-
-#         # Use local DB logic instead of HTTP call
-#         response_data = _get_user_types_logic()
-
-#         if response_data['status'] == 'success':
-#             roles = response_data.get('user_types', [])
-#             return JsonResponse({
-#                 "status": "success",
-#                 "data": {
-#                     "roles": roles
-#                 },
-#                 "message": "No roles found." if not roles else ""
-#             }, status=200)
-#         else:
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": response_data.get('message', 'Failed to fetch roles')
-#             }, status=400)
-
-#     except Exception as e:
-#         import traceback
-#         traceback.print_exc()
-#         return JsonResponse({
-#             "status": "error",
-#             "message": f"Server error occurred: {str(e)}"
-#         }, status=500)
 
 
 @csrf_exempt
@@ -991,3 +592,201 @@ def update_user(request, user_id):
             "status": "error",
             "message": f"Server error occurred: {str(e)}"
         }, status=500)
+    
+
+
+
+# @csrf_exempt
+# def logout(request):
+
+#     print('hit logout func')
+#     """
+#     Handles user logout by deleting session, calling logout API, and redirecting to login.
+#     """
+#     if request.method != 'POST':
+#         return JsonResponse({
+#             "status": "error",
+#             "message": "Method not allowed. Use POST."
+#         }, status=405)
+
+#     try:
+#         # Extract token from session or Authorization header
+#         token = request.session.get("token")
+#         if not token:
+#             auth_header = request.headers.get("Authorization", "")
+#             if auth_header.startswith("Token "):
+#                 token = auth_header.split("Token ")[-1]
+#             elif auth_header.startswith("Bearer "):
+#                 token = auth_header.split("Bearer ")[-1]
+
+#         if not token:
+#             return JsonResponse({
+#                 "status": "error",
+#                 "message": "Authorization token is required."
+#             }, status=401)
+
+#         # Build logout URL
+#         url = f"{host_url(request)}{reverse('logout_api')}"
+
+#         # Delete session
+#         session_key = request.session.session_key
+#         if session_key:
+#             try:
+#                 session_obj = Session.objects.get(session_key=session_key)
+#                 session_obj.delete()
+#             except Session.DoesNotExist:
+#                 pass  # Session already deleted or doesn't exist
+        
+#         payload = {
+           
+#         }
+#         # Prepare headers
+#         headers = {
+#             'Authorization': f'Token {token}',
+#             'Content-Type': 'application/json'
+#         }
+
+#         # Perform logout API call
+#         # response = requests.post(url, headers=headers, json={})
+#         response = api_connection(method="POST", url=url, headers=headers, data=payload)
+
+#         try:
+#             response_data = json.loads(response) if isinstance(response, str) else response
+#         except ValueError:
+#             response_data = {}
+
+#         if response.status_code == 200 and response_data.get('status') == 'success':
+#             return redirect('login_view')
+#         else:
+#             return JsonResponse({
+#                 "status": "error",
+#                 "message": response_data.get('message', 'Logout API failed.')
+#             }, status=response.status_code)
+
+#     except Exception as e:
+#         import traceback
+#         traceback.print_exc()
+#         return JsonResponse({
+#             "status": "error",
+#             "message": f"An unexpected error occurred: {str(e)}"
+#         }, status=500)
+
+@csrf_exempt
+def logout(request):
+    print('hit logout func')
+    """
+    Handles user logout by deleting session, calling logout API, and redirecting to login.
+    """
+    if request.method != 'POST':
+        return JsonResponse({
+            "status": "error",
+            "message": "Method not allowed. Use POST."
+        }, status=405)
+
+    try:
+        # Extract token from session or Authorization header
+        token = request.session.get("token")
+        if not token:
+            auth_header = request.headers.get("Authorization", "")
+            if auth_header.startswith("Token "):
+                token = auth_header.split("Token ")[-1]
+            elif auth_header.startswith("Bearer "):
+                token = auth_header.split("Bearer ")[-1]
+
+        if not token:
+            # If no token, consider it a local logout and redirect
+            request.session.flush() # Ensure session is cleared
+            return redirect('login_view')
+
+        # Build logout URL
+        url = f"{host_url(request)}{reverse('logout_api')}"
+
+        # Delete session BEFORE calling the API.
+        session_key = request.session.session_key
+        if session_key:
+            try:
+                session_obj = Session.objects.get(session_key=session_key)
+                session_obj.delete()
+                request.session.flush() # Explicitly flush the session
+            except Session.DoesNotExist:
+                pass  # Session already deleted or doesn't exist
+            except Exception as e:
+                print(f"Error deleting session: {e}") # Log unexpected session errors
+
+        payload = {} # Your payload can be empty for logout if not needed by the API
+
+        # Prepare headers
+        headers = {
+            'Authorization': f'Token {token}',
+            'Content-Type': 'application/json'
+        }
+
+        # Perform logout API call
+        # Since api_connection returns response.json(), 'response' will be a dict (or list)
+        api_response_data = api_connection(method="POST", url=url, headers=headers, data=payload)
+
+        # Now, api_response_data is the dictionary (or list) returned by your API.
+        # We need to check its content to determine success, not a status_code attribute.
+        # Your logout_api returns: {'status': 'success', 'message': 'Logged out successfully'}
+        # or {'status': 'error', 'message': 'No authentication token found.'} (implicitly via 401)
+
+        # The logout_api explicitly sets status=status.HTTP_200_OK for success.
+        # However, api_connection strips this status and only returns the JSON body.
+        # Therefore, we must rely solely on the content of api_response_data.
+
+        # The tracebacks show a 401 sometimes, but this 401 is from the actual HTTP response
+        # *before* api_connection extracts the JSON. If api_connection fails to get a 200
+        # it might raise an exception, or return an error message within the JSON.
+        # Let's assume on a successful *HTTP* 200 from the API, api_connection gives us:
+        # {'status': 'success', 'message': 'Logged out successfully'}
+
+        # We're relying on the 'status' key in the dictionary returned by api_connection
+        # to indicate success.
+        if isinstance(api_response_data, dict) and api_response_data.get('status') == 'success':
+            return redirect('login_view')
+        else:
+            # If api_response_data is not a dict, or 'status' is not 'success', it's a failure.
+            # We need to guess the original status code. If the token was bad, the API
+            # likely returned 401, but api_connection won't pass that.
+            # We have to infer from the message.
+
+            # Get the message, defaulting to a generic error if not found or not a dict.
+            message = "Logout API failed or returned unexpected data."
+            if isinstance(api_response_data, dict):
+                message = api_response_data.get('message', message)
+            
+            # Since api_connection loses the HTTP status code, we can't propagate it directly.
+            # If the API's message indicates unauthorized, use 401, otherwise 500 for generic failure.
+            response_status = status.HTTP_500_INTERNAL_SERVER_ERROR
+            if "unauthorized" in message.lower() or "token not found" in message.lower():
+                response_status = status.HTTP_401_UNAUTHORIZED # Infer 401 based on message
+
+            # If it's a 401, we might still want to redirect the user as their token is likely invalid anyway
+            if response_status == status.HTTP_401_UNAUTHORIZED:
+                return redirect('login_view')
+            
+            return JsonResponse({
+                "status": "error",
+                "message": message
+            }, status=response_status)
+
+    except requests.exceptions.RequestException as e:
+        # This catches network errors, connection refused, timeouts from the underlying requests.request
+        # within api_connection, *if* api_connection doesn't catch them itself.
+        # If api_connection *does* catch them and returns a dict with an error message,
+        # then the above `if isinstance(api_response_data, dict)` block will handle it.
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            "status": "error",
+            "message": f"Network error connecting to API: {str(e)}"
+        }, status=status.HTTP_503_SERVICE_UNAVAILABLE) # Use 503 for service unavailable
+
+    except Exception as e:
+        # Catch any other unexpected errors in the logout view's logic
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            "status": "error",
+            "message": f"An unexpected error occurred during logout process: {str(e)}"
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

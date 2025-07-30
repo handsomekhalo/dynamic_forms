@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import backendApi from "../../../../utils/backendApi";
 import { useAuth } from "../../../../AuthContext";
+import Swal from 'sweetalert2';
 
 import FormList from "./form_list";
 import CreateButton from "./create_button";
@@ -32,7 +33,7 @@ export default function FormManagement() {
   const [activeTab, setActiveTab] = useState("all");
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedFormId, setSelectedFormId] = useState(null);
-    const [showUpdateFormModal, setSShowUpdateFormModal] = useState(false);
+    const [showUpdateFormModal, setShowUpdateFormModal] = useState(false);
     
 
 
@@ -71,6 +72,23 @@ export default function FormManagement() {
   };
 
 
+// const handleFormUpdate = async () => {
+//   try {
+//     await backendApi.post("/application_management/update_form_details/", {
+//       formId: formData.id,
+//       name: formData.name,
+//       description: formData.description,
+//       is_active: formData.is_active,
+//     });
+
+//     setShowFormModal(false);
+//     fetchForms();
+//   } catch (err) {
+//     setError("Failed to update form.");
+//     console.error("Update form error:", err);
+//   }
+// };
+
 const handleFormUpdate = async () => {
   try {
     await backendApi.post("/application_management/update_form_details/", {
@@ -80,11 +98,29 @@ const handleFormUpdate = async () => {
       is_active: formData.is_active,
     });
 
-    setShowFormModal(false);
-    fetchForms();
+    setShowUpdateFormModal(false);
+        fetchForms();
+
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Success!',
+      text: 'Form updated successfully.',
+      confirmButtonText: "OK"
+    }).then(() => {
+      location.reload(); // or fetchForms() if you prefer not to reload the whole page
+    });
+
   } catch (err) {
     setError("Failed to update form.");
     console.error("Update form error:", err);
+
+    Swal.fire({
+      icon: 'error',
+      title: 'Update Failed',
+      text: 'Something went wrong while updating the form.',
+      confirmButtonText: "OK"
+    });
   }
 };
 
@@ -99,7 +135,8 @@ const handleFormUpdate = async () => {
   const handleUpdateClick = (form) => {
   setFormData(form); // preload form data
   // setShowUpdateFormModal(true);
-  setSShowUpdateFormModal(true)
+  setShowUpdateFormModal(true)
+  
 }
 
   const handleAssignQuestionsClick = (formId) => {
@@ -244,7 +281,8 @@ const handleFormUpdate = async () => {
     formData={formData}
     setFormData={setFormData}
     onUpdate={handleFormUpdate}
-    onClose={() => setSShowUpdateFormModal(false)}
+    onClose={() => setShowUpdateFormModal(false)}
+
   />
 )}
 

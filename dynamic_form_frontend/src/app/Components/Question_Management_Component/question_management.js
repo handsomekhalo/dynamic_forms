@@ -315,12 +315,12 @@ export default function ManageQuestions({ formId, questionTypes }) {
       <div className="flex justify-between items-center mb-4 ">
         <h2 className="text-xl font-semibold">Manage Questions</h2>
 
-        <button
+        {/* <button
           onClick={() => setShowAssignModal(true)}
           className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-700"
         >
           Assign To Category
-        </button>
+        </button> */}
 
         <button
           onClick={() => setShowModal(true)}

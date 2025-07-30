@@ -14,7 +14,9 @@ urlpatterns = [
     path('get_roles/', views.get_roles, name='get_roles'),
     path('get_all_users/', views.get_all_users, name='get_all_users'),
     # path('update_user/', views.update_user, name='update_user'),
-    path('update_user/<int:user_id>/', views.update_user, name='update_user')
+    path('update_user/<int:user_id>/', views.update_user, name='update_user'),
+    path('logout/', views.logout, name='logout'),
+
 
 ] 
 

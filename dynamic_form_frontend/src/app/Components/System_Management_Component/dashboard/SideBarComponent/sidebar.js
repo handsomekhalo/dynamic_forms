@@ -42,13 +42,20 @@ const Sidebar = () => {
          
       ],
     },
+    // {
+    //   title: 'Accounts',
+    //   links: [
+    //     { href: '/profile', icon: 'bx bx-user-circle', label: 'Profile' },
+    //     { href: '/logout', icon: 'bx bx-log-out', label: 'Logout' },
+    //   ],
+    // },
     {
-      title: 'Accounts',
-      links: [
-        { href: '/profile', icon: 'bx bx-user-circle', label: 'Profile' },
-        { href: '/logout', icon: 'bx bx-log-out', label: 'Logout' },
-      ],
-    },
+  title: 'Accounts',
+  links: [
+    { href: '/profile', icon: 'bx bx-user-circle', label: 'Profile' },
+    { href: '/logout', icon: 'bx bx-log-out', label: 'Logout' }, // no change needed here
+  ],
+}
   ];
 
   return (
