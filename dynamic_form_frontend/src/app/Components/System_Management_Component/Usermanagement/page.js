@@ -7,6 +7,9 @@ import { useAuth } from '../../../../../AuthContext';
 import backendApi from '../../../../../utils/backendApi';
 import Navbar from '../dashboard/SideBarComponent/navheader';
 import EditUserModal from './edit_user_modalr';
+import CreateUserModal from './Create_User_Modal';
+import DeleteUserModal from './delete_user_modal';
+
 
 const UserManagement = () => {
 //   const { authToken, isAuthenticated, navigate } = useAuth();
@@ -21,6 +24,11 @@ const UserManagement = () => {
   const usersPerPage = 6;
   const [selectedUser, setSelectedUser] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+const [userToDelete, setUserToDelete] = useState(null);
+const [deleting, setDeleting] = useState(false);
+
 
   // Fetch CSRF Token
 // In UserManagement.js
@@ -178,6 +186,84 @@ useEffect(() => {
     fetchData();
   }, [authToken, isAuthenticated, navigate]);
 
+const handleCreateUser = async (formData) => {
+  try {
+    console.log('Creating user with data:', formData);
+    
+    const response = await backendApi.post(
+        `/system_management/create_user/`, 
+        formData,
+      {
+        headers: { 
+          'Authorization': `Token ${authToken}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    console.log('Create response:', response);
+    
+    if (response.data.status === 'success') {
+      // Refresh user list after successful creation
+      await fetchUsers();
+      setIsCreateModalOpen(false);
+      alert('User created successfully! Login credentials sent via email.');
+    } else {
+      throw new Error(response.data.message || 'Failed to create user');
+    }
+  } catch (err) {
+    console.error('Error creating user:', err);
+    alert('Failed to create user: ' + (err.response?.data?.message || err.message || 'Unknown error'));
+  }
+};
+
+const handleDeleteClick = (user) => {
+  setUserToDelete(user);
+  setIsDeleteModalOpen(true);
+};
+
+const handleConfirmDelete = async (email) => {
+  if (!email) {
+    console.error('No email provided for deletion');
+    return;
+  }
+
+  try {
+    setDeleting(true);
+    const response = await backendApi.post(
+      '/system_management/delete_user/',
+      { email },
+      {
+        headers: {
+          Authorization: `Token ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (response.data.status === 'success') {
+      await fetchUsers();
+      setIsDeleteModalOpen(false);
+      setUserToDelete(null);
+    } else {
+      throw new Error(response.data.message || 'Delete failed');
+    }
+  } catch (error) {
+    console.error('Delete error:', error);
+    alert('Failed to delete user: ' + (error.response?.data?.message || error.message));
+  } finally {
+    setDeleting(false);
+  }
+};
+
+
+
+const handleDelete = (user) => {
+    console.log('Setting user to delete:', user);
+
+  setUserToDelete(user); // assuming this state exists
+  setIsDeleteModalOpen(true);
+};
   // Pagination
   const indexOfLastUser = currentPage * usersPerPage;
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
@@ -191,8 +277,13 @@ useEffect(() => {
       <Sidebar />
       <div className="flex-1 p-4">
         <h2 className="text-2xl font-semibold mb-4">User Management</h2>
-        <button type="button" class="text-white bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 font-medium rounded-full text-sm px-5 py-2.5 text-center me-2 mb-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800">Green</button>
-
+<button 
+        type="button" 
+        onClick={() => setIsCreateModalOpen(true)}
+        className="text-white bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 font-medium rounded-full text-sm px-5 py-2.5 text-center me-2 mb-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
+      >
+        Create User
+      </button>
 
 
         <EditUserModal
@@ -216,7 +307,34 @@ useEffect(() => {
           indexOfFirstUser={indexOfFirstUser}
           csrfToken={csrfToken}
           onEdit={handleEditClick}
+           onDelete={handleDelete}
+  setUserToDelete={setUserToDelete}
+  setIsDeleteModalOpen={setIsDeleteModalOpen}
         />
+
+
+        <CreateUserModal
+  isOpen={isCreateModalOpen}
+  onClose={() => setIsCreateModalOpen(false)}
+  onSave={handleCreateUser}
+  roles={roles}
+/>
+
+{/* <DeleteUserModal
+  isOpen={isDeleteModalOpen}
+  onClose={() => setIsDeleteModalOpen(false)}
+  onDelete={handleConfirmDelete}
+  userEmail={userToDelete?.email || ''}
+  loading={deleting}
+/> */}
+<DeleteUserModal
+  isOpen={isDeleteModalOpen}
+  onClose={() => setIsDeleteModalOpen(false)}
+  onDelete={handleConfirmDelete}             // receives email from modal
+  userEmail={userToDelete?.email || ''}      // pulls email from selected user
+  loading={deleting}
+/>
+
       </div>
 
 

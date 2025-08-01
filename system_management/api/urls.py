@@ -15,6 +15,8 @@ urlpatterns = [
     path('create_users_api/', views.create_users_api, name="create_users_api"),
 
     path('logout_api/', views.logout_api, name="logout_api"),
+    path('send_email_api/', send_email_api, name='send_email_api'),
+    path('delete_user_api/', views.delete_user_api, name='delete_user_api'),
 
 #    path('otp_api/', views.otp_api, name="otp_api"),
 #    path('logout_api/', views.logout_api, name="logout_api"),

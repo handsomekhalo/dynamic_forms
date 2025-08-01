@@ -14,7 +14,7 @@ from django.views.decorators.csrf import csrf_exempt
 from system_management import constants
 from system_management.api.serializers import UserTypeModelSerializer
 from system_management.decorators import session_timeout
-from system_management.general_func_classes import api_connection, host_url
+from system_management.general_func_classes import _send_email_thread, api_connection, host_url
 from system_management.models import User, UserType
 from django.http import JsonResponse
 import json # You're using json.dumps, so ensure this is imported
@@ -27,6 +27,15 @@ from rest_framework import status # Import DRF status codes for clarity
 import logging
 
 logger = logging.getLogger(__name__)
+import threading
+from django.http import JsonResponse
+from django.urls import reverse
+from django.views.decorators.csrf import csrf_exempt
+from .decorators import session_timeout, check_token_in_session
+# from .models import User
+from system_management.api.api_helpers import send_email_api
+
+# from .utils import host_url, api_connection, generate_password, _send_email_thread
 
 
 
@@ -597,80 +606,6 @@ def update_user(request, user_id):
 
 
 # @csrf_exempt
-# def logout(request):
-
-#     print('hit logout func')
-#     """
-#     Handles user logout by deleting session, calling logout API, and redirecting to login.
-#     """
-#     if request.method != 'POST':
-#         return JsonResponse({
-#             "status": "error",
-#             "message": "Method not allowed. Use POST."
-#         }, status=405)
-
-#     try:
-#         # Extract token from session or Authorization header
-#         token = request.session.get("token")
-#         if not token:
-#             auth_header = request.headers.get("Authorization", "")
-#             if auth_header.startswith("Token "):
-#                 token = auth_header.split("Token ")[-1]
-#             elif auth_header.startswith("Bearer "):
-#                 token = auth_header.split("Bearer ")[-1]
-
-#         if not token:
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "Authorization token is required."
-#             }, status=401)
-
-#         # Build logout URL
-#         url = f"{host_url(request)}{reverse('logout_api')}"
-
-#         # Delete session
-#         session_key = request.session.session_key
-#         if session_key:
-#             try:
-#                 session_obj = Session.objects.get(session_key=session_key)
-#                 session_obj.delete()
-#             except Session.DoesNotExist:
-#                 pass  # Session already deleted or doesn't exist
-        
-#         payload = {
-           
-#         }
-#         # Prepare headers
-#         headers = {
-#             'Authorization': f'Token {token}',
-#             'Content-Type': 'application/json'
-#         }
-
-#         # Perform logout API call
-#         # response = requests.post(url, headers=headers, json={})
-#         response = api_connection(method="POST", url=url, headers=headers, data=payload)
-
-#         try:
-#             response_data = json.loads(response) if isinstance(response, str) else response
-#         except ValueError:
-#             response_data = {}
-
-#         if response.status_code == 200 and response_data.get('status') == 'success':
-#             return redirect('login_view')
-#         else:
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": response_data.get('message', 'Logout API failed.')
-#             }, status=response.status_code)
-
-#     except Exception as e:
-#         import traceback
-#         traceback.print_exc()
-#         return JsonResponse({
-#             "status": "error",
-#             "message": f"An unexpected error occurred: {str(e)}"
-#         }, status=500)
-
 @csrf_exempt
 def logout(request):
     print('hit logout func')
@@ -790,3 +725,288 @@ def logout(request):
             "status": "error",
             "message": f"An unexpected error occurred during logout process: {str(e)}"
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+# @session_timeout
+# @check_token_in_session
+@csrf_exempt
+def create_user(request):
+    """User registration function for the creation of new users by admin"""
+    
+    if request.method != 'POST':
+        return JsonResponse({
+            "status": "error",
+            "message": "Method not allowed. Use POST."
+        }, status=405)
+
+    try:
+        # Extract token from session or Authorization header
+        token = request.session.get("token")
+        if not token:
+            auth_header = request.headers.get("Authorization", "")
+            if auth_header.startswith("Token "):
+                token = auth_header.split("Token ")[-1]
+            elif auth_header.startswith("Bearer "):
+                token = auth_header.split("Bearer ")[-1]
+
+        if not token:
+            return JsonResponse({
+                "status": "error",
+                "message": "Authorization token is required."
+            }, status=401)
+
+        # Parse request data (support both POST data and JSON)
+        if request.content_type == 'application/json':
+            data = json.loads(request.body)
+
+            print('data',data)
+            user_type_id = data.get('user_type_id')
+            
+            first_name = data.get('first_name')
+            last_name = data.get('last_name')
+            email = data.get('user_email') or data.get('email')
+            phone_number = data.get('phone_number')
+            id_number = data.get('id_number')
+            passport_number = data.get('passport_number')
+            street_address = data.get('street_address')
+            suburb = data.get('suburb')
+            city = data.get('city')
+            province = data.get('province')
+            postal_code = data.get('postal_code')
+        else:
+            # Handle form data
+            user_type_id = request.POST.get('user_type')
+            # print('user_type_id', user_type_id)
+            first_name = request.POST.get('first_name')
+            last_name = request.POST.get('last_name')
+            email = request.POST.get('user_email') or request.POST.get('email')
+            phone_number = request.POST.get('phone_number')
+            id_number = request.POST.get('id_number')
+            passport_number = request.POST.get('passport_number')
+            street_address = request.POST.get('street_address')
+            suburb = request.POST.get('suburb')
+            city = request.POST.get('city')
+            province = request.POST.get('province')
+            postal_code = request.POST.get('postal_code')
+
+        # Validate required fields
+        required_fields = {
+            'user_type': user_type_id,
+            'first_name': first_name,
+            'last_name': last_name,
+            'email': email,
+            'phone_number': phone_number,
+            'street_address': street_address,
+            'suburb': suburb,
+            'city': city,
+            'province': province
+        }
+
+        missing_fields = [field for field, value in required_fields.items() if not value]
+        if missing_fields:
+            return JsonResponse({
+                "status": "error",
+                "message": f"Missing required fields: {', '.join(missing_fields)}"
+            }, status=400)
+
+        # Validate that either ID number or passport number is provided
+        if not id_number and not passport_number:
+            return JsonResponse({
+                "status": "error",
+                "message": "Either ID number or passport number is required."
+            }, status=400)
+
+        # Get user created by from session
+        user_created_by_id = request.session.get('user_id')
+        
+        # Generate password
+        password = generate_password()
+        confirm_password = password  # Since it's auto-generated, confirmation is the same
+
+        # Prepare API payload
+        url = f"{host_url(request)}{reverse('create_users_api')}"
+        payload = json.dumps({
+            "user_type_id": int(user_type_id),
+            "first_name": first_name,
+            "last_name": last_name,
+            "email": email,
+            "password": password,
+            "confirm_password": confirm_password,
+            "phone_number": phone_number,
+            "id_number": id_number or "",
+            "passport_number": passport_number or "",
+            "street_address": street_address,
+            "suburb": suburb,
+            "city": city,
+            "province": province,
+            "postal_code": postal_code or "",
+            "user_created_by": user_created_by_id
+        })
+
+        headers = {
+            'Authorization': f'Token {token}',
+            'Content-Type': constants.JSON_APPLICATION
+        }
+
+        # Make API call to create user
+        response_data = api_connection(method="POST", url=url, headers=headers, data=payload)
+        status_result = response_data.get('status')
+
+        if status_result == 'success':
+            email_templates = {
+                '1': "email_temps/admin_credentials.html",
+            }
+            
+            html_tpl_path = email_templates.get(str(user_type_id), "email_temps/user_credentials.html")
+            
+            subject = "New User Registration - Account Created"
+            login_url = f"{host_url(request)}{reverse('login_view')}"
+            receiver_email = email
+            
+            context_data = {
+                "login_url": login_url,
+                "first_name": first_name,
+                "last_name": last_name,
+                "email": email,
+                "phone_number": phone_number,
+                "password": password,
+                "user_type": user_type_id,
+                "street_address": street_address,
+                "suburb": suburb,
+                "city": city,
+                "province": province,
+                "postal_code": postal_code
+            }
+
+            # Prepare email API call
+            email_url = f"{host_url(request)}{reverse('send_email_api')}"
+            email_payload = json.dumps({
+                "html_tpl_path": html_tpl_path,
+                "receiver_email": receiver_email,
+                "context_data": context_data,
+                "subject": subject,
+            })
+
+            # Send email in separate thread
+            thread = threading.Thread(
+                target=_send_email_thread, 
+                args=(email_url, headers, email_payload)
+            )
+            thread.start()
+
+            # Return success response
+            return JsonResponse({
+                "status": "success",
+                "message": "User created successfully. Login credentials sent via email.",
+                "user": response_data.get('user', {}),
+                "user_id": response_data.get('user', {}).get('id')
+            })
+        else:
+            # Return error from API
+            return JsonResponse({
+                "status": "error",
+                "message": response_data.get('message', 'User creation failed')
+            }, status=400)
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            "status": "error",
+            "message": "Invalid JSON data"
+        }, status=400)
+    except ValueError as e:
+        return JsonResponse({
+            "status": "error",
+            "message": f"Invalid data format: {str(e)}"
+        }, status=400)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            "status": "error",
+            "message": f"Server error occurred: {str(e)}"
+        }, status=500)
+
+# URL pattern to add to your urls.py
+# path('create-user/', create_user, name='create_user'),
+@csrf_exempt
+def delete_user(request):
+    """
+    Delete user view – gets email from frontend and calls delete_user_api
+    """
+    if request.method != 'POST':
+        return JsonResponse({
+            "status": "error",
+            "message": "Method not allowed. Use Post."
+        }, status=405)
+
+    try:
+        # Extract token from session or Authorization header
+        token = request.session.get("token")
+        if not token:
+            auth_header = request.headers.get("Authorization", "")
+            if auth_header.startswith("Token "):
+                token = auth_header.split("Token ")[-1]
+            elif auth_header.startswith("Bearer "):
+                token = auth_header.split("Bearer ")[-1]
+
+        if not token:
+            return JsonResponse({
+                "status": "error",
+                "message": "Authorization token is required."
+            }, status=401)
+
+        # Parse request data
+        if request.content_type == 'application/json':
+            data = json.loads(request.body)
+
+            print('email data', data)
+        else:
+            data = request.POST
+
+        email = data.get('email')
+        print('data', email)
+
+
+        if not email:
+            return JsonResponse({
+                "status": "error",
+                "message": "Email is required to delete a user."
+            }, status=400)
+
+        # Call the API
+        url = f"{host_url(request)}{reverse('delete_user_api')}"  # Ensure this name is in urls.py
+        headers = {
+            'Authorization': f'Token {token}',
+            'Content-Type': 'application/json'
+        }
+        payload = json.dumps({
+            "email": email
+        })
+
+        response_data = api_connection(method="POST", url=url, headers=headers, data=payload)
+
+        if response_data.get("status") == "success":
+            return JsonResponse({
+                "status": "success",
+                "message": response_data.get("message", "User deleted successfully")
+            }, status=200)
+        else:
+            return JsonResponse({
+                "status": "error",
+                "message": response_data.get("message", "Failed to delete user")
+            }, status=400)
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            "status": "error",
+            "message": "Invalid JSON data"
+        }, status=400)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            "status": "error",
+            "message": f"Server error occurred: {str(e)}"
+        }, status=500)

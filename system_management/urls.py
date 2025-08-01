@@ -16,6 +16,8 @@ urlpatterns = [
     # path('update_user/', views.update_user, name='update_user'),
     path('update_user/<int:user_id>/', views.update_user, name='update_user'),
     path('logout/', views.logout, name='logout'),
+    path('create_user/', views.create_user, name='create_user'),
+    path('delete_user/', views.delete_user, name='delete_user'),
 
 
 ] 
