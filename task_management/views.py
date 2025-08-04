@@ -23,16 +23,51 @@ def get_data_on_success(response_data):
 
 # Create your views here.
 
+@csrf_exempt
 def create_task(request):
     """Create task functionality."""
+    
+    if request.method != 'POST':
+        return JsonResponse({
+            "status": "error",
+            "message": "Method not allowed. Use POST."
+        }, status=405)
 
-    if request.method == 'POST':
-        token = request.session.get('token')
-        title = request.POST.get('title')
-        print('title',title)
-        description = request.POST.get('description')
-        print('description',description)
-        due_date = request.POST.get('due_date')
+    try:
+        # Extract token from Authorization header
+        auth_header = request.headers.get("Authorization", "")
+        token = None
+        if auth_header.startswith("Token "):
+            token = auth_header.split("Token ")[-1]
+        elif auth_header.startswith("Bearer "):
+            token = auth_header.split("Bearer ")[-1]
+
+        if not token:
+            return JsonResponse({
+                "status": "error",
+                "message": "Authorization token is required."
+            }, status=401)
+
+        # Store token in session
+        request.session["token"] = token
+        request.session.modified = True
+
+        # Parse JSON body
+        data = json.loads(request.body)
+        
+        title = data.get('title')
+        description = data.get('description')
+        due_date = data.get('due_date')
+
+        print('title:', title)
+        print('description:', description)
+
+        # Validate required fields
+        if not description:
+            return JsonResponse({
+                "status": "error",
+                "message": "Description is required."
+            }, status=400)
 
         headers = {
             'Content-Type': 'application/json',
@@ -40,77 +75,119 @@ def create_task(request):
         }
 
         # Prepare payload for the suggestive API
-        suggestive_payload = json.dumps({
+        suggestive_payload = {
             'input': description  # You might want to use title or description as input for suggestions
-        })
+        }
 
         print('suggestive_payload:', suggestive_payload)
 
         # Suggestive API URL
         suggestive_url = f"{host_url(request)}{reverse_lazy('suggest_task_api')}"
-        suggestive_response = requests.post(suggestive_url, headers=headers, data=suggestive_payload, timeout=10)
+        
+        try:
+            suggestive_response = requests.post(
+                suggestive_url, 
+                headers=headers, 
+                json=suggestive_payload, 
+                timeout=10
+            )
+        except requests.exceptions.RequestException as e:
+            return JsonResponse({
+                "status": "error",
+                "message": f"Error connecting to suggestion service: {str(e)}"
+            }, status=500)
 
         # Check if the suggestive API returned a valid response
         if suggestive_response.status_code == 200:
-            suggested_data = suggestive_response.json().get('suggestion', {})
+            try:
+                suggested_data = suggestive_response.json().get('suggestion', {})
+            except ValueError:
+                return JsonResponse({
+                    "status": "error",
+                    "message": "Invalid response from suggestion service"
+                }, status=500)
 
             # Include suggested title and description if needed
             title = title or suggested_data.get('title', title)
             description = description or suggested_data.get('description', description)
 
             # Prepare payload for task creation
-            payload = json.dumps({
+            task_payload = {
                 'title': title,
                 'description': description,
                 'due_date': due_date,
-            })
+            }
 
             # Task creation URL
             create_url = f"{host_url(request)}{reverse_lazy('create_task_api')}"
-            response_data = requests.post(create_url, headers=headers, data=payload, timeout=10)
+            
+            try:
+                response_data = requests.post(
+                    create_url, 
+                    headers=headers, 
+                    json=task_payload, 
+                    timeout=10
+                )
+            except requests.exceptions.RequestException as e:
+                return JsonResponse({
+                    "status": "error",
+                    "message": f"Error connecting to task creation service: {str(e)}"
+                }, status=500)
 
             # Check if task creation was successful
             if response_data.status_code == 201:
-                return JsonResponse({'status': 'success', 'data': response_data.json()})  # Return created task data
+                try:
+                    task_data = response_data.json()
+                    return JsonResponse({
+                        "status": "success",
+                        "message": "Task created successfully",
+                        "data": task_data
+                    })
+                except ValueError:
+                    return JsonResponse({
+                        "status": "error",
+                        "message": "Invalid response from task creation service"
+                    }, status=500)
             else:
-                return JsonResponse({'error': 'Error creating task', 'details': response_data.json()}, status=400)
+                try:
+                    error_details = response_data.json()
+                    return JsonResponse({
+                        "status": "error",
+                        "message": error_details.get('message', 'Error creating task'),
+                        "details": error_details
+                    }, status=400)
+                except ValueError:
+                    return JsonResponse({
+                        "status": "error",
+                        "message": "Error creating task"
+                    }, status=400)
         else:
-            return JsonResponse({'error': 'Error fetching suggestion', 'details': suggestive_response.json()}, status=400)
+            try:
+                error_details = suggestive_response.json()
+                return JsonResponse({
+                    "status": "error",
+                    "message": error_details.get('message', 'Error fetching suggestion'),
+                    "details": error_details
+                }, status=400)
+            except ValueError:
+                return JsonResponse({
+                    "status": "error",
+                    "message": "Error fetching suggestion"
+                }, status=400)
 
-# def create_task(request):
-#     """Create task functiona;ity."""
+    except json.JSONDecodeError:
+        return JsonResponse({
+            "status": "error",
+            "message": "Invalid JSON data"
+        }, status=400)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            "status": "error",
+            "message": f"Server error occurred: {str(e)}"
+        }, status=500)
 
-#     if request.method == 'POST':
-#         token = request.session.get('token')
-#         title = request.POST.get('title')
-#         description = request.POST.get('description')
-#         due_date = request.POST.get('due_date')
-
-#         headers = {
-#             'Content-Type': 'application/json',
-#             "Authorization": f"Token {token}"
-#         }
-
-#         payload = json.dumps({
-#             'title': title,
-#             'description': description,
-#             'due_date': due_date,
-#         })
-
-#         url = f"{host_url(request)}{reverse_lazy('create_task_api')}"
-#         suggestive_url = f"{host_url(request)}{reverse_lazy('suggest_task_api')}"
-        
-        
-
-#         response_data = requests.post(url, headers=headers, data=payload, timeout=10)
-#         suggestive_url_response = requests.post(suggestive_url, headers=headers, data=payload, timeout=10)
-
-#         if response_data.status_code == 201 and  suggestive_url_response.status_code ==200: # Check for Created status
-#             return JsonResponse({'status': 'success', 'data': response_data.json()})  # Send back the task data if needed
-#         else:
-#             return JsonResponse({'error': 'Error creating task', 'details': response_data.json()}, status=400)
-        
-        
 
 def get_all_tasks(request):
     """User login function with api."""
@@ -141,16 +218,158 @@ def get_all_tasks(request):
     
 
 
+@csrf_exempt
+def get_all_tasks(request):
+    """Get all tasks function with api."""
+
+    if request.method != 'GET':
+        return JsonResponse({
+            "status": "error",
+            "message": "Method not allowed. Use GET."
+        }, status=405)
+
+    try:
+        # Extract token from Authorization header
+        auth_header = request.headers.get("Authorization", "")
+        token = None
+        if auth_header.startswith("Token "):
+            token = auth_header.split("Token ")[-1]
+        elif auth_header.startswith("Bearer "):
+            token = auth_header.split("Bearer ")[-1]
+
+        # Fallback to session token if no header token
+        if not token:
+            token = request.session.get('token')
+
+        if not token:
+            return JsonResponse({
+                "status": "error",
+                "message": "Authorization token is required."
+            }, status=401)
+
+        # Store token in session
+        request.session["token"] = token
+        request.session.modified = True
+
+        headers = {
+            'Content-Type': 'application/json',
+            "Authorization": f"Token {token}"
+        }
+
+        # Get all tasks
+        all_tasks_url = f"{host_url(request)}{reverse_lazy('get_all_task_api')}"
+        try:
+            all_tasks_response = requests.get(all_tasks_url, headers=headers, timeout=10)
+        except requests.exceptions.RequestException as e:
+            return JsonResponse({
+                "status": "error",
+                "message": f"Error connecting to tasks service: {str(e)}"
+            }, status=500)
+
+        # Get single task (if this is needed)
+        task_url = f"{host_url(request)}{reverse_lazy('get_task_by_id_api')}"
+        try:
+            task_response = requests.get(task_url, headers=headers, timeout=10)
+        except requests.exceptions.RequestException as e:
+            return JsonResponse({
+                "status": "error",
+                "message": f"Error connecting to task service: {str(e)}"
+            }, status=500)
+
+        # Process responses
+        all_tasks = None
+        task = None
+
+        if all_tasks_response.status_code == 200:
+            try:
+                all_tasks = all_tasks_response.json()
+            except ValueError:
+                return JsonResponse({
+                    "status": "error",
+                    "message": "Invalid response from tasks service"
+                }, status=500)
+        else:
+            return JsonResponse({
+                "status": "error",
+                "message": "Failed to fetch tasks"
+            }, status=all_tasks_response.status_code)
+
+        if task_response.status_code == 200:
+            try:
+                task = task_response.json()
+            except ValueError:
+                task = None  # Optional, so we can continue without it
+
+        context = {
+            'all_tasks': all_tasks,
+            'task': task
+        }
+        
+        return render(request, 'index.html', context)
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            "status": "error",
+            "message": f"Server error occurred: {str(e)}"
+        }, status=500)
+
+
+@csrf_exempt
 def update_task(request):
     """Update task details via POST request."""
-    if request.method == "POST":
-        task_id = request.POST.get('task_id')
-        title = request.POST.get('title')
-        description = request.POST.get('description')
-        due_date = request.POST.get('due_date')
-        token = request.session.get('token')
-        url = f"{host_url(request)}{reverse_lazy('update_task_api')}"
+    
+    if request.method != 'POST':
+        return JsonResponse({
+            "status": "error",
+            "message": "Method not allowed. Use POST."
+        }, status=405)
+
+    try:
+        # Extract token from Authorization header
+        auth_header = request.headers.get("Authorization", "")
+        token = None
+        if auth_header.startswith("Token "):
+            token = auth_header.split("Token ")[-1]
+        elif auth_header.startswith("Bearer "):
+            token = auth_header.split("Bearer ")[-1]
+
+        # Fallback to session token if no header token
+        if not token:
+            token = request.session.get('token')
+
+        if not token:
+            return JsonResponse({
+                "status": "error",
+                "message": "Authorization token is required."
+            }, status=401)
+
+        # Store token in session
+        request.session["token"] = token
+        request.session.modified = True
+
+        # Parse JSON body
+        data = json.loads(request.body)
         
+        task_id = data.get('task_id')
+        title = data.get('title')
+        description = data.get('description')
+        due_date = data.get('due_date')
+
+        # Validate required fields
+        if not task_id:
+            return JsonResponse({
+                "status": "error",
+                "message": "Task ID is required."
+            }, status=400)
+
+        if not all([title, description]):
+            return JsonResponse({
+                "status": "error",
+                "message": "Title and description are required."
+            }, status=400)
+
         headers = {
             'Content-Type': 'application/json',
             "Authorization": f"Token {token}"
@@ -163,56 +382,143 @@ def update_task(request):
             'due_date': due_date,
         }
 
-        response_data = api_connection(method="PUT", url=url, data=json.dumps(payload), headers=headers)
-
-        return JsonResponse(response_data, safe=False)
-    else:
-        return JsonResponse({'error': 'Invalid request method'}, status=400)
-
-
-@csrf_exempt  # Only if you want to bypass CSRF protection (not recommended)
-def delete_task(request):
-    """Update task details via POST request."""
-    if request.method == "POST":
+        url = f"{host_url(request)}{reverse_lazy('update_task_api')}"
+        
         try:
-            # Parse JSON data from the request body
-            data = json.loads(request.body)
-            print('data', data)
+            response_data = requests.post(url, headers=headers, json=payload, timeout=10)
+        except requests.exceptions.RequestException as e:
+            return JsonResponse({
+                "status": "error",
+                "message": f"Error connecting to update service: {str(e)}"
+            }, status=500)
 
-            # Extract task_id and token from the parsed data
-            task_id = data.get('task_id')
-            print('task_id', task_id)
+        try:
+            response_json = response_data.json()
+        except ValueError:
+            return JsonResponse({
+                "status": "error",
+                "message": "Invalid response from update service"
+            }, status=500)
 
-            # Assuming token is sent in the request headers
-            token = request.headers.get('Authorization').split(' ')[-1] if 'Authorization' in request.headers else None
-            print('token', token)
+        if response_data.status_code == 200:
+            return JsonResponse({
+                "status": "success",
+                "message": "Task updated successfully",
+                "data": response_json
+            })
+        else:
+            return JsonResponse({
+                "status": "error",
+                "message": response_json.get('message', 'Update failed'),
+                "details": response_json
+            }, status=response_data.status_code)
 
-            url = f"{host_url(request)}{reverse_lazy('delete_task_api')}"
-            headers = {
-                'Content-Type': 'application/json',
-                "Authorization": f"Token {token}" if token else ''
-            }
+    except json.JSONDecodeError:
+        return JsonResponse({
+            "status": "error",
+            "message": "Invalid JSON data"
+        }, status=400)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            "status": "error",
+            "message": f"Server error occurred: {str(e)}"
+        }, status=500)
 
-            payload = {
-                'task_id': task_id,
-            }
-            print('payload', payload)
 
-            # Send request to external API
-            response_data = requests.post(url, headers=headers, json=payload, timeout=10)  # Use json= to send as JSON
-
-            # Return response from the external API
-            return JsonResponse(response_data.json(), safe=False)
-
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON format'}, status=400)
-
-        except Exception as e:
-            print('Unexpected error:', e)
-            return JsonResponse({'error': f"An error occurred: {str(e)}"}, status=500)
-
-    else:
-        return JsonResponse({'error': 'Invalid request method'}, status=400)
+@csrf_exempt
+def delete_task(request):
+    """Delete task via POST request."""
     
+    if request.method != 'POST':
+        return JsonResponse({
+            "status": "error",
+            "message": "Method not allowed. Use POST."
+        }, status=405)
 
-    
+    try:
+        # Extract token from Authorization header
+        auth_header = request.headers.get("Authorization", "")
+        token = None
+        if auth_header.startswith("Token "):
+            token = auth_header.split("Token ")[-1]
+        elif auth_header.startswith("Bearer "):
+            token = auth_header.split("Bearer ")[-1]
+
+        if not token:
+            return JsonResponse({
+                "status": "error",
+                "message": "Authorization token is required."
+            }, status=401)
+
+        # Store token in session
+        request.session["token"] = token
+        request.session.modified = True
+
+        # Parse JSON body
+        data = json.loads(request.body)
+        
+        task_id = data.get('task_id')
+        print('task_id:', task_id)
+
+        # Validate required fields
+        if not task_id:
+            return JsonResponse({
+                "status": "error",
+                "message": "Task ID is required."
+            }, status=400)
+
+        headers = {
+            'Content-Type': 'application/json',
+            "Authorization": f"Token {token}"
+        }
+
+        payload = {
+            'task_id': task_id,
+        }
+        print('payload:', payload)
+
+        url = f"{host_url(request)}{reverse_lazy('delete_task_api')}"
+        
+        try:
+            response_data = requests.post(url, headers=headers, json=payload, timeout=10)
+        except requests.exceptions.RequestException as e:
+            return JsonResponse({
+                "status": "error",
+                "message": f"Error connecting to delete service: {str(e)}"
+            }, status=500)
+
+        try:
+            response_json = response_data.json()
+        except ValueError:
+            return JsonResponse({
+                "status": "error",
+                "message": "Invalid response from delete service"
+            }, status=500)
+
+        if response_data.status_code == 200:
+            return JsonResponse({
+                "status": "success",
+                "message": "Task deleted successfully",
+                "data": response_json
+            })
+        else:
+            return JsonResponse({
+                "status": "error",
+                "message": response_json.get('message', 'Delete failed'),
+                "details": response_json
+            }, status=response_data.status_code)
+
+    except json.JSONDecodeError:
+        return JsonResponse({
+            "status": "error",
+            "message": "Invalid JSON data"
+        }, status=400)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            "status": "error",
+            "message": f"Server error occurred: {str(e)}"
+        }, status=500)

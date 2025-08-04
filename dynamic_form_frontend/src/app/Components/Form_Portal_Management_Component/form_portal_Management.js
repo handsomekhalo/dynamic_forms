@@ -884,64 +884,7 @@ case "file":
           })}
 
           {documentList.length > 0 && (
-            // <div className="mt-10">
-            //   <h3 className="text-lg font-semibold mb-4">Uploaded Documents</h3>
-            //   <div className="space-y-4">
-            //     {documentList.map((doc) => (
-            //       <div
-            //         key={doc.id}
-            //         className="flex justify-between items-center p-4 border rounded bg-gray-50 shadow-sm"
-            //       >
-            //         <div>
-            //           <p className="text-sm text-gray-700">
-            //             Document ID: {doc.id}
-            //           </p>
-            //           <p className="text-xs text-gray-500">
-            //             Uploaded at:{" "}
-            //             {new Date(doc.uploaded_at).toLocaleString()}
-            //           </p>
-            //         </div>
-
-            //         <div className="flex items-center space-x-3">
-            //           {/* View Button */}
-            //           {/* <a
-            //   href={doc.file.startsWith("http") ? doc.file : `${process.env.REACT_APP_BASE_URL}/${doc.file}`}
-              
-            //   target="_blank"
-            //   rel="noopener noreferrer"
-            //   className="text-blue-600 hover:underline text-sm"
-            // >
-            //   View
-            // </a> */}
-            //           <a
-            //             href={getDocumentUrl(doc.file)}
-            //             target="_blank"
-            //             rel="noopener noreferrer"
-            //             className="text-blue-600 hover:underline text-sm"
-            //           >
-            //             View
-            //           </a>
-            //           <span className="ml-2 text-xs text-gray-500">
-            //             {getDocumentUrl(doc.file).split("/").pop()}
-            //           </span>
-
-            //           {/* Update Button */}
-            //           <label className="text-sm text-green-700 hover:underline cursor-pointer">
-            //             Update
-            //             <input
-            //               type="file"
-            //               hidden
-            //               onChange={(e) => {
-            //                 const file = e.target.files[0];
-            //                 if (file) handleDocumentUpdate(doc.id, file);
-            //               }}
-            //             />
-            //           </label>
-            //         </div>
-            //       </div>
-            //     ))}
-            //   </div>
-            // </div>
+           
             <div className="mt-10">
   <h3 className="text-2xl font-semibold mb-6 text-gray-800">📎 Uploaded Documents</h3>
   <div className="space-y-4">

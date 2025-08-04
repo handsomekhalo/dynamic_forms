@@ -966,7 +966,7 @@ def delete_user(request):
             data = request.POST
 
         email = data.get('email')
-        print('data', email)
+        print('email data', email)
 
 
         if not email:

@@ -37,126 +37,139 @@ import os
 # model = AutoModelForCausalLM.from_pretrained(model_name)
 
 
-@api_view(['POST'])
+# @api_view(['POST'])
 def create_task_api(request):
     """Create a new task API."""
     
-    if request.method == "POST":
-        body = request.data        
-        serializer = TaskSerializer(data=body)
-        
-        if serializer.is_valid():
-            task = serializer.save()  # Save the task using the serializer
-            return Response({
-                "status": "success",
-                "message": "Task created successfully.",
-                "task": TaskSerializer(task).data,
-                "task_id": task.id
-            }, status=status.HTTP_201_CREATED)
-        else:
-            print('Serializer errors:', serializer.errors)  # Log serializer errors
+    try:
+        # The @api_view(['POST']) decorator already handles method validation,
+        # but we can add this check for extra safety
+        if request.method != "POST":
             return Response({
                 "status": "error",
-                "message": "Invalid data",
+                "message": "Method not allowed. Use POST."
+            }, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+        # Check if user is authenticated
+        if not request.user or not request.user.is_authenticated:
+            return Response({
+                "status": "error",
+                "message": "Authentication required."
+            }, status=status.HTTP_401_UNAUTHORIZED)
+
+        body = request.data
+        
+        # Validate that we have data
+        if not body:
+            return Response({
+                "status": "error",
+                "message": "Request body is required."
+            }, status=status.HTTP_400_BAD_REQUEST)
+                
+        serializer = TaskSerializer(data=body)
+                
+        if serializer.is_valid():
+            try:
+                # Ensure task is saved with the current user
+                task = serializer.save(user=request.user)
+                
+                return Response({
+                    "status": "success",
+                    "message": "Task created successfully.",
+                    "task": GetAllTaskSerializer(task).data,
+                    "task_id": task.id
+                }, status=status.HTTP_201_CREATED)
+                
+            except Exception as e:
+                print(f'Error saving task: {str(e)}')
+                return Response({
+                    "status": "error",
+                    "message": "Failed to create task.",
+                    "details": str(e)
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        else:
+            print('Serializer errors:', serializer.errors)
+            return Response({
+                "status": "error",
+                "message": "Invalid data provided.",
                 "errors": serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
+            
+    except Exception as e:
+        print(f'Unexpected error in create_task_api: {str(e)}')
+        import traceback
+        traceback.print_exc()
+        return Response({
+            "status": "error",
+            "message": "An unexpected error occurred.",
+            "details": str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 
 @api_view(['GET'])
 def get_all_task_api(request):
-    all_tasks = Task.objects.all()
-    all_task_serializer = GetAllTaskSerializer(all_tasks, many=True).data
+    # Get all tasks for the current user
+    all_tasks = Task.objects.filter(user=request.user)
+    
+    serializer = GetAllTaskSerializer(all_tasks, many=True).data
+    
     data = json.dumps({
-            "status": "success",
-            "message": "Case data retrieved successfully!",
-            'data': all_task_serializer
-
-        })
-
+        "status": "success",
+        "message": "All your tasks retrieved successfully!",
+        'data': serializer
+    })
+    
     return Response(data, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
 def get_task_by_id_api(request):
-    """
-    Retrieve a single task by its ID provided in the request body (if required for GET method).
-    
-    :param request: Django request parameter containing task_id in the request body.
-    :return: JSON response with the task details or error.
-    """
-    if request.method == 'GET':
-        try:
-            body = json.loads(request.body)
-
-            print('body',body)
-            task_id = body.get('task_id')
-
-            if not task_id:
-                return Response(json.dumps({
-                    'status': "error",
-                    'message': "task_id is required"
-                }), status=status.HTTP_400_BAD_REQUEST)
-
-            # Get the task by ID
-            try:
-                task = Task.objects.get(id=task_id)
-            except Task.DoesNotExist:
-                return Response(json.dumps({
-                    'status': "error",
-                    'message': "Task not found"
-                }), status=status.HTTP_404_NOT_FOUND)
-
-            # Serialize and return the task data
-            single_task_serializer = GetSingleTaskSerializer(task)
-
-            data = json.dumps({
-            "status": "success",
-            "message": "Case data retrieved successfully!",
-            'data': single_task_serializer
-
-        })
-
-            return Response(data, status=status.HTTP_200_OK)
-
-        except json.JSONDecodeError:
-            return Response(json.dumps({
-                'status': "error",
-                'message': "Invalid JSON format"
-            }), status=status.HTTP_400_BAD_REQUEST)
-    else:
+    task_id = request.data.get('task_id')
+    if not task_id:
         return Response({
-            'status': "error",
-            'message': "Invalid request method"
-        }, status=status.HTTP_405_METHOD_NOT_ALLOWED)
-    
+            "status": "error",
+            "message": "Task ID is required"
+        }, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['PUT'])
+    try:
+        task = Task.objects.get(id=task_id)
+        # Check if the current user owns this task
+        if task.user.email != request.user.email:
+            return Response({
+                "status": "error",
+                "message": "You are not authorized to access this task."
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        serializer = GetSingleTaskSerializer(task)
+        return Response(json.dumps(serializer.data), status=status.HTTP_200_OK)
+    except Task.DoesNotExist:
+        return Response({
+            "status": "error",
+            "message": "Task not found"
+        }, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['POST'])
 def update_task_api(request):
-    """
-    Update a task by ID, with the task_id received from the request body.
-    
-    :param request: Django request parameter with task details in the body.
-    :return: JSON response with the updated task data or error.
-    """
-    if request.method == 'PUT':
-        print('inside API')
-        body = json.loads(request.body)
-        print('body',body)
-        id = body.get('task_id')
-        print('task_id',id)
+    body = json.loads(request.body)
+    task_id = body.get('task_id')
 
-        # Check if task_id is provided
-        if not id:
-            return Response({"status": "error", "message": "Task ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+    if not task_id:
+        return Response({
+            "status": "error",
+            "message": "Task ID is required"
+        }, status=status.HTTP_400_BAD_REQUEST)
 
-        # Find the task by id
-        try:
-            task = Task.objects.get(id=id)
-            print('TASK IS TASK', task)
-        except Task.DoesNotExist:
-            print('non exists')
-            return Response({"status": "error", "message": "Task not found"}, status=status.HTTP_404_NOT_FOUND)
+    try:
+        task = Task.objects.get(id=task_id)
+        # Check ownership
+        if task.user.email != request.user.email:
+            return Response({
+                "status": "error",
+                "message": "You are not authorized to update this task."
+            }, status=status.HTTP_403_FORBIDDEN)
 
-        # Validate and update task data
         serializer = UpdateTaskSerializer(task, data=body)
         if serializer.is_valid():
             serializer.save()
@@ -168,43 +181,43 @@ def update_task_api(request):
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['POST'])
-def delete_task_api(request):
-    """
-    Delete a task by ID, with the task_id received from the request body.
-
-    :param request: Django request parameter with task_id in the body.
-    :return: JSON response confirming deletion or error.
-    """
-    if request.method == 'POST':
-        # Extract task_id from the request body
-        body = json.loads(request.body)
-        task_id = body.get('task_id')
-
-        # Check if task_id is provided
-        if not task_id:
-            return Response({"status": "error", "message": "Task ID is required"}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Find the task by id
-        try:
-            task = Task.objects.get(id=task_id)
-        except Task.DoesNotExist:
-            return Response({"status": "error", "message": "Task not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        # Delete the task
-        task.delete()
-
-        return Response({
-            "status": "success",
-            "message": f"Task with ID {task_id} deleted successfully"
-        }, status=status.HTTP_200_OK)
-
-    else:
+    except Task.DoesNotExist:
         return Response({
             "status": "error",
-            "message": "Invalid request method"
-        }, status=status.HTTP_405_METHOD_NOT_ALLOWED)
-    
+            "message": "Task not found"
+        }, status=status.HTTP_404_NOT_FOUND)
+
+
+
+@api_view(['POST'])
+def delete_task_api(request):
+    task_id = request.data.get('task_id')
+
+    if not task_id:
+        return Response({
+            "status": "error",
+            "message": "Task ID is required"
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        task = Task.objects.get(id=task_id)
+        # Check ownership
+        if task.user.email != request.user.email:
+            return Response({
+                "status": "error",
+                "message": "You are not authorized to delete this task."
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        task.delete()
+        return Response({
+            "status": "success",
+            "message": "Task deleted successfully"
+        }, status=status.HTTP_200_OK)
+    except Task.DoesNotExist:
+        return Response({
+            "status": "error",
+            "message": "Task not found"
+        }, status=status.HTTP_404_NOT_FOUND)
 
 
 # Set OpenAI API key
