@@ -42,5 +42,7 @@ urlpatterns = [
      path('application_management_api/', include('application_management.api.urls')),
     path('form_portal_management/', include('form_portal_management.urls')),
     path('form_portal_management_api/', include('form_portal_management.api.urls')),
+     path('task_management/', include('task_management.urls')),
+    path('task_management_api/', include('task_management.api.urls')),
 
 ]
