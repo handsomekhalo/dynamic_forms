@@ -42,20 +42,24 @@ const Sidebar = () => {
          
       ],
     },
-    // {
-    //   title: 'Accounts',
-    //   links: [
-    //     { href: '/profile', icon: 'bx bx-user-circle', label: 'Profile' },
-    //     { href: '/logout', icon: 'bx bx-log-out', label: 'Logout' },
-    //   ],
-    // },
+        {
+      title: 'Task Management',
+      links: [
+        {  href: '/Components/Task_Management_Component/',
+           icon: 'bx bx-user-circle', label: 'Manage Tasks' },// Link to /form management
+         
+      ],
+    },
+    
+    
     {
-  title: 'Accounts',
-  links: [
-    { href: '/profile', icon: 'bx bx-user-circle', label: 'Profile' },
-    { href: '/logout', icon: 'bx bx-log-out', label: 'Logout' }, // no change needed here
-  ],
-}
+      title: 'Accounts',
+      links: [
+        { href: '/profile', icon: 'bx bx-user-circle', label: 'Profile' },
+        { href: '/logout', icon: 'bx bx-log-out', label: 'Logout' },
+      ],
+    },
+    
   ];
 
   return (

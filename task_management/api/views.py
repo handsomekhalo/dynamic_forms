@@ -9,7 +9,7 @@ import json
 from datetime import datetime
 from anthropic import Anthropic
 from django.shortcuts import get_object_or_404
-# import openai
+import openai
 from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Count,Sum
@@ -21,23 +21,25 @@ from task_management.models import Task
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
-# from openai import OpenAI
+from openai import OpenAI
 from django.conf import settings
 import os
-# openai.api_key = settings.OPEN_AI_API_KEY
-# from transformers import AutoModelForCausalLM, AutoTokenizer
-# import torch
+openai.api_key = settings.OPEN_AI_API_KEY
+from transformers import AutoModelForCausalLM, AutoTokenizer
+# from transformers import AutoTokenizer, AutoModelForCausalLM
+
+import torch
 
 
 # Load the model and tokenizer once at the module level
-# model_name = "distilgpt2" 
-# model_name = "distilgpt2" 
-#  # You can change this to any suitable model, e.g., 'gpt-2'
-# tokenizer = AutoTokenizer.from_pretrained(model_name)
-# model = AutoModelForCausalLM.from_pretrained(model_name)
+model_name = "distilgpt2" 
+model_name = "distilgpt2" 
+ # You can change this to any suitable model, e.g., 'gpt-2'
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForCausalLM.from_pretrained(model_name)
 
 
-# @api_view(['POST'])
+@api_view(['POST'])
 def create_task_api(request):
     """Create a new task API."""
     
@@ -107,19 +109,34 @@ def create_task_api(request):
 
 
 
+# @api_view(['GET'])
+# def get_all_task_api(request):
+#     # Get all tasks for the current user
+#     all_tasks = Task.objects.filter(user=request.user)
+#     print('all_tasks', all_tasks)
+#     serializer = GetAllTaskSerializer(all_tasks, many=True).data
+    
+#     data = json.dumps({
+#         "status": "success",
+#         "message": "All your tasks retrieved successfully!",
+#         'data': serializer
+#     })
+    
+#     return Response(data, status=status.HTTP_200_OK)
 @api_view(['GET'])
 def get_all_task_api(request):
     # Get all tasks for the current user
     all_tasks = Task.objects.filter(user=request.user)
-    
     serializer = GetAllTaskSerializer(all_tasks, many=True).data
-    
-    data = json.dumps({
+
+
+    data = {
         "status": "success",
         "message": "All your tasks retrieved successfully!",
         'data': serializer
-    })
+    }
     
+    # Return the dictionary directly. DRF will handle the JSON serialization.
     return Response(data, status=status.HTTP_200_OK)
 
 
@@ -220,14 +237,14 @@ def delete_task_api(request):
         }, status=status.HTTP_404_NOT_FOUND)
 
 
-# Set OpenAI API key
+# # Set OpenAI API key
 # openai.api_key = settings.OPENAI_API_KEY
 
 
 
 
-# @api_view(['POST'])
-# def suggest_task_api(request):
+@api_view(['POST'])
+def suggest_task_api(request):
     """Suggest a title or description for a new task based on keywords provided."""
     user_input = request.data.get("input", "")
     
