@@ -32,7 +32,7 @@ export default function LogoutPage() {
         console.error('Logout failed:', err);
       } finally {
         logout();
-        router.push('/login');
+        router.push('/');
       }
     };
 

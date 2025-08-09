@@ -386,27 +386,58 @@ def update_user_api(request):
         }, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
+# @api_view(['POST'])
+# @authentication_classes([authentication.TokenAuthentication])
+# @permission_classes([permissions.IsAuthenticated])
+# def logout_api(request):
+#     """
+#     Logout api for user authentication
+
+#     Args:
+#         request:
+#     Returns:
+#         Response:
+#             data:
+#                 - status
+#                 - message
+#             status code:
+#                 - message
+#     """
+#     token = request.auth
+#     token.delete()
+#     response_data = json.dumps({'message': 'Logged out'})
+#     return Response(response_data, status=status.HTTP_200_OK)
 @api_view(['POST'])
 @authentication_classes([authentication.TokenAuthentication])
 @permission_classes([permissions.IsAuthenticated])
 def logout_api(request):
     """
-    Logout api for user authentication
+    Logout API for user authentication.
 
-    Args:
-        request:
-    Returns:
-        Response:
-            data:
-                - status
-                - message
-            status code:
-                - message
+    Deletes the current user's authentication token if present
+    and returns a JSON response indicating success.
+
+    Expected header:
+        Authorization: Token <token_value>
     """
-    token = request.auth
-    token.delete()
-    response_data = json.dumps({'message': 'Logged out'})
-    return Response(response_data, status=status.HTTP_200_OK)
+    try:
+        if request.auth:
+            request.auth.delete()
+            return Response(
+                {"status": "success", "message": "Logged out successfully"},
+                status=status.HTTP_200_OK
+            )
+        else:
+            # Token missing or already deleted
+            return Response(
+                {"status": "success", "message": "Already logged out"},
+                status=status.HTTP_200_OK
+            )
+    except Exception as e:
+        return Response(
+            {"status": "error", "message": f"Logout failed: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
 @api_view(["POST"])
