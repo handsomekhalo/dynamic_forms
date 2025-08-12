@@ -1,6 +1,8 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
+
 
 export default function Navbar() {
   return (
@@ -26,11 +28,13 @@ export default function Navbar() {
           </div>
           <div className="flex flex-1 items-center justify-center sm:items-stretch sm:justify-start">
             <div className="flex shrink-0 items-center">
-              <img
+              {/* <img
                 className="h-8 w-auto"
                 src="https://tailwindcss.com/plus-assets/img/logos/mark.svg?color=indigo&shade=500"
                 alt="Your Company"
-              />
+              /> */}
+              <Image src="/logo.png" alt="Logo" width={200} height={100} priority />
+
             </div>
             <div className="hidden sm:ml-6 sm:block">
               <div className="flex space-x-4">
@@ -59,11 +63,14 @@ export default function Navbar() {
                 id="user-menu-button"
               >
                 <span className="sr-only">Open user menu</span>
-                <img
+                {/* <img
                   className="h-8 w-8 rounded-full"
                   src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e"
                   alt=""
-                />
+                /> */}
+                <Image src="/https://images.unsplash.com/photo-1472099645785-5658abf4ff4e" alt="Logo" width={200} height={100} priority />
+
+                
               </button>
               <div className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black/5">
                 <a href="#" className="block px-4 py-2 text-sm text-gray-700">Your Profile</a>
