@@ -5,7 +5,7 @@ import { useAuth } from '../../../AuthContext';
 import backendApi from '../../../utils/backendApi';
 import { useRouter } from 'next/navigation';  // Correct import for App Router
 
-export default function LoginPage() {
+export default function Login() {
   const { login: authLogin } = useAuth();
   const [csrfToken, setCsrfToken] = useState('');
   const [email, setEmail] = useState('');
