@@ -201,7 +201,9 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:8000",
     "http://56.228.24.233",
     "http://52.14.111.23",
-    "http://3.144.218.251"
+    "http://3.144.218.251",
+    "http://dynamicz3.s3-website-us-east-1.amazonaws.com",
+
 
 ]
 
