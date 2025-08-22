@@ -1,5 +1,5 @@
 'use client';
 
-import Login from "./login";
+import LoginPage from "./login";
 
-export default Login;
+export default LoginPage;

@@ -17,7 +17,9 @@ export default function LoginPage() {
   // Fetch CSRF Token
   useEffect(() => {
     backendApi
-      .get('/system_management/csrf/', { withCredentials: true })
+      // .get('/system_management/csrf/', { withCredentials: true })
+      axios.get("http://3.144.218.251/system_management/csrf/", { withCredentials: true })
+
       .then((res) => {
         if (res.data && res.data.csrfToken) {
           setCsrfToken(res.data.csrfToken);
