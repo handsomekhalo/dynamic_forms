@@ -92,3 +92,4 @@ venv/
 
 # Environment files
 .env
+form_venv
