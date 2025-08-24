@@ -59,9 +59,9 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -203,10 +203,27 @@ CSRF_TRUSTED_ORIGINS = [
     "http://56.228.24.233",
     "http://52.14.111.23",
     "http://3.144.218.251",
+    'http://3.144.218.251',
     "http://dynamicz3.s3-website-us-east-1.amazonaws.com",
 
 
 ]
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+
+# If using HTTPS in production, also add:
+# "https://dynamicz3.s3-website-us-east-1.amazonaws.com",
 
 CORS_ALLOW_CREDENTIALS = True  # Important for sending cookies cross-domain
 X_FRAME_OPTIONS = 'ALLOWALL'
