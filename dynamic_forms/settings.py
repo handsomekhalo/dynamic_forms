@@ -59,14 +59,15 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
+        'django.middleware.security.SecurityMiddleware',
+
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.security.SecurityMiddleware',
+    # 'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # 'corsheaders.middleware.CorsMiddleware',
 
 ]
 
@@ -181,19 +182,28 @@ CORS_ALLOW_CREDENTIALS = True
 # Or for development, you can use:
 # CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_ALL_ORIGINS = False  # Set to False to use specific origins
-CORS_ALLOWED_ORIGINS = [
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:3000",
+#     "http://127.0.0.1:3000",
+#     "http://localhost:3000",
+#     "http://52.14.111.23",
+#     "http://3.144.218.251",
+#     "http://dynamicz3.s3-website-us-east-1.amazonaws.com",
+
+#   # Your Next.js dev server
+    
+    
+# ]
+# Ensure CSRF settings match your production environment
+CSRF_COOKIE_SECURE = False  # Set to True when using HTTPS
+CSRF_COOKIE_HTTPONLY = True # Best practice for security
+CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
-    "http://127.0.0.1:3000",  # If you're running frontend locally
-    "http://localhost:3000",
-    "http://52.14.111.23",
+    "http://127.0.0.1:3000",
     "http://3.144.218.251",
     "http://dynamicz3.s3-website-us-east-1.amazonaws.com",
-
-  # Your Next.js dev server
-    
-    
 ]
-
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
