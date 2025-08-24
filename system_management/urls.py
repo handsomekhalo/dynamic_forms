@@ -18,7 +18,7 @@ urlpatterns = [
     path('logout/', views.logout, name='logout'),
     path('create_user/', views.create_user, name='create_user'),
     path('delete_user/', views.delete_user, name='delete_user'),
-
+##removed task management
 
 ] 
 
