@@ -42,15 +42,8 @@ const Sidebar = () => {
          
       ],
     },
-        {
-      title: 'Task Management',
-      links: [
-        {  href: '/Components/Task_Management_Component/',
-           icon: 'bx bx-user-circle', label: 'Manage Tasks' },// Link to /form management
-         
-      ],
-    },
-    
+       ,
+
     
     {
       title: 'Accounts',
