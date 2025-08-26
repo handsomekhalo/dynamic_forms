@@ -386,27 +386,7 @@ def update_user_api(request):
         }, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
-# @api_view(['POST'])
-# @authentication_classes([authentication.TokenAuthentication])
-# @permission_classes([permissions.IsAuthenticated])
-# def logout_api(request):
-#     """
-#     Logout api for user authentication
 
-#     Args:
-#         request:
-#     Returns:
-#         Response:
-#             data:
-#                 - status
-#                 - message
-#             status code:
-#                 - message
-#     """
-#     token = request.auth
-#     token.delete()
-#     response_data = json.dumps({'message': 'Logged out'})
-#     return Response(response_data, status=status.HTTP_200_OK)
 @api_view(['POST'])
 @authentication_classes([authentication.TokenAuthentication])
 @permission_classes([permissions.IsAuthenticated])

@@ -16,6 +16,7 @@ from decouple import config
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
@@ -38,6 +39,7 @@ INTERNAL_API_BASE_URL = os.environ.get("INTERNAL_API_BASE_URL", "http://127.0.0.
 
 # Application definition
 
+# Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -45,30 +47,28 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-     'rest_framework',
-     'rest_framework.authtoken',
-     'rest_framework_simplejwt',
-     'system_management',
-     'question_management',
-     'application_management',
-     'form_portal_management',
-     'corsheaders',
-     
+    'rest_framework',
+    'rest_framework.authtoken',
+    'rest_framework_simplejwt',
+    'corsheaders',  # Put corsheaders early in the list
+    'system_management',
+    'question_management',
+    'application_management',
+    'form_portal_management',
 ]
 
-MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
-        'django.middleware.security.SecurityMiddleware',
 
-    'django.middleware.common.CommonMiddleware',
-    # 'django.middleware.security.SecurityMiddleware',
+MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',  # Must be first
+    'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
-
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
 
 ROOT_URLCONF = 'dynamic_forms.urls'
 
@@ -166,56 +166,40 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'system_management.User'
 
 
-# Session and CSRF Security
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = False  # Change to True in production with HTTPS
-CSRF_COOKIE_HTTPONLY = False
-CSRF_COOKIE_SAMESITE = 'Lax'  # Or 'Strict'/'None' based on your use case
-CSRF_COOKIE_NAME = "csrftoken"
-CSRF_HEADER_NAME = 'HTTP_X_CSRFTOKEN'
-CSRF_USE_SESSIONS = False
-
-
+# CORS Configuration
 CORS_ALLOW_CREDENTIALS = True
-# CORS_ORIGIN_ALLOW_ALL = False  # Good for security
-# Or for development, you can use:
-# CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOW_ALL_ORIGINS = False  # Set to False to use specific origins
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:3000",
-#     "http://127.0.0.1:3000",
-#     "http://localhost:3000",
-#     "http://52.14.111.23",
-#     "http://3.144.218.251",
-#     "http://dynamicz3.s3-website-us-east-1.amazonaws.com",
+CORS_ALLOW_ALL_ORIGINS = False  # Keep False for security
 
-#   # Your Next.js dev server
-    
-    
-# ]
-# Ensure CSRF settings match your production environment
-CSRF_COOKIE_SECURE = False  # Set to True when using HTTPS
-CSRF_COOKIE_HTTPONLY = True # Best practice for security
-CSRF_COOKIE_SAMESITE = 'Lax'
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://3.144.218.251",
-    "http://dynamicz3.s3-website-us-east-1.amazonaws.com",
-]
+# Define allowed origins based on environment
+DEBUG = config('DEBUG', default=False, cast=bool)
 
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:8000",
-    "http://localhost:8000",
-    "http://56.228.24.233",
-    "http://52.14.111.23",
-    "http://3.144.218.251",
-    'http://3.144.218.251',
-    "http://dynamicz3.s3-website-us-east-1.amazonaws.com",
+if DEBUG:
+    # Development origins
+    CORS_ALLOWED_ORIGINS = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+    ]
+else:
+    # Production origins
+    CORS_ALLOWED_ORIGINS = [
+        "http://dynamicz3.s3-website-us-east-1.amazonaws.com",
+        "https://dynamicz3.s3-website-us-east-1.amazonaws.com",  # Add HTTPS version too
+        "http://3.144.218.251",
+        "http://52.14.111.23",
+        # Add development origins for testing in production
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
 
-
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
 ]
 
 CORS_ALLOW_HEADERS = [
@@ -230,35 +214,142 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
+CORS_EXPOSE_HEADERS = [
+    "Content-Type", 
+    "X-CSRFToken"
+]
 
-# If using HTTPS in production, also add:
-# "https://dynamicz3.s3-website-us-east-1.amazonaws.com",
+# CSRF Configuration
+CSRF_COOKIE_SECURE = not DEBUG  # True in production, False in development
+CSRF_COOKIE_HTTPONLY = False  # Must be False for JavaScript access
+CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_NAME = "csrftoken"
+CSRF_HEADER_NAME = 'HTTP_X_CSRFTOKEN'
+CSRF_USE_SESSIONS = False
 
-CORS_ALLOW_CREDENTIALS = True  # Important for sending cookies cross-domain
+# CSRF Trusted Origins (same as CORS allowed origins)
+CSRF_TRUSTED_ORIGINS = [
+    "http://dynamicz3.s3-website-us-east-1.amazonaws.com",
+    "https://dynamicz3.s3-website-us-east-1.amazonaws.com",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:8000",
+    "http://localhost:8000",
+    "http://3.144.218.251",
+    "http://52.14.111.23",
+]
+
+# Session Configuration
+SESSION_COOKIE_SECURE = not DEBUG  # True in production, False in development
+SESSION_COOKIE_SAMESITE = "Lax"
+
+# Security Settings
 X_FRAME_OPTIONS = 'ALLOWALL'
-
-
-
-# If you need to expose specific headers:
-CORS_EXPOSE_HEADERS = ["Content-Type", "X-CSRFToken"]
-
-# Tell Django it's behind a trusted proxy (NGINX)
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'http')
-
-# Ensure you're not forcing SSL unless you're using HTTPS via AWS ACM/Load Balancer
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')  # Changed to https
 SECURE_SSL_REDIRECT = False
 
-#for dhango cross site  settings
-
-SESSION_COOKIE_SAMESITE = "Lax"
-SESSION_COOKIE_SECURE = False
-
-
-
-# BACKBLAZE
+# External Services
 BACK_BLAZE_KEY_ID = config('BACK_BLAZE_KEY_ID')
 BACK_BLAZE_KEY_NAME = config('BACK_BLAZE_KEY_NAME')
 BACK_BLAZE_BUCKET_NAME = config('BACK_BLAZE_BUCKET_NAME')
-BACK_BLAZE_APLLICATION_KEY =config('BACK_BLAZE_APLLICATION_KEY')
+BACK_BLAZE_APLLICATION_KEY = config('BACK_BLAZE_APLLICATION_KEY')
 OPEN_AI_API_KEY = config('OPEN_AI_API_KEY')
 CLAUDE_AI_API_KEY = config('CLAUDE_AI_API_KEY')
+
+
+# # Session and CSRF Security
+# SESSION_COOKIE_SECURE = True
+# CSRF_COOKIE_SECURE = False  # Change to True in production with HTTPS
+# CSRF_COOKIE_HTTPONLY = False
+# CSRF_COOKIE_SAMESITE = 'Lax'  # Or 'Strict'/'None' based on your use case
+# CSRF_COOKIE_NAME = "csrftoken"
+# CSRF_HEADER_NAME = 'HTTP_X_CSRFTOKEN'
+# CSRF_USE_SESSIONS = False
+
+
+# CORS_ALLOW_CREDENTIALS = True
+# # CORS_ORIGIN_ALLOW_ALL = False  # Good for security
+# # Or for development, you can use:
+# # CORS_ALLOW_ALL_ORIGINS = True
+# CORS_ALLOW_ALL_ORIGINS = False  # Set to False to use specific origins
+# # CORS_ALLOWED_ORIGINS = [
+# #     "http://localhost:3000",
+# #     "http://127.0.0.1:3000",
+# #     "http://localhost:3000",
+# #     "http://52.14.111.23",
+# #     "http://3.144.218.251",
+# #     "http://dynamicz3.s3-website-us-east-1.amazonaws.com",
+
+# #   # Your Next.js dev server
+    
+    
+# # ]
+# # Ensure CSRF settings match your production environment
+# CSRF_COOKIE_SECURE = False  # Set to True when using HTTPS
+# CSRF_COOKIE_HTTPONLY = True # Best practice for security
+# CSRF_COOKIE_SAMESITE = 'Lax'
+# CSRF_TRUSTED_ORIGINS = [
+#     "http://localhost:3000",
+#     "http://127.0.0.1:3000",
+#     "http://3.144.218.251",
+#     "http://dynamicz3.s3-website-us-east-1.amazonaws.com",
+# ]
+
+# CSRF_TRUSTED_ORIGINS = [
+#     "http://localhost:3000",
+#     "http://127.0.0.1:3000",
+#     "http://127.0.0.1:8000",
+#     "http://localhost:8000",
+#     "http://56.228.24.233",
+#     "http://52.14.111.23",
+#     "http://3.144.218.251",
+#     'http://3.144.218.251',
+#     "http://dynamicz3.s3-website-us-east-1.amazonaws.com",
+
+
+# ]
+
+# CORS_ALLOW_HEADERS = [
+#     'accept',
+#     'accept-encoding',
+#     'authorization',
+#     'content-type',
+#     'dnt',
+#     'origin',
+#     'user-agent',
+#     'x-csrftoken',
+#     'x-requested-with',
+# ]
+
+
+# # If using HTTPS in production, also add:
+# # "https://dynamicz3.s3-website-us-east-1.amazonaws.com",
+
+# CORS_ALLOW_CREDENTIALS = True  # Important for sending cookies cross-domain
+# X_FRAME_OPTIONS = 'ALLOWALL'
+
+
+
+# # If you need to expose specific headers:
+# CORS_EXPOSE_HEADERS = ["Content-Type", "X-CSRFToken"]
+
+# # Tell Django it's behind a trusted proxy (NGINX)
+# SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'http')
+
+# # Ensure you're not forcing SSL unless you're using HTTPS via AWS ACM/Load Balancer
+# SECURE_SSL_REDIRECT = False
+
+# #for dhango cross site  settings
+
+# SESSION_COOKIE_SAMESITE = "Lax"
+# SESSION_COOKIE_SECURE = False
+
+
+
+# # BACKBLAZE
+# BACK_BLAZE_KEY_ID = config('BACK_BLAZE_KEY_ID')
+# BACK_BLAZE_KEY_NAME = config('BACK_BLAZE_KEY_NAME')
+# BACK_BLAZE_BUCKET_NAME = config('BACK_BLAZE_BUCKET_NAME')
+# BACK_BLAZE_APLLICATION_KEY =config('BACK_BLAZE_APLLICATION_KEY')
+# OPEN_AI_API_KEY = config('OPEN_AI_API_KEY')
+# CLAUDE_AI_API_KEY = config('CLAUDE_AI_API_KEY')
