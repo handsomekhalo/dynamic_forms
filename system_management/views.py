@@ -91,9 +91,9 @@ def set_csrf_token(request):
 
 # View that redirects to Next.js
 def login_view(request):
-    return redirect("http://localhost:3000/")  # Next.js is running here
+    # return redirect("http://localhost:3000/") 
+    return redirect("http://dynamicz3.s3-website-us-east-1.amazonaws.com") # Next.js is running here
     # return redirect('http://52.14.111.23:3000/')  # or your real domain
-
 
 
 @csrf_exempt
