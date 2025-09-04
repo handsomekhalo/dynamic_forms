@@ -176,8 +176,9 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 if DEBUG:
     # Development origins
     CORS_ALLOWED_ORIGINS = [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
+        # "http://localhost:3000",
+        # "http://127.0.0.1:3000",
+        "http://dynamicz3.s3-website-us-east-1.amazonaws.com"
         "http://localhost:8000",
         "http://127.0.0.1:8000",
     ]
@@ -189,8 +190,11 @@ else:
         "http://3.144.218.251",
         "http://52.14.111.23",
         # Add development origins for testing in production
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
+        # "http://localhost:3000",
+        # "http://127.0.0.1:3000",
+        "http://dynamicz3.s3-website-us-east-1.amazonaws.com",
+
+
     ]
 
 CORS_ALLOW_METHODS = [
@@ -231,8 +235,8 @@ CSRF_USE_SESSIONS = False
 CSRF_TRUSTED_ORIGINS = [
     "http://dynamicz3.s3-website-us-east-1.amazonaws.com",
     "https://dynamicz3.s3-website-us-east-1.amazonaws.com",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
+    # "http://localhost:3000",
+    # "http://127.0.0.1:3000",
     "http://127.0.0.1:8000",
     "http://localhost:8000",
     "http://3.144.218.251",
