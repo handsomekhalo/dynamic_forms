@@ -166,6 +166,37 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'system_management.User'
 
 
+# # CORS Configuration
+# CORS_ALLOW_CREDENTIALS = True
+# CORS_ALLOW_ALL_ORIGINS = False  # Keep False for security
+
+# # Define allowed origins based on environment
+# DEBUG = config('DEBUG', default=False, cast=bool)
+
+# if DEBUG:
+#     # Development origins
+#     CORS_ALLOWED_ORIGINS = [
+#         # "http://localhost:3000",
+#         # "http://127.0.0.1:3000",
+#         "http://dynamicz3.s3-website-us-east-1.amazonaws.com"
+#         "http://localhost:8000",
+#         "http://127.0.0.1:8000",
+#     ]
+# else:
+#     # Production origins
+#     CORS_ALLOWED_ORIGINS = [
+#         "http://dynamicz3.s3-website-us-east-1.amazonaws.com",
+#         "https://dynamicz3.s3-website-us-east-1.amazonaws.com",  # Add HTTPS version too
+#         "http://3.144.218.251",
+#         "http://52.14.111.23",
+#         # Add development origins for testing in production
+#         # "http://localhost:3000",
+#         # "http://127.0.0.1:3000",
+#         "http://dynamicz3.s3-website-us-east-1.amazonaws.com",
+
+
+#     ]
+
 # CORS Configuration
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = False  # Keep False for security
@@ -175,27 +206,28 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 
 if DEBUG:
     # Development origins
-    CORS_ALLOWED_ORIGINS = [
-        # "http://localhost:3000",
-        # "http://127.0.0.1:3000",
-        "http://dynamicz3.s3-website-us-east-1.amazonaws.com"
+    origins_set = {
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://dynamicz3.s3-website-us-east-1.amazonaws.com",
         "http://localhost:8000",
         "http://127.0.0.1:8000",
-    ]
+    }
 else:
     # Production origins
-    CORS_ALLOWED_ORIGINS = [
+    origins_set = {
         "http://dynamicz3.s3-website-us-east-1.amazonaws.com",
-        "https://dynamicz3.s3-website-us-east-1.amazonaws.com",  # Add HTTPS version too
+        "https://dynamicz3.s3-website-us-east-1.amazonaws.com",
         "http://3.144.218.251",
         "http://52.14.111.23",
         # Add development origins for testing in production
-        # "http://localhost:3000",
-        # "http://127.0.0.1:3000",
-        "http://dynamicz3.s3-website-us-east-1.amazonaws.com",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    }
 
+# Convert the set back to a list
+CORS_ALLOWED_ORIGINS = list(origins_set)
 
-    ]
 
 CORS_ALLOW_METHODS = [
     'DELETE',
