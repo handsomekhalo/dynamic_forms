@@ -166,6 +166,37 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'system_management.User'
 
 
+# # # CORS Configuration
+# # CORS_ALLOW_CREDENTIALS = True
+# # CORS_ALLOW_ALL_ORIGINS = False  # Keep False for security
+
+# # # Define allowed origins based on environment
+# # DEBUG = config('DEBUG', default=False, cast=bool)
+
+# # if DEBUG:
+# #     # Development origins
+# #     CORS_ALLOWED_ORIGINS = [
+# #         # "http://localhost:3000",
+# #         # "http://127.0.0.1:3000",
+# #         "http://dynamicz3.s3-website-us-east-1.amazonaws.com"
+# #         "http://localhost:8000",
+# #         "http://127.0.0.1:8000",
+# #     ]
+# # else:
+# #     # Production origins
+# #     CORS_ALLOWED_ORIGINS = [
+# #         "http://dynamicz3.s3-website-us-east-1.amazonaws.com",
+# #         "https://dynamicz3.s3-website-us-east-1.amazonaws.com",  # Add HTTPS version too
+# #         "http://3.144.218.251",
+# #         "http://52.14.111.23",
+# #         # Add development origins for testing in production
+# #         # "http://localhost:3000",
+# #         # "http://127.0.0.1:3000",
+# #         "http://dynamicz3.s3-website-us-east-1.amazonaws.com",
+
+
+# #     ]
+
 # # CORS Configuration
 # CORS_ALLOW_CREDENTIALS = True
 # CORS_ALLOW_ALL_ORIGINS = False  # Keep False for security
@@ -175,59 +206,110 @@ AUTH_USER_MODEL = 'system_management.User'
 
 # if DEBUG:
 #     # Development origins
-#     CORS_ALLOWED_ORIGINS = [
-#         # "http://localhost:3000",
-#         # "http://127.0.0.1:3000",
-#         "http://dynamicz3.s3-website-us-east-1.amazonaws.com"
+#     origins_set = {
+#         "http://localhost:3000",
+#         "http://127.0.0.1:3000",
+#         # "http://dynamicz3.s3-website-us-east-1.amazonaws.com",
 #         "http://localhost:8000",
 #         "http://127.0.0.1:8000",
-#     ]
+#     }
 # else:
 #     # Production origins
-#     CORS_ALLOWED_ORIGINS = [
+#     origins_set = {
 #         "http://dynamicz3.s3-website-us-east-1.amazonaws.com",
-#         "https://dynamicz3.s3-website-us-east-1.amazonaws.com",  # Add HTTPS version too
+#         # "https://dynamicz3.s3-website-us-east-1.amazonaws.com",
 #         "http://3.144.218.251",
 #         "http://52.14.111.23",
 #         # Add development origins for testing in production
-#         # "http://localhost:3000",
-#         # "http://127.0.0.1:3000",
-#         "http://dynamicz3.s3-website-us-east-1.amazonaws.com",
+#         "http://localhost:3000",
+#         "http://127.0.0.1:3000",
+#     }
+
+# # Convert the set back to a list
+# CORS_ALLOWED_ORIGINS = list(origins_set)
 
 
-#     ]
+# CORS_ALLOW_METHODS = [
+#     'DELETE',
+#     'GET',
+#     'OPTIONS',
+#     'PATCH',
+#     'POST',
+#     'PUT',
+# ]
+
+# CORS_ALLOW_HEADERS = [
+#     'accept',
+#     'accept-encoding',
+#     'authorization',
+#     'content-type',
+#     'dnt',
+#     'origin',
+#     'user-agent',
+#     'x-csrftoken',
+#     'x-requested-with',
+# ]
+
+# CORS_EXPOSE_HEADERS = [
+#     "Content-Type", 
+#     "X-CSRFToken"
+# ]
+
+# # CSRF Configuration
+# CSRF_COOKIE_SECURE = not DEBUG  # True in production, False in development
+# CSRF_COOKIE_HTTPONLY = False  # Must be False for JavaScript access
+# CSRF_COOKIE_SAMESITE = 'Lax'
+# CSRF_COOKIE_NAME = "csrftoken"
+# CSRF_HEADER_NAME = 'HTTP_X_CSRFTOKEN'
+# CSRF_USE_SESSIONS = False
+
+# # CSRF Trusted Origins (same as CORS allowed origins)
+# CSRF_TRUSTED_ORIGINS = [
+#     "http://dynamicz3.s3-website-us-east-1.amazonaws.com",
+#     "https://dynamicz3.s3-website-us-east-1.amazonaws.com",
+#     # "http://localhost:3000",
+#     # "http://127.0.0.1:3000",
+#     "http://127.0.0.1:8000",
+#     "http://localhost:8000",
+#     "http://3.144.218.251",
+#     "http://52.14.111.23",
+# ]
+
+# # Session Configuration
+# SESSION_COOKIE_SECURE = not DEBUG  # True in production, False in development
+# SESSION_COOKIE_SAMESITE = "Lax"
+
+# # Security Settings
+# X_FRAME_OPTIONS = 'ALLOWALL'
+# SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')  # Changed to https
+# SECURE_SSL_REDIRECT = False
 
 # CORS Configuration
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = False  # Keep False for security
+CORS_ALLOW_ALL_ORIGINS = False
 
 # Define allowed origins based on environment
 DEBUG = config('DEBUG', default=False, cast=bool)
 
 if DEBUG:
     # Development origins
-    origins_set = {
+    allowed_origins = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        # "http://dynamicz3.s3-website-us-east-1.amazonaws.com",
         "http://localhost:8000",
         "http://127.0.0.1:8000",
-    }
+    ]
 else:
     # Production origins
-    origins_set = {
+    allowed_origins = [
         "http://dynamicz3.s3-website-us-east-1.amazonaws.com",
-        # "https://dynamicz3.s3-website-us-east-1.amazonaws.com",
         "http://3.144.218.251",
         "http://52.14.111.23",
-        # Add development origins for testing in production
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    }
+    ]
 
-# Convert the set back to a list
-CORS_ALLOWED_ORIGINS = list(origins_set)
-
+# Set both CORS and CSRF to use the same origins
+CORS_ALLOWED_ORIGINS = allowed_origins
+CSRF_TRUSTED_ORIGINS = allowed_origins
 
 CORS_ALLOW_METHODS = [
     'DELETE',
@@ -256,33 +338,22 @@ CORS_EXPOSE_HEADERS = [
 ]
 
 # CSRF Configuration
-CSRF_COOKIE_SECURE = not DEBUG  # True in production, False in development
-CSRF_COOKIE_HTTPONLY = False  # Must be False for JavaScript access
+CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_NAME = "csrftoken"
 CSRF_HEADER_NAME = 'HTTP_X_CSRFTOKEN'
 CSRF_USE_SESSIONS = False
 
-# CSRF Trusted Origins (same as CORS allowed origins)
-CSRF_TRUSTED_ORIGINS = [
-    "http://dynamicz3.s3-website-us-east-1.amazonaws.com",
-    "https://dynamicz3.s3-website-us-east-1.amazonaws.com",
-    # "http://localhost:3000",
-    # "http://127.0.0.1:3000",
-    "http://127.0.0.1:8000",
-    "http://localhost:8000",
-    "http://3.144.218.251",
-    "http://52.14.111.23",
-]
-
 # Session Configuration
-SESSION_COOKIE_SECURE = not DEBUG  # True in production, False in development
+SESSION_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_SAMESITE = "Lax"
 
 # Security Settings
 X_FRAME_OPTIONS = 'ALLOWALL'
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')  # Changed to https
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_SSL_REDIRECT = False
+
 
 # External Services
 BACK_BLAZE_KEY_ID = config('BACK_BLAZE_KEY_ID')
