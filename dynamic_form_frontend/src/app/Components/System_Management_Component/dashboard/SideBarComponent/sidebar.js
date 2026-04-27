@@ -19,8 +19,9 @@ const Sidebar = () => {
     {
       title: 'Manage Users',
       links: [
-        {  href: '/Components/System_Management_Component/Usermanagement', 
-            icon: 'bx bx-user', label: 'View Users' } // Link to /users page
+     { href: '/Components/System_Management_Component/Usermanagement',
+       icon: 'bx bx-user-circle', label: 'Profile' },
+        // Link to /users page
       
   
       ],
@@ -30,7 +31,7 @@ const Sidebar = () => {
       title: 'Form Management',
       links: [
         {  href: '/Components/Form_Management_Component/',
-           icon: 'bx bx-user-circle', label: 'Manage Forms ' },// Link to /form management
+           icon: 'bx bx-user-circle', label: 'Manage Forms ' }// Link to /form management
          
       ],
     },
@@ -49,7 +50,7 @@ const Sidebar = () => {
       title: 'Accounts',
       links: [
         { href: '/profile', icon: 'bx bx-user-circle', label: 'Profile' },
-        { href: '/logout', icon: 'bx bx-log-out', label: 'Logout' },
+        { href: '/', icon: 'bx bx-log-out', label: 'Logout' },
       ],
     },
     

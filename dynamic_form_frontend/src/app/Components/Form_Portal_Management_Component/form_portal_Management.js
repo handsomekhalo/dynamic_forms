@@ -244,34 +244,76 @@ const [isDocumentLoading, setIsDocumentLoading] = useState(false);
   };
 
   const handleFormSelect = async (formId) => {
-    if (formId === selectedFormId) return; // Don't reload the same form
+    if (formId === selectedFormId) return;
 
     setSelectedFormId(formId);
     setFormDetails([]);
-    setOpenAccordions({}); // Reset open accordions
-    setFormAnswers({}); // Reset form answers when switching forms
+    setOpenAccordions({});
+    setFormAnswers({});
 
     try {
-      // Fetch form details
       const res = await backendApi.get(
         `/form_portal_management/get_all_form_details/${formId}/`
       );
       const formDetailsData = res.data.formDetails || res.data || [];
-      setFormDetails(formDetailsData);
+      setFormDetails(Array.isArray(formDetailsData) ? formDetailsData : []);
 
-      // Open the first accordion only
       if (formDetailsData.length > 0) {
         setOpenAccordions({ [formDetailsData[0].id]: true });
       }
 
-      // Fetch existing answers for this form
-      await fetchFormAnswers(formId);
-      await fetchDocumentAnswers();
+      // Fetch answers — if 404 (no submission yet) that's fine, just skip
+      try {
+        await fetchFormAnswers(formId);
+      } catch (e) {
+        // No prior answers — silent skip
+      }
+
+      // Only fetch documents if user has a submission for this form
+      try {
+        await fetchDocumentAnswers();
+      } catch (e) {
+        // No documents yet — silent skip  
+      }
+
     } catch (err) {
       console.error("Error fetching form details:", err);
       setError("Failed to load form details.");
     }
   };
+
+  // const handleFormSelect = async (formId) => {
+  //   if (formId === selectedFormId) return; // Don't reload the same form
+
+  //   setSelectedFormId(formId);
+  //   setFormDetails([]);
+  //   setOpenAccordions({}); // Reset open accordions
+  //   setFormAnswers({}); // Reset form answers when switching forms
+
+  //   try {
+  //     // Fetch form details
+  //     const res = await backendApi.get(
+  //       `/form_portal_management/get_all_form_details/${formId}/`
+  //     );
+  //     // const formDetailsData = res.data.formDetails || res.data || [];
+  //     // setFormDetails(formDetailsData);
+  //     // AFTER
+  //       const formDetailsData = res.data.formDetails || res.data || [];
+  //       setFormDetails(Array.isArray(formDetailsData) ? formDetailsData : []);
+
+  //     // Open the first accordion only
+  //     if (formDetailsData.length > 0) {
+  //       setOpenAccordions({ [formDetailsData[0].id]: true });
+  //     }
+
+  //     // Fetch existing answers for this form
+  //     await fetchFormAnswers(formId);
+  //     await fetchDocumentAnswers();
+  //   } catch (err) {
+  //     console.error("Error fetching form details:", err);
+  //     setError("Failed to load form details.");
+  //   }
+  // };
 
   // Add this helper function at the top of your component
   const fileToBase64 = (file) => {
@@ -955,6 +997,11 @@ case "file":
           </div>
         </div>
       )}
+      {selectedFormId && formDetails.length === 0 && !loading && (
+  <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-lg">
+    This form has no categories configured yet. Please contact your administrator.
+  </div>
+)}
 
 {selectedFileUrl && (
   <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

@@ -125,12 +125,27 @@ class GetAnsweredQuestionFromFormResponseSerializer(serializers.ModelSerializer)
             "response_date",
             "response_boolean",
         ]
-
+        
     def get_file_upload(self, obj):
         if obj.file_upload:
-            from system_management.backblazes3 import open_back_blaze_s3_file  # adjust import
-            return open_back_blaze_s3_file(obj.file_upload)
+            from system_management.backblazes3 import open_back_blaze_s3_file
+            try:
+                url = open_back_blaze_s3_file(obj.file_upload)
+                # If head_object failed, it returns the raw filepath string (not a presigned URL)
+                # Don't serve broken paths to the frontend
+                if url and str(url).startswith('http') and 'X-Amz-Signature' in str(url):
+                    return url
+                elif url and str(url).startswith('http') and 'backblazeb2.com' in str(url):
+                    return url  # direct URL fallback
+                return None  # orphaned file — don't expose broken path
+            except Exception:
+                return None
         return None
+    # def get_file_upload(self, obj):
+        # if obj.file_upload:
+        #     from system_management.backblazes3 import open_back_blaze_s3_file  # adjust import
+        #     return open_back_blaze_s3_file(obj.file_upload)
+        # return None
 
 # class RetreiveDocumentSerializer(serializers.ModelSerializer):
 #     class Meta:

@@ -299,6 +299,8 @@ def get_all_categories_by_form_id_api(request, formId):
 def get_all_forms_api(request):
     forms = FormType.objects.filter(is_active=True).order_by('-date_created')
     serializer = GetAllFormTypeSerializer(forms, many=True)
+
+    print('get_all_forms_api serializer:', serializer.data)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 

@@ -150,12 +150,37 @@ def get_form_answers_from_user_api(request, form_id, client_id):
 
 
 
+# @api_view(['POST'])
+# def get_all_documents_for_user_api(request):
+#     """
+#     Retrieves all Z83 documents for a specific user.
+#     Expected input: { "user_id": "some-id" }
+#     """
+#     try:
+#         body = json.loads(request.body)
+#         user_id = body.get("user_id")
+
+#         if not user_id:
+#             return Response({"status": "error", "message": "Missing user_id"}, status=400)
+
+#         # Get all documents uploaded by this user
+#         documents = Document.objects.filter(uploaded_by_id=user_id).order_by('-uploaded_at')
+
+#         serializer = RetreiveDocumentSerializer(documents, many=True)
+
+#         return Response({
+#             "status": "success",
+#             "message": "User documents retrieved successfully.",
+#             "documents": serializer.data,
+#         }, status=200)
+
+#     except Exception as e:
+#         return Response({
+#             "status": "error",
+#             "message": str(e)
+#         }, status=500)
 @api_view(['POST'])
 def get_all_documents_for_user_api(request):
-    """
-    Retrieves all Z83 documents for a specific user.
-    Expected input: { "user_id": "some-id" }
-    """
     try:
         body = json.loads(request.body)
         user_id = body.get("user_id")
@@ -163,23 +188,27 @@ def get_all_documents_for_user_api(request):
         if not user_id:
             return Response({"status": "error", "message": "Missing user_id"}, status=400)
 
-        # Get all documents uploaded by this user
-        documents = Document.objects.filter(uploaded_by_id=user_id).order_by('-uploaded_at')
+        documents = Document.objects.filter(
+            uploaded_by_id=user_id,
+            file__isnull=False,   # ← guard 1: no null files
+        ).exclude(
+            file=''               # ← guard 2: no empty string files
+        ).order_by('-uploaded_at')
 
         serializer = RetreiveDocumentSerializer(documents, many=True)
+        
+        # Filter out any docs where serializer returned null file_upload
+        # (orphaned Backblaze files)
+        valid_docs = [d for d in serializer.data if d.get('file')]
 
         return Response({
             "status": "success",
             "message": "User documents retrieved successfully.",
-            "documents": serializer.data,
+            "documents": valid_docs,
         }, status=200)
 
     except Exception as e:
-        return Response({
-            "status": "error",
-            "message": str(e)
-        }, status=500)
-
+        return Response({"status": "error", "message": str(e)}, status=500)
 
 # @api_view(['POST'])
 # def get_all_documents_for_user_api(request):

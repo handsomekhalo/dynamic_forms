@@ -288,6 +288,7 @@ AUTH_USER_MODEL = 'system_management.User'
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = False
 
+
 # Define allowed origins based on environment
 DEBUG = config('DEBUG', default=False, cast=bool)
 

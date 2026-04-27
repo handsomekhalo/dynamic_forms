@@ -172,6 +172,8 @@ def get_all_forms(request):
 
         response_data = response.json()
 
+        print('response data from get_all_forms_api:', response_data)
+
         return JsonResponse({
             "status": "success",
             "forms": response_data

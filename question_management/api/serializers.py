@@ -20,11 +20,13 @@ class QuestionSerializer(serializers.ModelSerializer):
             'id',
             'text',  
             'is_required',
+            'input_type',
             'question_type',
             'order',  
             'is_active',
             'allow_other_option', 
-            'options',  
+            'options',
+            'input_type',  
         )
 
     def get_options(self, question):

@@ -75,6 +75,16 @@ class GetAllFormTypeSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'description', 'is_active', 'date_created']
 
 
+class GetAllFormTypeSerializer(serializers.ModelSerializer):
+    categories = serializers.SerializerMethodField()
+
+    class Meta:
+        model = FormType
+        fields = ['id', 'name', 'description', 'is_active', 'date_created', 'categories']
+
+    def get_categories(self, obj):
+        assignments = FormCategoryAssignment.objects.filter(form_type=obj)
+        return [{'id': a.main_category.id, 'name': a.main_category.name} for a in assignments]
 class GetUnassignedCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = MainCategory
