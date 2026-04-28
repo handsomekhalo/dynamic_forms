@@ -19,10 +19,7 @@ urlpatterns = [
     path('create_user/', views.create_user, name='create_user'),
     path('delete_user/', views.delete_user, name='delete_user'),
         path('login/', views.login, name='login'),
-    path('send_form_invitation/', views.send_form_invitation_view, name='send_form_invitation'),
-    path('send_bulk_invitations/', views.send_bulk_form_invitations_view, name='send_bulk_invitations'),
-    path('validate_token/<str:token>/', views.validate_form_token_view, name='validate_token'),
-
+    
 ##removed task management
 
 ] 

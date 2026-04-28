@@ -9,7 +9,9 @@ import Swal from "sweetalert2";
 import { useRouter } from 'next/navigation'; // 
 
 
-export default function FormPortal_Management() {
+// export default function FormPortal_Management() {
+ export default function FormPortal_Management({ magicLinkFormId = null, magicLinkUserId = null }) {
+
   const [forms, setForms] = useState([]);
   const [selectedFormId, setSelectedFormId] = useState(null);
   const [formDetails, setFormDetails] = useState([]);
@@ -26,7 +28,9 @@ const [isDocumentLoading, setIsDocumentLoading] = useState(false);
 
 
 
-  const { authToken, isAuthenticated, navigate, isLoading } = useAuth();
+  // const { authToken, isAuthenticated, navigate, isLoading } = useAuth();
+    const auth = useAuth() || {};
+    const { authToken, isAuthenticated, navigate, isLoading } = auth;  
     const router = useRouter(); // Get the router object
 
   // const location = useLocation(); // Get the current location
@@ -36,24 +40,26 @@ const [isDocumentLoading, setIsDocumentLoading] = useState(false);
     const isPublic = router.query?.public === "true"; // Use optional chaining to avoid errors
 
 
- useEffect(() => {
-    const fetchForms = async () => {
-      try {
-        const res = await backendApi.get(
-          "/application_management/get_all_forms/",
-          {
-            headers: isPublic ? {} : { Authorization: `Token ${authToken}` }, // Add auth token only if not public
-          }
-        );
-        console.log("Forms API response:", res.data);
-        setForms(res.data.forms || []);
-      } catch (error) {
-        console.error("Error fetching forms:", error);
-      }
-    };
-    fetchForms();
-  }, [authToken, isPublic]);
+//  useEffect(() => {
+//     const fetchForms = async () => {
+//       try {
+//         const res = await backendApi.get(
+//           "/application_management/get_all_forms/",
+//           {
+//             // headers: isPublic ? {} : { Authorization: `Token ${authToken}` }, // Add auth token only if not public
+//             headers: (isPublic || magicLinkFormId) ? {} : { Authorization: `Token ${authToken}` },
+//           }
+//         );
+//         console.log("Forms API response:", res.data);
+//         setForms(res.data.forms || []);
+//       } catch (error) {
+//         console.error("Error fetching forms:", error);
+//       }
+//     };
+//     fetchForms();
+//   }, [authToken, isPublic]);
  
+// Auto-select form when coming from magic link
 
   const getDocumentUrl = (fileUrl) => {
     if (!fileUrl) return "";
@@ -281,6 +287,13 @@ const [isDocumentLoading, setIsDocumentLoading] = useState(false);
       setError("Failed to load form details.");
     }
   };
+
+  useEffect(() => {
+  if (magicLinkFormId) {
+    handleFormSelect(magicLinkFormId);
+  }
+}, [magicLinkFormId]);
+
 
   // const handleFormSelect = async (formId) => {
   //   if (formId === selectedFormId) return; // Don't reload the same form
