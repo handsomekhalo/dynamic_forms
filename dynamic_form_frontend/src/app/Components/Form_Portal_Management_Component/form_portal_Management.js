@@ -85,7 +85,9 @@ const [isDocumentLoading, setIsDocumentLoading] = useState(false);
       const res = await backendApi.get(
         `/form_portal_management/get_all_documents_for_user/`,
         {
-          headers: { Authorization: `Token ${authToken}` },
+          // headers: { Authorization: `Token ${authToken}` },
+          headers: authToken ? { Authorization: `Token ${authToken}` } : {},
+
         }
       );
 
@@ -159,7 +161,9 @@ const [isDocumentLoading, setIsDocumentLoading] = useState(false);
     const res = await backendApi.get(
       `/form_portal_management/get_form_answers_from_user/${formId}/`,
       {
-        headers: { Authorization: `Token ${authToken}` },
+        // headers: { Authorization: `Token ${authToken}` },
+        headers: authToken ? { Authorization: `Token ${authToken}` } : {},
+
       }
     );
 
@@ -295,39 +299,7 @@ const [isDocumentLoading, setIsDocumentLoading] = useState(false);
 }, [magicLinkFormId]);
 
 
-  // const handleFormSelect = async (formId) => {
-  //   if (formId === selectedFormId) return; // Don't reload the same form
-
-  //   setSelectedFormId(formId);
-  //   setFormDetails([]);
-  //   setOpenAccordions({}); // Reset open accordions
-  //   setFormAnswers({}); // Reset form answers when switching forms
-
-  //   try {
-  //     // Fetch form details
-  //     const res = await backendApi.get(
-  //       `/form_portal_management/get_all_form_details/${formId}/`
-  //     );
-  //     // const formDetailsData = res.data.formDetails || res.data || [];
-  //     // setFormDetails(formDetailsData);
-  //     // AFTER
-  //       const formDetailsData = res.data.formDetails || res.data || [];
-  //       setFormDetails(Array.isArray(formDetailsData) ? formDetailsData : []);
-
-  //     // Open the first accordion only
-  //     if (formDetailsData.length > 0) {
-  //       setOpenAccordions({ [formDetailsData[0].id]: true });
-  //     }
-
-  //     // Fetch existing answers for this form
-  //     await fetchFormAnswers(formId);
-  //     await fetchDocumentAnswers();
-  //   } catch (err) {
-  //     console.error("Error fetching form details:", err);
-  //     setError("Failed to load form details.");
-  //   }
-  // };
-
+  
   // Add this helper function at the top of your component
   const fileToBase64 = (file) => {
     return new Promise((resolve, reject) => {
