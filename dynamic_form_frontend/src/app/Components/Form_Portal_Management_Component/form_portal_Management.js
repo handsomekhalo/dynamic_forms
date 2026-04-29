@@ -61,6 +61,31 @@ const [isDocumentLoading, setIsDocumentLoading] = useState(false);
  
 // Auto-select form when coming from magic link
 
+useEffect(() => {
+  const fetchForms = async () => {
+    try {
+      const res = await backendApi.get(
+        "/application_management/get_all_forms/",
+        {
+          headers: (isPublic || magicLinkFormId) 
+            ? {} 
+            : { Authorization: `Token ${authToken}` },
+        }
+      );
+      setForms(res.data.forms || []);
+    } catch (error) {
+      console.error("Error fetching forms:", error);
+    }
+  };
+
+  // Only fetch forms list if NOT coming from magic link
+  // Magic link skips the dropdown entirely
+  if (!magicLinkFormId) {
+    fetchForms();
+  }
+}, [authToken, isPublic, magicLinkFormId]);
+
+
   const getDocumentUrl = (fileUrl) => {
     if (!fileUrl) return "";
 
