@@ -110,7 +110,7 @@ useEffect(() => {
       const res = await backendApi.get(
         `/form_portal_management/get_all_documents_for_user/`,
         {
-          // headers: { Authorization: `Token ${authToken}` },
+          
           headers: authToken ? { Authorization: `Token ${authToken}` } : {},
 
         }
@@ -186,7 +186,6 @@ useEffect(() => {
     const res = await backendApi.get(
       `/form_portal_management/get_form_answers_from_user/${formId}/`,
       {
-        // headers: { Authorization: `Token ${authToken}` },
         headers: authToken ? { Authorization: `Token ${authToken}` } : {},
 
       }
@@ -420,6 +419,7 @@ useEffect(() => {
         "/form_portal_management/submit_category_answers/",
         {
           headers: { Authorization: `Token ${authToken}`, payload },
+          
         }
       );
 
