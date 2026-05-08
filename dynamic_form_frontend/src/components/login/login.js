@@ -5,7 +5,7 @@ import { useAuth } from '../../../AuthContext';
 import backendApi from '../../../utils/backendApi';
 import { useRouter } from 'next/navigation';  // Correct import for App Router
 
-export default function Login() {
+export default function LoginPage() {
   const { login: authLogin } = useAuth();
   const [csrfToken, setCsrfToken] = useState('');
   const [email, setEmail] = useState('');
@@ -19,6 +19,7 @@ export default function Login() {
     backendApi
       .get('/system_management/csrf/', { withCredentials: true })
       // axios.get("http://3.144.218.251/system_management/csrf/", { withCredentials: true })
+
       .then((res) => {
         if (res.data && res.data.csrfToken) {
           setCsrfToken(res.data.csrfToken);
@@ -78,10 +79,12 @@ export default function Login() {
         console.log('Authentication tokens stored:', { authToken: token, csrfToken: tokenToUse });
         console.log('Redirecting to dashboard...');
         
-      
+        // Correctly navigate to /dashboard using the router
+        // router.push('/Components/System_Management_Component/dashboard');
+        
         setTimeout(() => {
           // router.push('/Components/System_Management_Component/dashboard');
-            router.push('/dashboard');
+          router.push('/dashboard');
 
         }, 100);
       } else {

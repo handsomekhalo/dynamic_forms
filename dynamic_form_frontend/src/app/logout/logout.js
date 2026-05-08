@@ -6,8 +6,6 @@ import { useRouter } from 'next/navigation';
 import backendApi from '../../../utils/backendApi';
 import Sidebar from '../Components/System_Management_Component/dashboard/SideBarComponent/sidebar';
 import Navbar from '../Components/System_Management_Component/dashboard/SideBarComponent/navheader';
-// import Sidebar from '../System_Management_Component/dashboard/SideBarComponent/sidebar';
-// import Navbar from '../System_Management_Component/dashboard/SideBarComponent/navheader';
 
 export default function LogoutPage() {
   const { authToken, csrfToken, logout } = useAuth();

@@ -1,9 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import LoginPage from './Components/System_Management_Component/login/login';
-import RegisterPage from './Components/System_Management_Component/register/register';
-// import Dashboard from './Components/System_Management_Component/dashboard/dashboard';
+import LoginPage from  "@/components/login/login";
+import RegisterPage from '@/components/register/register';
+
+
+// export default function Page() { redirect('/login'); }
+
 
 export default function Home() {
   const [showLogin, setShowLogin] = useState(true);
