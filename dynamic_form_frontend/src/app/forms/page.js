@@ -1,2 +1,2 @@
-import FormManagement from '@/components/forms/FormManagement';
-export default function Page() { return <FormManagement />; }
+import FormPage from '@/components/forms/FormsPage';
+export default function Page() { return <FormPage />; }

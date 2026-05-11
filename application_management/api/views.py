@@ -5,8 +5,11 @@ from rest_framework import status
 from application_management.models import FormCategoryAssignment, FormQuestionAssignment, FormType, MainCategory
 
 from rest_framework import status
-from .serializers import AssignCategoryToFormSerializer, AssignQuestionToFormSerializer, CreateMainCategorySerializer, FormCategoriesResponseSerializer, FormCategoryAssignmentSerializer, FormTypeSerializer, GetAllFormTypeSerializer, GetUnassignedCategorySerializer, MainCategorySerializer, RemoveCategoryAssignmentSerializer, SelectAllCategoriesSerializer, SelectCategoryBasedOnIdSerializer, UnassignCategorySerializer,UpdateFormeSerializer
+from .serializers import AssignCategoryToFormSerializer, AssignQuestionToFormSerializer, CreateMainCategorySerializer, FormCategoriesResponseSerializer, FormCategoryAssignmentSerializer, FormTypeSerializer, GetAllFormTypeSerializer, GetFormDetailsSerializer, GetUnassignedCategorySerializer, MainCategorySerializer, RemoveCategoryAssignmentSerializer, SelectAllCategoriesSerializer, SelectCategoryBasedOnIdSerializer, UnassignCategorySerializer,UpdateFormeSerializer
 from django.db import transaction
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.decorators import api_view, permission_classes
+
 
 
 
@@ -102,64 +105,6 @@ def assign_question_to_form_api(request):
         return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     
 
-# @api_view(['POST'])
-# def assign_question_to_form_api(request):
-#     """
-#     Assign a question to a specific form and category (activates it if previously soft-deleted).
-#     """
-#     serializer = AssignQuestionToFormSerializer(data=request.data)
-
-#     if not serializer.is_valid():
-#         return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-
-#     form_type = serializer.validated_data['form_type']
-#     main_category = serializer.validated_data['main_category']
-#     question_text = serializer.validated_data['question_text']
-
-#     try:
-#         # Check if the question already exists (even if inactive)
-#         existing_question = main_category.question_set.filter(question=question_text).first()
-
-#         if existing_question:
-#             if existing_question.is_active:
-#                 return Response({
-#                     "status": "error",
-#                     "message": "This question is already active in this category."
-#                 }, status=status.HTTP_400_BAD_REQUEST)
-
-#             # Reactivate it
-#             existing_question.is_active = True
-#             existing_question.save()
-
-#             return Response({
-#                 "status": "success",
-#                 "message": "Question reactivated and assigned successfully.",
-#                 "question_id": existing_question.id
-#             }, status=status.HTTP_200_OK)
-
-#         # Create new question
-#         new_question = Question.objects.create(
-#             question=question_text,
-#             main_category=main_category,
-#             is_active=True
-#         )
-
-#         return Response({
-#             "status": "success",
-#             "message": "Question assigned to form successfully.",
-#             "question_id": new_question.id
-#         }, status=status.HTTP_201_CREATED)
-
-#     except Exception as e:
-#         return Response({
-#             "status": "error",
-#             "message": f"An unexpected error occurred: {str(e)}"
-#         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-
-
-
 
 @api_view(['POST'])
 def assign_question_and_category_to_form_api(request):
@@ -204,63 +149,6 @@ def assign_question_and_category_to_form_api(request):
     
     return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
-# @api_view(['POST'])
-# def assign_question_and_category_to_form_api(request):
-#     """
-#     Assign a question to a form and category — if the category isn't yet added to the form, add it.
-#     """
-#     serializer = AssignQuestionToFormSerializer(data=request.data)
-
-#     if not serializer.is_valid():
-#         return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-
-#     form_type = serializer.validated_data['form_type']
-#     main_category = serializer.validated_data['main_category']
-#     question_text = serializer.validated_data['question_text']
-
-#     try:
-#         # Attach the category to the form if not already assigned
-#         if not form_type.categories.filter(id=main_category.id).exists():
-#             form_type.categories.add(main_category)
-
-#         # Check if question exists (even if inactive)
-#         existing_question = main_category.question_set.filter(question=question_text).first()
-
-#         if existing_question:
-#             if existing_question.is_active:
-#                 return Response({
-#                     "status": "error",
-#                     "message": "This question is already active in this category."
-#                 }, status=status.HTTP_400_BAD_REQUEST)
-
-#             # Reactivate it
-#             existing_question.is_active = True
-#             existing_question.save()
-
-#             return Response({
-#                 "status": "success",
-#                 "message": "Question reactivated and assigned successfully.",
-#                 "question_id": existing_question.id
-#             }, status=status.HTTP_200_OK)
-
-#         # Create new question
-#         new_question = Question.objects.create(
-#             question=question_text,
-#             main_category=main_category,
-#             is_active=True
-#         )
-
-#         return Response({
-#             "status": "success",
-#             "message": "Question assigned to form successfully.",
-#             "question_id": new_question.id
-#         }, status=status.HTTP_201_CREATED)
-
-#     except Exception as e:
-#         return Response({
-#             "status": "error",
-#             "message": f"An error occurred: {str(e)}"
-#         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])
@@ -297,7 +185,8 @@ def get_all_categories_by_form_id_api(request, formId):
 
 @api_view(['GET'])
 def get_all_forms_api(request):
-    forms = FormType.objects.filter(is_active=True).order_by('-date_created')
+    # forms = FormType.objects.filter(is_active=True).order_by('-date_created')
+    forms = FormType.objects.all().order_by('-date_created')
     serializer = GetAllFormTypeSerializer(forms, many=True)
 
     print('get_all_forms_api serializer:', serializer.data)
@@ -435,9 +324,6 @@ def get_unassigned_categories_api(request, form_type_id):
 
     serializer = GetUnassignedCategorySerializer(unassigned_categories, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-
 
 
 
@@ -658,3 +544,25 @@ def update_form_api(request):
         "message": "Form updated successfully.",
         "form": serializer.data
     }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_form_details_api(request, form_id):
+    try:
+        form = FormType.objects.get(id=form_id)
+        print(f"Retrieved form: {form.name} (ID: {form.id})")
+        serializer = GetFormDetailsSerializer(form)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except FormType.DoesNotExist:
+        print(f"Form with ID {form_id} does not exist.")
+        return Response(
+            {'status': 'error', 'message': 'Form not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        print(f"An error occurred while retrieving form details: {str(e)}")
+        return Response(
+            {'status': 'error', 'message': str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

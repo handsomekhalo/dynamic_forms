@@ -990,3 +990,60 @@ def get_assigned_categories(request, form_type_id):
             "status": "error",
             "message": f"Server error occurred: {str(e)}"
         }, status=500)
+
+
+@csrf_exempt
+def get_form_details(request, form_id):
+    if request.method != 'GET':
+        return JsonResponse({
+            "status": "error",
+            "message": "Method not allowed"
+        }, status=405)
+
+    try:
+        auth_header = request.headers.get("Authorization", "")
+        token = None
+        if auth_header.startswith("Token "):
+            token = auth_header.split("Token ")[-1]
+        elif auth_header.startswith("Bearer "):
+            token = auth_header.split("Bearer ")[-1]
+
+        if not token:
+            return JsonResponse({
+                "status": "error",
+                "message": "Authorization token is required."
+            }, status=401)
+
+        request.session["token"] = token
+        request.session.modified = True
+
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Token {token}",
+        }
+
+        url = f"{host_url(request)}{reverse_lazy('get_form_details_api', kwargs={'form_id': form_id})}"
+
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+
+        response_data = response.json()
+
+        print('response data from get_form_details_api:', response_data)
+
+        return JsonResponse({
+            "status": "success",
+            "form": response_data
+        }, status=200)
+
+    except requests.exceptions.RequestException as e:
+        return JsonResponse({'status': 'error', 'message': f'Request failed: {str(e)}'}, status=500)
+    except ValueError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON response from API'}, status=500)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            "status": "error",
+            "message": f"Server error occurred: {str(e)}"
+        }, status=500)

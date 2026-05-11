@@ -1,80 +1,159 @@
 'use client';
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-// import { useAuth } from '../../../../AuthContext';
-import { useAuth } from '../../../AuthContext';
+
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+
+import { Bell } from "lucide-react";
+
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+import {
+  Avatar,
+  AvatarFallback,
+} from "@/components/ui/avatar";
+
+import { useAuth } from "../../../AuthContext";
 
 export default function Navbar() {
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const { logout } = useAuth();
   const router = useRouter();
+
+  const { user, logout } = useAuth();
+
+  const initials = user?.full_name
+    ? user.full_name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    : "U";
 
   const handleLogout = () => {
     logout();
-    router.push('/');
+    router.push("/");
   };
 
   return (
-    <nav className="bg-gray-800 w-full">
-      <div className="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
-        <div className="relative flex h-16 items-center justify-between">
-
-          {/* Logo */}
-          <div className="flex items-center">
-            <Link href="/dashboard">
-              <span className="text-white font-bold text-lg tracking-wide">
-                Z83 Dynamic Tool
-              </span>
-            </Link>
-          </div>
-
-          {/* Right side — bell + avatar */}
-          <div className="flex items-center gap-4">
-            {/* Notification bell */}
-            <button className="rounded-full bg-gray-800 p-1 text-gray-400 hover:text-white">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022 23.84 23.84 0 005.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-              </svg>
-            </button>
-
-            {/* Avatar + dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="flex rounded-full bg-indigo-600 text-white text-sm font-bold w-9 h-9 items-center justify-center focus:outline-none focus:ring-2 focus:ring-white"
-              >
-                TK
-              </button>
-
-              {dropdownOpen && (
-                <div className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black/5">
-                  <Link
-                    href="/Components/System_Management_Component/Usermanagement"
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    onClick={() => setDropdownOpen(false)}
-                  >
-                    Your Profile
-                  </Link>
-                  <button
-                    onClick={handleLogout}
-                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                  >
-                    Sign out
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-        </div>
+    <header
+      className="
+        sticky top-0 z-30
+        h-16
+        bg-white/80
+        backdrop-blur-md
+        border-b border-slate-200
+        flex items-center justify-between
+        px-6
+        lg:ml-64
+      "
+    >
+      {/* Left Side */}
+      <div>
+        {/* <h1 className="text-sm font-semibold tracking-wide text-slate-500 uppercase">
+          Z83 Compliance Platform
+        </h1> */}
       </div>
-    </nav>
+
+      {/* Right Side */}
+      <div className="flex items-center gap-3">
+        
+        {/* Notifications */}
+        <button
+          className="
+            relative p-2 rounded-xl
+            text-slate-500
+            hover:bg-slate-100
+            hover:text-slate-700
+            transition-all duration-200
+          "
+        >
+          <Bell className="w-[18px] h-[18px]" />
+
+          <span
+            className="
+              absolute top-2 right-2
+              w-2 h-2 rounded-full
+              bg-blue-600
+            "
+          />
+        </button>
+
+        {/* User Menu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className="
+                flex items-center gap-3
+                pl-3 pr-1 py-1
+                rounded-xl
+                hover:bg-slate-100
+                transition-all duration-200
+              "
+            >
+              {/* User Info */}
+              <div className="hidden sm:block text-right">
+                <p className="text-sm font-medium text-slate-800 leading-none">
+                  {user?.full_name || "User"}
+                </p>
+
+                <p className="text-xs text-slate-500 mt-1">
+                  {user?.role || "Administrator"}
+                </p>
+              </div>
+
+              {/* Avatar */}
+              <Avatar className="w-9 h-9">
+                <AvatarFallback
+                  className="
+                    bg-blue-600/10
+                    text-blue-600
+                    text-xs
+                    font-semibold
+                  "
+                >
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+            </button>
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent
+            align="end"
+            className="w-52"
+          >
+            <DropdownMenuItem asChild>
+              <Link href="/profile">
+                Your Profile
+              </Link>
+            </DropdownMenuItem>
+
+            <DropdownMenuItem asChild>
+              <Link href="/settings">
+                Settings
+              </Link>
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem
+              onClick={handleLogout}
+              className="text-red-500 focus:text-red-500"
+            >
+              Sign Out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </header>
   );
 }
-
 // 'use client';
 
 // import React from 'react';

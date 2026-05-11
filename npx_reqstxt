@@ -1,0 +1,3 @@
+npx shadcn@latest add badge
+npx shadcn@latest add card
+npm install recharts

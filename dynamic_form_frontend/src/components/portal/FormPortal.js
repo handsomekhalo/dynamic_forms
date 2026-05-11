@@ -40,25 +40,6 @@ const [isDocumentLoading, setIsDocumentLoading] = useState(false);
     const isPublic = router.query?.public === "true"; // Use optional chaining to avoid errors
 
 
-//  useEffect(() => {
-//     const fetchForms = async () => {
-//       try {
-//         const res = await backendApi.get(
-//           "/application_management/get_all_forms/",
-//           {
-//             // headers: isPublic ? {} : { Authorization: `Token ${authToken}` }, // Add auth token only if not public
-//             headers: (isPublic || magicLinkFormId) ? {} : { Authorization: `Token ${authToken}` },
-//           }
-//         );
-//         console.log("Forms API response:", res.data);
-//         setForms(res.data.forms || []);
-//       } catch (error) {
-//         console.error("Error fetching forms:", error);
-//       }
-//     };
-//     fetchForms();
-//   }, [authToken, isPublic]);
- 
 // Auto-select form when coming from magic link
 
 useEffect(() => {

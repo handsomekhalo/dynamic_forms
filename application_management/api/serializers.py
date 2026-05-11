@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from application_management.models import FormCategoryAssignment, FormQuestionAssignment, FormType, MainCategory
+from form_portal_management.api.serailizers import GetCategoryWithQuestionsAssignedSerializer
 
 
 class FormTypeSerializer(serializers.ModelSerializer):
@@ -193,3 +194,24 @@ class UpdateFormeSerializer(serializers.ModelSerializer):
         model = FormType
         fields = ['id', 'name', 'description', 'is_active', 'date_created']
         read_only_fields = ['id', 'date_created']
+
+
+class GetFormDetailsSerializer(serializers.ModelSerializer):
+    categories = serializers.SerializerMethodField()
+
+    class Meta:
+        model = FormType
+        fields = ['id', 'name', 'description', 'is_active', 'categories']
+
+    def get_categories(self, obj):
+        category_links = FormCategoryAssignment.objects.filter(form_type_id=obj.id)
+        categories = MainCategory.objects.filter(
+            id__in=category_links.values_list('main_category_id', flat=True)
+        ).order_by('order')
+        return GetCategoryWithQuestionsAssignedSerializer(
+            categories,
+            many=True,
+            context={'form_id': obj.id}
+        ).data
+
+

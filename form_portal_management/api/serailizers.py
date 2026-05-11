@@ -13,19 +13,33 @@ class GettOptionSerializer(serializers.ModelSerializer):
         fields = ['id', 'text']
 
 
+# class GetQuestionsAssignedSerializer(serializers.ModelSerializer):
+#     options = serializers.SerializerMethodField()
+
+#     class Meta:
+#         model = Question
+#         fields = ['id', 'text', 'input_type', 'order', 'is_required', 'options']
+
+#     def get_options(self, obj):
+#         if obj.input_type in ['select', 'checkbox']:
+#             return GettOptionSerializer(obj.options.all(), many=True).data
+#         return []
 class GetQuestionsAssignedSerializer(serializers.ModelSerializer):
-    options = serializers.SerializerMethodField()
+
+    question_type = serializers.CharField(
+        source='question_type.name',
+        read_only=True
+    )
 
     class Meta:
         model = Question
-        fields = ['id', 'text', 'input_type', 'order', 'is_required', 'options']
-
-    def get_options(self, obj):
-        if obj.input_type in ['select', 'checkbox']:
-            return GettOptionSerializer(obj.options.all(), many=True).data
-        return []
-
-
+        fields = [
+            'id',
+            'text',
+            'question_type',
+            'input_type',
+            'is_required'
+        ]
 class GetCategoryWithQuestionsAssignedSerializer(serializers.ModelSerializer):
     questions = serializers.SerializerMethodField()
 
@@ -43,64 +57,6 @@ class GetCategoryWithQuestionsAssignedSerializer(serializers.ModelSerializer):
         questions = [qa.question for qa in question_assignments]
         return GetQuestionsAssignedSerializer(questions, many=True).data
 
-
-
-
-
-# Update your GetAnsweredQuestionFromFormResponseSerializer
-# class GetAnsweredQuestionFromFormResponseSerializer(serializers.ModelSerializer):
-#     question_text = serializers.CharField(source='question.text', read_only=True)
-#     input_type = serializers.CharField(source='question.input_type', read_only=True)
-#     selected_option_text = serializers.SerializerMethodField()
-#     category_id = serializers.SerializerMethodField()  # Add this line
-    
-#     class Meta:
-#         model = FormResponse
-#         fields = [
-#             'question', 'question_text', 'input_type', 
-#             'response_text', 'response_number', 'response_date', 
-#             'response_boolean', 'file_upload', 'selected_option_text',
-#             'category_id', 'created_at'  # Add category_id here
-#         ]
-    
-#     def get_selected_option_text(self, obj):
-#         if hasattr(obj, 'selected_option') and obj.selected_option:
-#             return obj.selected_option.text
-#         return None
-    
-#     def get_category_id(self, obj):
-#         # Get category_id from the question assignment
-#         try:
-#             assignment = FormQuestionAssignment.objects.filter(
-#                 question_id=obj.question_id,
-#                 form_type_id=obj.submission.form_type_id
-#             ).first()
-#             return assignment.main_category_id if assignment else None
-#         except:
-#             return None
-
-
-# class GetAnsweredQuestionFromFormResponseSerializer(serializers.ModelSerializer):
-#     question_id = serializers.IntegerField(source="question.id")
-#     category_id = serializers.IntegerField(source="category.id", required=False)
-#     form_type_id = serializers.IntegerField(source="form_type.id")
-#     input_type = serializers.CharField(source="question.input_type")
-#     question_text = serializers.CharField(source="question.text")
-
-#     class Meta:
-#         model = FormResponse
-#         fields = [
-#             "question_id",
-#             "category_id",
-#             "form_type_id",
-#             "input_type",
-#             "question_text",
-#             "response_text",
-#             "file_upload",
-#             "response_number",
-#             "response_date",
-#             "response_boolean",
-#         ]
 
 class GetAnsweredQuestionFromFormResponseSerializer(serializers.ModelSerializer):
     question_id = serializers.IntegerField(source="question.id")
