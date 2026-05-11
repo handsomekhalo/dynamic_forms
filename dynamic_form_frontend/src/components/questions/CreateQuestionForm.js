@@ -4,7 +4,11 @@ import Swal from "sweetalert2";
 import backendApi from "../../../utils/backendApi";
 import { useAuth } from "../../../AuthContext";
 
-export default function CreateQuestionForm() {
+// export default function CreateQuestionForm() {
+ export default function CreateQuestionForm({
+  onSuccess,
+  onClose,
+}) {
   const { authToken, isLoading } = useAuth();
 
   const [questionType, setQuestionType] = useState(""); // stores selected question_type ID
@@ -149,9 +153,19 @@ export default function CreateQuestionForm() {
       const result = response.data;
 
       if (result.status === "success") {
-        Swal.fire("Success", result.message || "Question created successfully", "success").then(() =>
-          window.location.reload()
+              Swal.fire(
+          "Success",
+          result.message || "Question created successfully",
+          "success"
         );
+        if (onSuccess) {
+  await onSuccess();
+}
+
+if (onClose) {
+  onClose();
+}
+
       } else {
         // Handle server validation errors
         if (result.errors) {

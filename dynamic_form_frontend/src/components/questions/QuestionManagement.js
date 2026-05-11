@@ -100,18 +100,12 @@ export default function ManageQuestions({ formId, questionTypes }) {
       <div className="flex justify-between items-center mb-4 ">
         <h2 className="text-xl font-semibold">Manage Questions</h2>
 
-        {/* <button
-          onClick={() => setShowAssignModal(true)}
-          className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-700"
-        >
-          Assign To Category
-        </button> */}
-
+    
         <button
           onClick={() => setShowModal(true)}
           className="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700"
         >
-          Create Question
+           Create Question 
         </button>
       </div>
 
@@ -233,10 +227,15 @@ export default function ManageQuestions({ formId, questionTypes }) {
           <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg">
             <h3 className="text-lg font-semibold mb-4">Create New Question</h3>
 
-            <CreateQuestionForm 
+            {/* <CreateQuestionForm 
               questionTypes={questionTypes} 
               onSuccess={handleQuestionsUpdate}
-            />
+            /> */}
+            <CreateQuestionForm
+  questionTypes={questionTypes}
+  onSuccess={handleQuestionsUpdate}
+  onClose={() => setShowModal(false)}
+/>
 
             <div className="flex justify-end space-x-2 mt-4">
               <button
@@ -267,11 +266,17 @@ export default function ManageQuestions({ formId, questionTypes }) {
       {showStatusModal && statusModalData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
           <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg">
-            <StatusChangeModal
+            {/* <StatusChangeModal
               questionId={statusModalData.questionId}
               newStatus={statusModalData.newStatus}
               onClose={handleStatusClose} // This will refresh after status change
-            />
+            /> */}
+            <StatusChangeModal
+  questionId={statusModalData.questionId}
+  newStatus={statusModalData.newStatus}
+  onClose={handleStatusClose}
+  onSuccess={handleQuestionsUpdate}
+/>
           </div>
         </div>
       )}

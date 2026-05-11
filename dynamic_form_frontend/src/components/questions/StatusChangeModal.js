@@ -2,7 +2,13 @@ import backendApi from "../../../utils/backendApi";
 import { useAuth } from "../../../AuthContext";
 import Swal from "sweetalert2";
 
-export default function StatusChangeModal({ questionId, newStatus, onClose }) {
+// export default function StatusChangeModal({ questionId, newStatus, onClose }) {
+export default function StatusChangeModal({
+  questionId,
+  newStatus,
+  onClose,
+  onSuccess,
+}){
   const { authToken } = useAuth();
 
   const handleStatusChange = async () => {
@@ -23,9 +29,19 @@ export default function StatusChangeModal({ questionId, newStatus, onClose }) {
         }
       );
 
-      Swal.fire("Success", "Status changed", "success").then(() =>
-        window.location.reload()
-      );
+     Swal.fire(
+  "Success",
+  "Status changed",
+  "success"
+);
+
+if (onSuccess) {
+  await onSuccess();
+}
+
+if (onClose) {
+  onClose();
+}
     } catch (error) {
       console.error("Failed to change status", error);
       Swal.fire("Error", "Failed to change status", "error");
