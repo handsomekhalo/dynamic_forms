@@ -1,10 +1,14 @@
 # serializers.py
 
 from rest_framework import serializers
-from application_management.models import FormQuestionAssignment, FormResponse, MainCategory
+from application_management.models import FormQuestionAssignment, FormResponse, FormSubmission, MainCategory
 
 from form_portal_management.models import Document
 from question_management.models import Question, Option
+from django.contrib.auth import get_user_model
+from rest_framework import serializers
+
+User = get_user_model()
 
 
 class GettOptionSerializer(serializers.ModelSerializer):
@@ -118,3 +122,96 @@ class RetreiveDocumentSerializer(serializers.ModelSerializer):
             'question',
             'main_category',
         ]
+
+
+
+
+class FormResponseSerializer(serializers.ModelSerializer):
+    question_text = serializers.CharField(source='question.text', read_only=True)
+    question_input_type = serializers.CharField(source='question.input_type', read_only=True)
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    selected_option_text = serializers.CharField(source='selected_option.text', read_only=True, default=None)
+
+    class Meta:
+        model = FormResponse
+        fields = [
+            'id',
+            'question',
+            'question_text',
+            'question_input_type',
+            'category',
+            'category_name',
+            'response_text',
+            'response_number',
+            'response_date',
+            'response_boolean',
+            'selected_option_text',
+            'file_upload',
+            'created_at',
+        ]
+
+class SubmissionListSerializer(serializers.ModelSerializer):
+    applicant_name = serializers.SerializerMethodField()
+    applicant_email = serializers.CharField(source='user.email', read_only=True)
+    form_name = serializers.CharField(source='form_type.name', read_only=True)
+
+    class Meta:
+        model = FormSubmission
+        fields = [
+            'id',
+            'applicant_name',
+            'applicant_email',
+            'form_name',
+            'form_type',
+            'status',
+            'submitted_at',
+            'is_complete',
+        ]
+
+    def get_applicant_name(self, obj):
+        first = obj.user.first_name or ''
+        last = obj.user.last_name or ''
+        return f"{first} {last}".strip() or obj.user.email
+
+
+class SubmissionDetailSerializer(serializers.ModelSerializer):
+    applicant_name = serializers.SerializerMethodField()
+    applicant_email = serializers.CharField(source='user.email', read_only=True)
+    form_name = serializers.CharField(source='form_type.name', read_only=True)
+    responses = serializers.SerializerMethodField()
+    reviewed_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = FormSubmission
+        fields = [
+            'id',
+            'applicant_name',
+            'applicant_email',
+            'form_name',
+            'form_type',
+            'status',
+            # 'review_notes',
+            'reviewed_by_name',
+            'reviewed_at',
+            'submitted_at',
+            'is_complete',
+            'responses',
+        ]
+
+    def get_applicant_name(self, obj):
+        first = obj.user.first_name or ''
+        last = obj.user.last_name or ''
+        return f"{first} {last}".strip() or obj.user.email
+
+    def get_reviewed_by_name(self, obj):
+        if not obj.reviewed_by:
+            return None
+        first = obj.reviewed_by.first_name or ''
+        last = obj.reviewed_by.last_name or ''
+        return f"{first} {last}".strip() or obj.reviewed_by.email
+
+    def get_responses(self, obj):
+        responses = FormResponse.objects.filter(
+            submission=obj
+        ).select_related('question', 'category').order_by('category__order', 'question__id')
+        return FormResponseSerializer(responses, many=True).data

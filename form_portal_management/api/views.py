@@ -5,9 +5,10 @@ import json
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+from django.utils import timezone
 
 from application_management.models import FormCategoryAssignment, FormQuestionAssignment, FormResponse, FormSubmission, FormType, MainCategory
-from form_portal_management.api.serailizers import GetAnsweredQuestionFromFormResponseSerializer, GetCategoryWithQuestionsAssignedSerializer, RetreiveDocumentSerializer
+from form_portal_management.api.serailizers import GetAnsweredQuestionFromFormResponseSerializer, GetCategoryWithQuestionsAssignedSerializer, RetreiveDocumentSerializer, SubmissionDetailSerializer, SubmissionListSerializer
 from django.db.models import Max
 
 from form_portal_management.models import Document
@@ -18,6 +19,8 @@ from rest_framework.decorators import (
     # authentication_classes,
     permission_classes
 )
+from rest_framework.permissions import IsAuthenticated, AllowAny
+
 
 
 
@@ -179,7 +182,8 @@ def get_form_answers_from_user_api(request, form_id, client_id):
 #             "status": "error",
 #             "message": str(e)
 #         }, status=500)
-@api_view(['POST'])
+
+@api_view(['GET'])
 def get_all_documents_for_user_api(request):
     try:
         body = json.loads(request.body)
@@ -210,57 +214,111 @@ def get_all_documents_for_user_api(request):
     except Exception as e:
         return Response({"status": "error", "message": str(e)}, status=500)
 
-# @api_view(['POST'])
-# def get_all_documents_for_user_api(request):
-#     """
-#     Retrieves all Z83 documents for a specific user.
-#     Expected input: { "user_id": "some-id" }
-#     """
-#     try:
-#         body = json.loads(request.body)
-#         user_id = body.get("user_id")
 
-#         print('user_id', user_id)
 
-#         if not user_id:
-#             print('No user id')
-#             return Response({"status": "error", "message": "Missing user_id"}, status=400)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_all_submissions_api(request, form_id):
+    try:
+        submissions = FormSubmission.objects.filter(
+            form_type_id=form_id
+        ).select_related('user', 'form_type').order_by('-submitted_at')
 
-#         # ✅ FIXED: Filter by uploaded_by instead of id
-#         # documents = Document.objects.filter(uploaded_by=user_id)
-#         # documents =Document.objects.filter(form_submission=submission, question=question,main_category=category).order_by('-uploaded_at').first()
-#         # Build a lookup for documents
-#         document_map = {}
-#         documents = Document.objects.filter(form_submission=submission)
-#         for doc in documents:
-#             key = f"{doc.question_id}-{doc.main_category_id}"
-#             document_map[key] = doc.file  # or use full serializer if needed
+        serializer = SubmissionListSerializer(submissions, many=True)
 
-#         # Then when looping through responses
-#         for response in responses:
-#             key = f"{response.question.id}-{response.category.id}"
-#             document_url = document_map.get(key)
-#             response_data = {
-#                 "question": response.question.id,
-#                 "question_text": response.question.text,
-#                 # Add other key/value pairs as needed
-#                 "file_upload": document_url,  # attach actual file
-#             }
+        return Response({
+            'status': 'success',
+            'count': submissions.count(),
+            'submissions': serializer.data,
+        }, status=status.HTTP_200_OK)
 
-#         # Optional: Add ordering for consistent results
-#         documents = documents.order_by('-uploaded_at')
-        
-#         serializer = RetreiveDocumentSerializer(documents, many=True)
+    except Exception as e:
+        return Response(
+            {'status': 'error', 'message': str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
-#         return Response({
-#             "status": "success",
-#             "message": "User documents retrieved successfully.",
-#             "documents": serializer.data,
-#             # "unanswered_questions": unanswered_questions
-#         }, status=200)
 
-#     except Exception as e:
-#         return Response({
-#             "status": "error",
-#             "message": str(e)
-#         }, status=500)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_submission_detail_api(request, submission_id):
+    try:
+        submission = FormSubmission.objects.select_related(
+            'user', 'form_type', 'reviewed_by'
+        ).get(id=submission_id)
+
+        # Only admin or the submission owner can view
+        if request.user != submission.user and not request.user.is_staff:
+            return Response(
+                {'status': 'error', 'message': 'Permission denied'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        serializer = SubmissionDetailSerializer(submission)
+
+        return Response({
+            'status': 'success',
+            'submission': serializer.data,
+        }, status=status.HTTP_200_OK)
+
+    except FormSubmission.DoesNotExist:
+        return Response(
+            {'status': 'error', 'message': 'Submission not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return Response(
+            {'status': 'error', 'message': str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def update_submission_status_api(request, submission_id):
+    try:
+        submission = FormSubmission.objects.get(id=submission_id)
+
+        # Only staff/admin can update status
+        if not request.user.is_staff:
+            return Response(
+                {'status': 'error', 'message': 'Permission denied'},
+                status=status.HTTP_403_FORBIDDEN
+        )
+
+        new_status = request.data.get('status')
+        review_notes = request.data.get('review_notes', None)
+
+        valid_statuses = ['draft', 'submitted', 'under_review', 'approved', 'rejected', 'returned']
+        if new_status not in valid_statuses:
+            return Response(
+                {'status': 'error', 'message': f'Invalid status. Must be one of: {valid_statuses}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        submission.status = new_status
+        if review_notes is not None:
+            submission.review_notes = review_notes
+        submission.reviewed_by = request.user
+        submission.reviewed_at = timezone.now()
+        submission.save()
+
+        return Response({
+            'status': 'success',
+            'message': f'Submission status updated to {new_status}',
+            'submission_id': submission.id,
+            'new_status': submission.status,
+            'reviewed_by': request.user.email,
+            'reviewed_at': submission.reviewed_at,
+        }, status=status.HTTP_200_OK)
+
+    except FormSubmission.DoesNotExist:
+        return Response(
+            {'status': 'error', 'message': 'Submission not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return Response(
+            {'status': 'error', 'message': str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

@@ -926,3 +926,103 @@ def validate_form_token_view(request, token):
         })
     except (User.DoesNotExist, FormType.DoesNotExist):
         return Response({'status': 'error', 'message': 'Invalid link.'}, status=404)
+
+
+@csrf_exempt
+def get_all_submissions(request, form_id):
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+    try:
+        auth_header = request.headers.get('Authorization', '')
+        token = None
+        if auth_header.startswith('Token '):
+            token = auth_header.split('Token ')[-1]
+        elif auth_header.startswith('Bearer '):
+            token = auth_header.split('Bearer ')[-1]
+
+        if not token:
+            return JsonResponse({'status': 'error', 'message': 'Authorization token is required.'}, status=401)
+
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Token {token}',
+        }
+
+        url = f"{host_url(request)}{reverse_lazy('get_all_submissions_api', kwargs={'form_id': form_id})}"
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+
+        return JsonResponse(response.json(), status=200)
+
+    except requests.exceptions.RequestException as e:
+        return JsonResponse({'status': 'error', 'message': f'Request failed: {str(e)}'}, status=500)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': f'Server error: {str(e)}'}, status=500)
+
+
+@csrf_exempt
+def get_submission_detail(request, submission_id):
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+    try:
+        auth_header = request.headers.get('Authorization', '')
+        token = None
+        if auth_header.startswith('Token '):
+            token = auth_header.split('Token ')[-1]
+        elif auth_header.startswith('Bearer '):
+            token = auth_header.split('Bearer ')[-1]
+
+        if not token:
+            return JsonResponse({'status': 'error', 'message': 'Authorization token is required.'}, status=401)
+
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Token {token}',
+        }
+
+        url = f"{host_url(request)}{reverse_lazy('get_submission_detail_api', kwargs={'submission_id': submission_id})}"
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+
+        return JsonResponse(response.json(), status=200)
+
+    except requests.exceptions.RequestException as e:
+        return JsonResponse({'status': 'error', 'message': f'Request failed: {str(e)}'}, status=500)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': f'Server error: {str(e)}'}, status=500)
+
+
+@csrf_exempt
+def update_submission_status(request, submission_id):
+    if request.method != 'PATCH':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+    try:
+        auth_header = request.headers.get('Authorization', '')
+        token = None
+        if auth_header.startswith('Token '):
+            token = auth_header.split('Token ')[-1]
+        elif auth_header.startswith('Bearer '):
+            token = auth_header.split('Bearer ')[-1]
+
+        if not token:
+            return JsonResponse({'status': 'error', 'message': 'Authorization token is required.'}, status=401)
+
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Token {token}',
+        }
+
+        body = json.loads(request.body)
+        url = f"{host_url(request)}{reverse_lazy('update_submission_status_api', kwargs={'submission_id': submission_id})}"
+        response = requests.patch(url, json=body, headers=headers, timeout=10)
+        response.raise_for_status()
+
+        return JsonResponse(response.json(), status=200)
+
+    except requests.exceptions.RequestException as e:
+        return JsonResponse({'status': 'error', 'message': f'Request failed: {str(e)}'}, status=500)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': f'Server error: {str(e)}'}, status=500)

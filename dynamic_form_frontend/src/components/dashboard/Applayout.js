@@ -47,6 +47,13 @@ const navItems = [
     icon: FileText,
   },
 
+    {
+    href: "/submissions",
+    label: "Submissions",
+    icon: Inbox,
+  },
+
+
   {
     href: "/invite-user",
     label: "Send Invites",

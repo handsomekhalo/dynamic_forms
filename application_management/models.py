@@ -46,6 +46,7 @@ class FormSubmission(models.Model):
     form_type = models.ForeignKey(FormType, on_delete=models.CASCADE)
     submitted_at = models.DateTimeField(auto_now_add=True)
     is_complete = models.BooleanField(default=True)  # you can support partial drafts later
+    review_notes = models.TextField(blank=True, null=True)
 
     status = models.CharField(
         max_length=20,

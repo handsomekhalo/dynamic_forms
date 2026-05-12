@@ -7,10 +7,12 @@ urlpatterns = [
     
     # path('get_form_details_api/<int:form_id>/',views.get_form_details_api,
     #      name='get_form_details_api'),
-    path('get_form_answers_from_user_api/<int:form_id>/<int:client_id>/',views.get_form_answers_from_user_api,
+     path('get_form_answers_from_user_api/<int:form_id>/<int:client_id>/',views.get_form_answers_from_user_api,
          name='get_form_answers_from_user_api'),
      path('get_all_documents_for_user_api/', views.get_all_documents_for_user_api, name="get_all_documents_for_user_api"),
-
+     path('get_all_submissions_api/<int:form_id>/', views.get_all_submissions_api, name='get_all_submissions_api'),
+     path('get_submission_detail_api/<int:submission_id>/', views.get_submission_detail_api, name='get_submission_detail_api'),
+     path('update_submission_status_api/<int:submission_id>/', views.update_submission_status_api , name='update_submission_status_api'),
 
      #     retrieve_user_documents_api
   
