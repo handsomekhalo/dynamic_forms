@@ -47,6 +47,23 @@ class FormSubmission(models.Model):
     submitted_at = models.DateTimeField(auto_now_add=True)
     is_complete = models.BooleanField(default=True)  # you can support partial drafts later
 
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'Pending'),
+            ('under_review', 'Under Review'),
+            ('approved', 'Approved'),
+            ('rejected', 'Rejected'),
+        ],
+            default='pending'
+            )
+    reviewed_by = models.ForeignKey(
+        User, null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='reviewed_submissions'
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
     def __str__(self):
         return f"{self.user.email} - {self.form_type.name}"
 
