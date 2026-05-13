@@ -183,7 +183,7 @@ def get_form_answers_from_user_api(request, form_id, client_id):
 #             "message": str(e)
 #         }, status=500)
 
-@api_view(['GET'])
+@api_view(['POST'])
 def get_all_documents_for_user_api(request):
     try:
         body = json.loads(request.body)
@@ -255,7 +255,7 @@ def get_submission_detail_api(request, submission_id):
             )
 
         serializer = SubmissionDetailSerializer(submission)
-
+        print(f"Fetched submission detail for submission_id {submission_id}: {serializer.data}")
         return Response({
             'status': 'success',
             'submission': serializer.data,

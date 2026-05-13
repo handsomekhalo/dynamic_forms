@@ -16,6 +16,9 @@ export default function SubmissionDetailPage() {
   const auth = useAuth() || {};
   const { authToken } = auth;
 
+  const [selectedFileUrl, setSelectedFileUrl] = useState(null);
+  const [isDocumentLoading, setIsDocumentLoading] = useState(false);
+
   const [submission, setSubmission] = useState(null);
 
   const [loading, setLoading] = useState(true);
@@ -38,7 +41,8 @@ export default function SubmissionDetailPage() {
           },
         }
       );
-
+      
+      console.log("Fetched submission detail:", res.data);
       setSubmission(res.data.submission);
     } catch (error) {
       console.error("Failed to fetch submission:", error);
@@ -50,7 +54,7 @@ export default function SubmissionDetailPage() {
   const updateStatus = async (status) => {
     try {
       await backendApi.patch(
-        `/form_management/update_submission_status/${id}/`,
+        `/form_portal_management/update_submission_status/${id}/`,
         {
           status,
         },
@@ -157,6 +161,148 @@ export default function SubmissionDetailPage() {
         </Card>
 
         <div className="space-y-4">
+  <h2 className="text-xl font-semibold">
+    Responses
+  </h2>
+
+  {submission.responses?.map((response) => (
+    <Card key={response.id}>
+      <CardContent className="pt-6 space-y-3">
+
+        <div>
+          <p className="text-sm text-gray-500">
+            Category
+          </p>
+
+          <p className="font-medium">
+            {response.category_name}
+          </p>
+        </div>
+
+        <div>
+          <p className="text-sm text-gray-500">
+            Question
+          </p>
+
+          <p className="font-medium">
+            {response.question_text}
+          </p>
+        </div>
+
+        
+
+        {/* <div>
+          <p className="text-sm text-gray-500">
+            Response
+          </p>
+
+          {response.file_upload ? (
+            <button
+              onClick={() => {
+                setIsDocumentLoading(true);
+
+                setSelectedFileUrl(
+                  encodeURI(
+                    response.file_upload.startsWith('http')
+            ? response.file_upload
+            : `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/${response.file_upload}`)
+                );
+              }}
+              className="text-blue-600 underline text-sm"
+            >
+              View Uploaded File
+            </button>
+          ) : (
+            <p className="text-gray-700">
+              {response.response_text ||
+                response.response_number ||
+                response.response_date ||
+                (response.response_boolean !== null
+                  ? response.response_boolean
+                    ? "Yes"
+                    : "No"
+                  : "-")}
+            </p>
+          )}
+        </div> */}
+
+        <div>
+  <p className="text-sm text-gray-500">Response</p>
+  {response.file_upload ? (
+    // --- ADDED '<a' HERE ---
+    <a
+      href={response.file_upload}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-blue-600 underline text-sm"
+    >
+      View Document
+    </a>
+  ) : (
+    <p className="text-gray-700">
+      {response.response_text ||
+        response.response_number ||
+        response.response_date ||
+        (response.response_boolean !== null
+          ? response.response_boolean
+            ? "Yes"
+            : "No"
+          : "-")}
+    </p>
+  )}
+</div>
+
+        
+
+      </CardContent>
+    </Card>
+  ))}
+</div>
+
+{selectedFileUrl && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="bg-white rounded-xl shadow-2xl w-[95%] max-w-5xl p-6 relative">
+
+      <button
+        onClick={() => setSelectedFileUrl(null)}
+        className="absolute top-3 right-3 text-gray-500 hover:text-black text-xl"
+      >
+        ✕
+      </button>
+
+      <div className="text-center font-bold text-lg mb-4">
+        Document Preview
+      </div>
+
+      {isDocumentLoading && (
+        <div className="text-center text-blue-500 mb-4">
+          Loading document...
+        </div>
+      )}
+
+      <iframe
+        src={selectedFileUrl}
+        title="Document Preview"
+        className="w-full h-[70vh] border rounded"
+        onLoad={() => setIsDocumentLoading(false)}
+      />
+
+      <div className="text-center mt-4">
+        <a
+          href={selectedFileUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 underline text-sm"
+        >
+          Open in new tab
+        </a>
+      </div>
+
+    </div>
+  </div>
+)}
+{/* 
+        <div className="space-y-4">
           <h2 className="text-xl font-semibold">
             Responses
           </h2>
@@ -207,8 +353,9 @@ export default function SubmissionDetailPage() {
               </CardContent>
             </Card>
           ))}
-        </div>
+        </div> */}
       </div>
+      
     </AppLayout>
   );
 }

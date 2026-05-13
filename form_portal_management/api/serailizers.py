@@ -7,6 +7,7 @@ from form_portal_management.models import Document
 from question_management.models import Question, Option
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
+from system_management.backblazes3 import open_back_blaze_s3_file
 
 User = get_user_model()
 
@@ -124,13 +125,12 @@ class RetreiveDocumentSerializer(serializers.ModelSerializer):
         ]
 
 
-
-
 class FormResponseSerializer(serializers.ModelSerializer):
     question_text = serializers.CharField(source='question.text', read_only=True)
     question_input_type = serializers.CharField(source='question.input_type', read_only=True)
     category_name = serializers.CharField(source='category.name', read_only=True)
     selected_option_text = serializers.CharField(source='selected_option.text', read_only=True, default=None)
+    file_upload = serializers.SerializerMethodField()  # ← add this
 
     class Meta:
         model = FormResponse
@@ -149,6 +149,58 @@ class FormResponseSerializer(serializers.ModelSerializer):
             'file_upload',
             'created_at',
         ]
+
+    # ← outside Meta, same indentation level as Meta
+    def get_file_upload(self, obj):
+        if not obj.file_upload:
+            return None
+        from system_management.backblazes3 import open_back_blaze_s3_file
+        try:
+            url = str(obj.file_upload)
+            if url.startswith('/https%3A/'):
+                url = 'https://' + url[len('/https%3A/'):]
+            result = open_back_blaze_s3_file(url)
+            if result and str(result).startswith('http') and ('X-Amz-Signature' in str(result) or 'backblazeb2.com' in str(result)):
+                return result
+            return None
+        except Exception:
+            return None
+
+# class FormResponseSerializer(serializers.ModelSerializer):
+#     question_text = serializers.CharField(source='question.text', read_only=True)
+#     question_input_type = serializers.CharField(source='question.input_type', read_only=True)
+#     category_name = serializers.CharField(source='category.name', read_only=True)
+#     selected_option_text = serializers.CharField(source='selected_option.text', read_only=True, default=None)
+
+#     class Meta:
+#         model = FormResponse
+#         fields = [
+#             'id',
+#             'question',
+#             'question_text',
+#             'question_input_type',
+#             'category',
+#             'category_name',
+#             'response_text',
+#             'response_number',
+#             'response_date',
+#             'response_boolean',
+#             'selected_option_text',
+#             'file_upload',
+#             'created_at',
+#         ]
+#         def get_file_upload(self, obj):
+#             if not obj.file_upload:
+#                 return None
+            
+#             url = str(obj.file_upload)
+            
+#             # Fix corrupted URLs stored as /https%3A/...
+#             if url.startswith('/https%3A/'):
+#                 url = 'https://' + url[len('/https%3A/'):]
+            
+#             # Generate presigned URL via your existing helper
+#             return open_back_blaze_s3_file(url)
 
 class SubmissionListSerializer(serializers.ModelSerializer):
     applicant_name = serializers.SerializerMethodField()

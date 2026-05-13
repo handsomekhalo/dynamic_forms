@@ -986,6 +986,8 @@ def get_submission_detail(request, submission_id):
         response = requests.get(url, headers=headers, timeout=10)
         response.raise_for_status()
 
+        # print(f"Fetched submission detail for submission_id {submission_id}: {response.json()}")
+
         return JsonResponse(response.json(), status=200)
 
     except requests.exceptions.RequestException as e:

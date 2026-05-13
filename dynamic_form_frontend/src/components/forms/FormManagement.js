@@ -1,5 +1,5 @@
 "use client";
-
+import { useRouter } from 'next/navigation'; 
 import { useEffect, useState } from "react";
 
 import Link from "next/link";
@@ -53,6 +53,8 @@ import UpdateFormModal from "@/components/forms/UpdateFormModal";
 export default function FormDetailPage() {
 
   const params = useParams();
+  const router = useRouter();
+
 
   const formId = params?.id;
 
@@ -215,6 +217,13 @@ export default function FormDetailPage() {
 
             Edit Form
           </Button>
+
+            <Button
+    variant="outline"
+    onClick={() => router.push(`/forms/${formId}/builder`)}
+  >
+    Open Builder
+  </Button>
 
           <Button asChild>
 
@@ -770,6 +779,10 @@ export default function FormDetailPage() {
         />
 
       )}
+
+      <Button onClick={() => router.push(`/forms/${form.id}/builder`)}>
+  Open Builder
+</Button>
 
     </AppLayout>
   );
