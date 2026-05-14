@@ -14,7 +14,7 @@ from form_portal_management.api.serailizers import RetreiveDocumentSerializer
 from question_management.models import Question
        
 from application_management.models import FormCategoryAssignment, FormQuestionAssignment, FormResponse, FormSubmission, FormType, MainCategory
-from form_portal_management.models import Document
+from form_portal_management.models import Document, FormInvite
 from system_management.backblazes3 import upload_to_backblaze_s3,open_back_blaze_s3_file
 from system_management.general_func_classes import host_url
 from rest_framework.response import Response
@@ -37,6 +37,8 @@ import threading
 import json
 from django.core import signing
 from django.core.mail import send_mail
+from django.db.models import Max
+
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
@@ -260,7 +262,9 @@ def submit_category_answers(request):
 
         # Save the answers
         saved_count = save_category_answers(submission, form_id, category_id, answers, request, user)
-
+        # Check if form is now complete and notify
+        check_form_complete_and_notify(submission, request)
+        
         return JsonResponse({
             "status": "success",
             "message": f"Successfully saved {saved_count} answers for category '{main_category.name}'",
@@ -777,6 +781,14 @@ def send_form_invitation_view(request):
         return Response({'error': 'User or form not found'}, status=404)
 
     token = generate_form_token(user_id, form_id)
+
+    # Record who sent this invite
+    FormInvite.objects.create(
+        sent_by=request.user,
+        recipient=user,
+        form_type=form,
+        token=token
+    )
     
     # Build the magic link
     frontend_url = request.build_absolute_uri('/').rstrip('/')
@@ -1028,3 +1040,87 @@ def update_submission_status(request, submission_id):
         return JsonResponse({'status': 'error', 'message': f'Request failed: {str(e)}'}, status=500)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': f'Server error: {str(e)}'}, status=500)
+
+
+def check_form_complete_and_notify(submission, request):
+    """
+    Check if all assigned questions have been answered.
+    If complete, send confirmation to client and alert to whoever sent the invite.
+    """
+    try:
+        form_id = submission.form_type_id
+        user_id = submission.user_id
+
+        # Get all assigned questions for this form
+        total_assigned = FormQuestionAssignment.objects.filter(
+            form_type_id=form_id
+        ).count()
+
+        if total_assigned == 0:
+            return
+
+        # Get latest unique answered questions
+        latest_ids = FormResponse.objects.filter(submission=submission) \
+            .values('question_id', 'category_id') \
+            .annotate(latest_id=Max('id')) \
+            .values_list('latest_id', flat=True)
+
+        answered_count = FormResponse.objects.filter(
+            id__in=latest_ids
+        ).values('question_id').distinct().count()
+
+        if answered_count < total_assigned:
+            return  # Not complete yet, do nothing
+
+        # Mark submission as submitted
+        submission.status = 'submitted'
+        submission.save()
+
+        # Get the user
+        user = submission.user
+        form = submission.form_type
+        submitted_at = submission.submitted_at.strftime('%d %B %Y at %H:%M')
+
+        # Build frontend URL
+        frontend_base = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+        review_link = f"{frontend_base}/submissions/{submission.id}"
+
+        # --- Email 1: Client confirmation ---
+        client_context = {
+            'first_name': user.first_name or user.email,
+            'form_name': form.name,
+            'submitted_at': submitted_at,
+        }
+        from django.template.loader import get_template
+        client_html = get_template('email_temps/submission_confirmation.html').render(client_context)
+
+        threading.Thread(
+            target=send_email_api,
+            args=(user.email, f"Your {form.name} submission has been received", client_html)
+        ).start()
+
+        # --- Email 2: Alert to whoever sent the invite ---
+        invite = FormInvite.objects.filter(
+            recipient=user,
+            form_type=form
+        ).order_by('-sent_at').first()
+
+        if invite and invite.sent_by:
+            admin_context = {
+                'applicant_name': f"{user.first_name} {user.last_name}".strip() or user.email,
+                'applicant_email': user.email,
+                'form_name': form.name,
+                'submitted_at': submitted_at,
+                'review_link': review_link,
+            }
+            admin_html = get_template('email_temps/admin_submission_alert.html').render(admin_context)
+
+            threading.Thread(
+                target=send_email_api,
+                args=(invite.sent_by.email, f"New submission: {form.name} — {user.email}", admin_html)
+            ).start()
+
+    except Exception as e:
+        print(f"[NOTIFY ERROR] {e}")
+        import traceback
+        traceback.print_exc()

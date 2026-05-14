@@ -86,4 +86,7 @@ def api_connection(method, url, headers, data=None):
 
 def _send_email_thread(url, headers, payload):
     """This function is used to send email in a thread."""
-    requests.post(url=url, headers=headers, data=payload, timeout=120)
+    requests.post(url=url, headers=headers, json=json.loads(payload), timeout=120)
+# def _send_email_thread(url, headers, payload):
+#     """This function is used to send email in a thread."""
+#     requests.post(url=url, headers=headers, data=payload, timeout=120)

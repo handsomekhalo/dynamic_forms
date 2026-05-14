@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
+    .container { max-width: 600px; margin: 40px auto; background: white; border-radius: 8px; padding: 40px; }
+    .header { color: #1a1a2e; font-size: 24px; font-weight: bold; margin-bottom: 8px; }
+    .subtext { color: #666; font-size: 14px; margin-bottom: 24px; }
+    .detail { background: #f8f9fa; border-radius: 6px; padding: 16px; margin-bottom: 24px; }
+    .detail p { margin: 4px 0; font-size: 14px; color: #333; }
+    .footer { font-size: 12px; color: #999; margin-top: 32px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">Submission Received</div>
+    <p class="subtext">Hi {{ first_name }}, your form submission has been received successfully.</p>
+
+    <div class="detail">
+      <p><strong>Form:</strong> {{ form_name }}</p>
+      <p><strong>Submitted:</strong> {{ submitted_at }}</p>
+      <p><strong>Status:</strong> Pending Review</p>
+    </div>
+
+    <p style="font-size:14px; color:#333;">
+      You will be notified once your submission has been reviewed.
+      If you need to make changes, please contact the person who sent you this form.
+    </p>
+
+    <div class="footer">
+      This is an automated message from Z83 Dynamic Tool. Please do not reply to this email.
+    </div>
+  </div>
+</body>
+</html>

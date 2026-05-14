@@ -453,6 +453,7 @@ def create_users_api(request):
             
             missing_fields = [field for field in required_fields if not body.get(field)]
             if missing_fields:
+                print(f"Missing required fields: {', '.join(missing_fields)}")
                 data = {
                     "status": "error",
                     "message": f"Missing required fields: {', '.join(missing_fields)}"
@@ -463,6 +464,7 @@ def create_users_api(request):
             serializer = CreateUserSerializer(data=body)
             
             if serializer.is_valid():
+                print("Serializer is valid. Creating user...")
                 # Create user
                 user = serializer.save()
                 
@@ -473,7 +475,7 @@ def create_users_api(request):
                         user.user_created_by = created_by_user
                         user.save()
                     except User.DoesNotExist:
-                        pass  # Continue without setting created_by if user doesn't exist
+                        print("User who created the new user does not exist.")
                 
                 # Generate token for the new user
                 token, _ = Token.objects.get_or_create(user=user)
@@ -483,10 +485,12 @@ def create_users_api(request):
                 
                 # Get profile information
                 try:
+                    print("Fetching user profile...")
                     profile = Profile.objects.get(user_id=user.id)
                     first_login = profile.first_login
                     user_number = profile.phone_number
                 except Profile.DoesNotExist:
+                    print("Profile does not exist for the new user.")
                     first_login = True
                     user_number = body.get('phone_number', '')
                 
@@ -496,6 +500,8 @@ def create_users_api(request):
                 
                 # Serialize user data
                 user_serializer = UserModelSerializer(user)
+
+                print("User created successfully. Preparing response...")
                 
                 response_data = {
                     "status": "success",
@@ -511,6 +517,7 @@ def create_users_api(request):
             
             else:
                 # Return validation errors
+                print('Serializer errors:', serializer.errors)
                 error_messages = []
                 for field, errors in serializer.errors.items():
                     for error in errors:
@@ -523,13 +530,15 @@ def create_users_api(request):
                 return Response(data, status=status.HTTP_400_BAD_REQUEST)
                 
         except json.JSONDecodeError:
+            print("Invalid JSON format in request body.")
             data = {
                 "status": "error",
                 "message": "Invalid JSON format"
             }
             return Response(data, status=status.HTTP_400_BAD_REQUEST)
             
-        except Exception as e:
+        except Exception as e:  
+            print(f"Exception in create_users_api: {str(e)}")
             data = {
                 "status": "error",
                 "message": f"An error occurred: {str(e)}"
@@ -545,19 +554,9 @@ def create_users_api(request):
 
 
 @api_view(["POST"])
-# @permission_classes((AllowAny,))
 def delete_user_api(request):
-    """
-    Deletes a user and their profile by email.
-    Accepts email in body (JSON or form-data) or query param.
-    """
     try:
-        if request.content_type == 'application/json':
-            body = json.loads(request.body)
-        else:
-            body = request.data
-
-        email = body.get("email") or request.query_params.get("email")
+        email = request.data.get("email") or request.query_params.get("email")
 
         if not email:
             return Response({
@@ -572,12 +571,18 @@ def delete_user_api(request):
                 "message": serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        user = User.objects.get(email=email)
-        user.delete()
+        try:
+            user = User.objects.get(email=email)
+            user.delete()
+        except User.DoesNotExist:
+            return Response({
+                "status": "error",
+                "message": f"No user found with email {email}"
+            }, status=status.HTTP_404_NOT_FOUND)
 
         return Response({
             "status": "success",
-            "message": f"User with email {email} has been deleted."
+            "message": f"User {email} deleted successfully."
         }, status=status.HTTP_200_OK)
 
     except Exception as e:
@@ -585,3 +590,54 @@ def delete_user_api(request):
             "status": "error",
             "message": f"An unexpected error occurred: {str(e)}"
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# @api_view(["POST"])
+# # @permission_classes((AllowAny,))
+# def delete_user_api(request):
+#     """
+#     Deletes a user and their profile by email.
+#     Accepts email in body (JSON or form-data) or query param.
+#     """
+#     try:
+#         # if request.content_type == 'application/json':
+#         #     body = json.loads(request.body)
+#         # else:
+#         #     body = request.data
+#         body = request.data
+
+#         email = body.get("email") or request.query_params.get("email")
+
+#         if not email:
+#             return Response({
+#                 "status": "error",
+#                 "message": "Email is required to delete a user."
+#             }, status=status.HTTP_400_BAD_REQUEST)
+
+#         serializer = DeleteUserSerializer(data={"email": email})
+#         if not serializer.is_valid():
+#             return Response({
+#                 "status": "error",
+#                 "message": serializer.errors
+#             }, status=status.HTTP_400_BAD_REQUEST)
+
+#         # user = User.objects.get(email=email)
+#         # user.delete()
+#         try:
+#             user = User.objects.get(email=email)
+#             user.delete()
+#         except User.DoesNotExist:
+#             return Response({
+#                 "status": "error",
+#                 "message": f"No user found with email {email}"
+#             }, status=status.HTTP_404_NOT_FOUND)
+
+#         return Response({
+#             "status": "success",
+#             "message": f"User with email {email} has been deleted."
+#         }, status=status.HTTP_200_OK)
+
+#     except Exception as e:
+#         return Response({
+#             "status": "error",
+#             "message": f"An unexpected error occurred: {str(e)}"
+#         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

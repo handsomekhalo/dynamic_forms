@@ -742,7 +742,8 @@ def create_user(request):
 
         # Prepare API payload
         url = f"{host_url(request)}{reverse('create_users_api')}"
-        payload = json.dumps({
+        # payload = json.dumps({
+        payload = {
             "user_type_id": int(user_type_id),
             "first_name": first_name,
             "last_name": last_name,
@@ -758,7 +759,7 @@ def create_user(request):
             "province": province,
             "postal_code": postal_code or "",
             "user_created_by": user_created_by_id
-        })
+        }
 
         headers = {
             'Authorization': f'Token {token}',
@@ -896,12 +897,15 @@ def delete_user(request):
             'Authorization': f'Token {token}',
             'Content-Type': 'application/json'
         }
-        payload = json.dumps({
-            "email": email
-        })
+        # payload = json.dumps({
+        payload = {"email": email}
 
+        #     "email": email
+        # })
+        print('delete user payload', payload)
         response_data = api_connection(method="POST", url=url, headers=headers, data=payload)
-
+        # response_data = api_connection(method="POST", url=url, headers=headers, json=payload)
+        print('delete user response', response_data)
         if response_data.get("status") == "success":
             return JsonResponse({
                 "status": "success",
