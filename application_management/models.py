@@ -4,16 +4,19 @@ from question_management.models import Question
 from system_management.models import User
 
 # Create your models here.
+from system_management.models import Organisation
+
 class FormType(models.Model):
-    name = models.CharField(max_length=250)
+    name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
-    date_created = models.DateTimeField(default=timezone.now)
-    categories = models.ManyToManyField('MainCategory', blank=True)
-
-
-    def __str__(self):
-        return self.name
+    organisation = models.ForeignKey(
+        Organisation,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='forms'
+    )
 
 
 class MainCategory(models.Model):

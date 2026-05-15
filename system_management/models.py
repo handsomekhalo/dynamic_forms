@@ -42,7 +42,18 @@ class User(AbstractUser):
     username = None
     email = models.EmailField(unique=True)
     user_type = models.ForeignKey(UserType, on_delete=models.CASCADE)
-    user_created_by = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='created_users')
+    organisation = models.ForeignKey(
+        'Organisation',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='users'
+    )
+    user_created_by = models.ForeignKey(
+        'self', null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='created_users'
+    )
 
     objects = UserManager()
     USERNAME_FIELD = 'email'
@@ -70,6 +81,14 @@ class Profile(models.Model):
 
 class Province(models.Model):
     name = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.name
+
+class Organisation(models.Model):
+    name = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return self.name
