@@ -1,5 +1,4 @@
 "use client"; // Ensure this is a client component
-
 import React, { useState, useEffect } from "react";
 import backendApi from "../../../utils/backendApi";
 import { useAuth } from "../../../AuthContext";
@@ -7,10 +6,13 @@ import Swal from "sweetalert2";
 // import { useLocation } from "react-router-dom"; // Import useLocation to access the URL
 // import { useRouter } from "next/router"; // Import useRouter from next/router
 import { useRouter } from 'next/navigation'; // 
+import { useParams } from 'next/navigation';
+
 
 
 // export default function FormPortal_Management() {
- export default function FormPortal_Management({ magicLinkFormId = null, magicLinkUserId = null }) {
+ export default function FormPortal_Management({ magicLinkFormId = null, magicLinkUserId = null,  magicLinkToken = null  // add this
+}) {
 
   const [forms, setForms] = useState([]);
   const [selectedFormId, setSelectedFormId] = useState(null);
@@ -164,10 +166,15 @@ useEffect(() => {
   const fetchFormAnswers = async (formId) => {
   setLoadingAnswers(true);
   try {
+    const userParam = magicLinkUserId ? `?user_id=${magicLinkUserId}` : '';
+
     const res = await backendApi.get(
-      `/form_portal_management/get_form_answers_from_user/${formId}/`,
+      // `/form_portal_management/get_form_answers_from_user/${formId}/`,
+      `/form_portal_management/get_form_answers_from_user/${formId}/${userParam}`,
+
       {
         headers: authToken ? { Authorization: `Token ${authToken}` } : {},
+        
 
       }
     );
@@ -392,15 +399,19 @@ useEffect(() => {
         form_id: parseInt(formId),
         category_id: parseInt(categoryId),
         answers: categoryAnswers,
+          magic_link_token: magicLinkToken || null,
+        magic_link_token: magicLinkToken || null,
+
       };
 
       console.log("Submitting payload:", payload);
 
+// CORRECT — payload as body, headers separate
       const res = await backendApi.post(
         "/form_portal_management/submit_category_answers/",
+        payload,
         {
-          headers: { Authorization: `Token ${authToken}`, payload },
-          
+          headers: authToken ? { Authorization: `Token ${authToken}` } : {},
         }
       );
 
@@ -663,9 +674,11 @@ case "file":
 
     <div className="p-6 bg-white shadow-md rounded-xl max-w-4xl mx-auto">
       {/* <h2 className="text-2xl font-bold mb-4">Form Answering Portal</h2> */}
-        <h2 className="text-3xl font-bold text-gray-800 mb-6 border-b pb-2">
+        {!magicLinkFormId && (
+  <h2 className="text-3xl font-bold text-gray-800 mb-6 border-b pb-2">
     📄 Form Answering Portal
   </h2>
+)}
 
       {/* {error && (
         <div className="bg-red-100 text-red-600 p-3 rounded mb-4 border border-red-200">
@@ -696,23 +709,25 @@ case "file":
         </select>
       </div> */}
 
-<div className="mb-8">
-  <label className="block text-sm font-semibold text-gray-700 mb-2">
-    Select a Form
-  </label>
-  <select
-    className="border border-gray-300 p-3 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-    value={selectedFormId || ""}
-    onChange={(e) => handleFormSelect(parseInt(e.target.value))}
-  >
-    <option value="">-- Choose Form --</option>
-    {forms?.map?.((form) => (
-      <option key={form.id} value={form.id}>
-        {form.name}
-      </option>
-    ))}
-  </select>
-</div>
+{!magicLinkFormId && (
+  <div className="mb-8">
+    <label className="block text-sm font-semibold text-gray-700 mb-2">
+      Select a Form
+    </label>
+    <select
+      className="border border-gray-300 p-3 rounded-lg w-full"
+      value={selectedFormId || ""}
+      onChange={(e) => handleFormSelect(parseInt(e.target.value))}
+    >
+      <option value="">-- Choose Form --</option>
+      {forms?.map?.((form) => (
+        <option key={form.id} value={form.id}>
+          {form.name}
+        </option>
+      ))}
+    </select>
+  </div>
+)}
 
       {/* {loadingAnswers && (
         <div className="bg-blue-100 text-blue-600 p-3 rounded mb-4 border border-blue-200">
@@ -731,7 +746,7 @@ case "file":
       {formDetails.length > 0 && (
         <div className="space-y-4">
           <h3 className="text-xl font-semibold text-gray-800 mb-4">
-            Form Categories
+            {/* Form Categories */}
           </h3>
 
           {formDetails.map((category) => {

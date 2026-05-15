@@ -1,4 +1,5 @@
 import json
+import os
 from urllib.parse import urlencode
 from django.forms import ValidationError
 from django.views.decorators.csrf import csrf_exempt
@@ -10,6 +11,7 @@ import base64
 from django.core.files.base import ContentFile
 from application_management.models import FormType, MainCategory, FormSubmission, FormResponse, FormQuestionAssignment, FormCategoryAssignment
 from application_management.models import FormType, MainCategory, FormResponse, FormQuestionAssignment
+from dynamic_forms import settings
 from form_portal_management.api.serailizers import RetreiveDocumentSerializer
 from question_management.models import Question
        
@@ -149,17 +151,147 @@ def get_all_form_details_no_token(request, formId):
         }, status=500)
 
 
+# @csrf_exempt
+# def submit_category_answers(request):
+#     try:
+#         # Ensure Content-Type is application/json
+#         if request.content_type != 'application/json':
+#             return JsonResponse({
+#                 "status": "error",
+#                 "message": "Content-Type must be application/json"
+#             }, status=400)
+
+#         # Load and debug the data
+#         try:
+#             data = json.loads(request.body)
+#         except json.JSONDecodeError:
+#             return JsonResponse({
+#                 "status": "error",
+#                 "message": "Invalid JSON format"
+#             }, status=400)
+
+#         # Extract Authorization Token - try from headers first, then from data
+#         auth_header = request.headers.get("Authorization", "")
+#         token = None
+        
+#         if auth_header.startswith("Token "):
+#             token = auth_header.split("Token ")[-1]
+#         elif auth_header.startswith("Bearer "):
+#             token = auth_header.split("Bearer ")[-1]
+#         elif 'headers' in data and 'Authorization' in data['headers']:
+#             # Extract from nested headers if not in request headers
+#             auth_value = data['headers']['Authorization']
+#             if auth_value.startswith("Token "):
+#                 token = auth_value.split("Token ")[-1]
+#             elif auth_value.startswith("Bearer "):
+#                 token = auth_value.split("Bearer ")[-1]
+
+#         if not token:
+#             return JsonResponse({
+#                 "status": "error",
+#                 "message": "Authorization token is required."
+#             }, status=401)
+
+#         # Authenticate user based on token
+#         try:
+#             token_obj = Token.objects.get(key=token)
+#             user = token_obj.user
+#         except Token.DoesNotExist:
+#             return JsonResponse({
+#                 "status": "error",
+#                 "message": "Invalid token"
+#             }, status=401)
+
+#         # Extract the actual payload data - check multiple possible locations
+#         if 'headers' in data and 'payload' in data['headers']:
+#             # Data is nested under headers.payload
+#             payload_data = data['headers']['payload']
+#         elif 'payload' in data:
+#             # Data is nested under 'payload'
+#             payload_data = data['payload']
+#         else:
+#             # Data is at root level
+#             payload_data = data
+
+#         # Extract the expected fields from the correct data structure
+#         form_id = payload_data.get("form_id")
+#         category_id = payload_data.get("category_id")
+#         answers = payload_data.get("answers", [])
+
+#         print('answers', answers)
+
+#         # Validation
+#         if form_id is None:
+#             return JsonResponse({"status": "error", "message": "form_id is required"}, status=400)
+#         if category_id is None:
+#             return JsonResponse({"status": "error", "message": "category_id is required"}, status=400)
+#         if not answers or not isinstance(answers, list):
+#             return JsonResponse({"status": "error", "message": "answers must be a non-empty list"}, status=400)
+
+#         try:
+#             form_id = int(form_id)
+#             category_id = int(category_id)
+#         except (ValueError, TypeError):
+#             return JsonResponse({
+#                 "status": "error",
+#                 "message": "form_id and category_id must be valid integers"
+#             }, status=400)
+
+#         # Validate that the form and category exist
+
+#         try:
+#             form_type = FormType.objects.get(id=form_id)
+#         except FormType.DoesNotExist:
+#             return JsonResponse({"status": "error", "message": "Invalid form_id"}, status=400)
+
+#         try:
+#             main_category = MainCategory.objects.get(id=category_id)
+#         except MainCategory.DoesNotExist:
+#             return JsonResponse({"status": "error", "message": "Invalid category_id"}, status=400)
+
+#         if not FormCategoryAssignment.objects.filter(form_type=form_type, main_category=main_category).exists():
+#             return JsonResponse({
+#                 "status": "error",
+#                 "message": "Category is not assigned to this form"
+#             }, status=400)
+
+#         # Save submission record (create if not exists)
+#         submission, created = FormSubmission.objects.get_or_create(
+#             user=user,
+#             form_type=form_type,
+#             defaults={'is_complete': False}
+#         )
+
+#         # Save the answers
+#         saved_count = save_category_answers(submission, form_id, category_id, answers, request, user)
+#         # Check if form is now complete and notify
+#         check_form_complete_and_notify(submission, request)
+
+#         return JsonResponse({
+#             "status": "success",
+#             "message": f"Successfully saved {saved_count} answers for category '{main_category.name}'",
+#             "formId": form_id,
+#             "categoryId": category_id,
+#             "savedAnswers": saved_count
+#         }, status=200)
+
+#     except Exception as e:
+#         import traceback
+#         traceback.print_exc()
+#         return JsonResponse({
+#             "status": "error",
+#             "message": f"Server error occurred: {str(e)}"
+#         }, status=500)
+
 @csrf_exempt
 def submit_category_answers(request):
     try:
-        # Ensure Content-Type is application/json
         if request.content_type != 'application/json':
             return JsonResponse({
                 "status": "error",
                 "message": "Content-Type must be application/json"
             }, status=400)
 
-        # Load and debug the data
         try:
             data = json.loads(request.body)
         except json.JSONDecodeError:
@@ -168,63 +300,113 @@ def submit_category_answers(request):
                 "message": "Invalid JSON format"
             }, status=400)
 
-        # Extract Authorization Token - try from headers first, then from data
+        # -----------------------------
+        # AUTH TOKEN EXTRACTION
+        # -----------------------------
         auth_header = request.headers.get("Authorization", "")
         token = None
-        
+
         if auth_header.startswith("Token "):
             token = auth_header.split("Token ")[-1]
         elif auth_header.startswith("Bearer "):
             token = auth_header.split("Bearer ")[-1]
         elif 'headers' in data and 'Authorization' in data['headers']:
-            # Extract from nested headers if not in request headers
             auth_value = data['headers']['Authorization']
             if auth_value.startswith("Token "):
                 token = auth_value.split("Token ")[-1]
             elif auth_value.startswith("Bearer "):
                 token = auth_value.split("Bearer ")[-1]
 
-        if not token:
-            return JsonResponse({
-                "status": "error",
-                "message": "Authorization token is required."
-            }, status=401)
-
-        # Authenticate user based on token
-        try:
-            token_obj = Token.objects.get(key=token)
-            user = token_obj.user
-        except Token.DoesNotExist:
-            return JsonResponse({
-                "status": "error",
-                "message": "Invalid token"
-            }, status=401)
-
-        # Extract the actual payload data - check multiple possible locations
+        # -----------------------------
+        # PAYLOAD EXTRACTION
+        # -----------------------------
         if 'headers' in data and 'payload' in data['headers']:
-            # Data is nested under headers.payload
             payload_data = data['headers']['payload']
         elif 'payload' in data:
-            # Data is nested under 'payload'
             payload_data = data['payload']
         else:
-            # Data is at root level
             payload_data = data
 
-        # Extract the expected fields from the correct data structure
         form_id = payload_data.get("form_id")
         category_id = payload_data.get("category_id")
         answers = payload_data.get("answers", [])
+        magic_link_token = payload_data.get("magic_link_token")
 
-        print('answers', answers)
+        # -----------------------------
+        # USER RESOLUTION
+        # -----------------------------
+        authenticated_user = None
 
-        # Validation
+        if token:
+            try:
+                token_obj = Token.objects.get(key=token)
+                authenticated_user = token_obj.user
+            except Token.DoesNotExist:
+                if not magic_link_token:
+                    return JsonResponse({
+                        "status": "error",
+                        "message": "Invalid token"
+                    }, status=401)
+
+        elif not magic_link_token:
+            return JsonResponse({
+                "status": "error",
+                "message": "Authorization token or magic link token is required."
+            }, status=401)
+
+        # Default submission user to authenticated user
+        submission_user = authenticated_user
+
+        # -----------------------------
+        # MAGIC LINK RESOLUTION
+        # -----------------------------
+        if magic_link_token:
+            try:
+                invite = FormInvite.objects.select_related(
+                    'recipient', 'form_type'
+                ).get(token=magic_link_token)
+
+                submission_user = invite.recipient
+
+                # Validate form matches invite
+                if form_id and int(form_id) != invite.form_type.id:
+                    return JsonResponse({
+                        "status": "error",
+                        "message": "Invalid form for this invite"
+                    }, status=403)
+
+            except FormInvite.DoesNotExist:
+                return JsonResponse({
+                    "status": "error",
+                    "message": "Invalid magic link token"
+                }, status=401)
+
+        if not submission_user:
+            return JsonResponse({
+                "status": "error",
+                "message": "Could not resolve submission user"
+            }, status=401)
+
+        # -----------------------------
+        # VALIDATION
+        # -----------------------------
         if form_id is None:
-            return JsonResponse({"status": "error", "message": "form_id is required"}, status=400)
+            return JsonResponse({
+                "status": "error",
+                "message": "form_id is required"
+            }, status=400)
+
         if category_id is None:
-            return JsonResponse({"status": "error", "message": "category_id is required"}, status=400)
+            return JsonResponse({
+                "status": "error",
+                "message": "category_id is required"
+            }, status=400)
+
         if not answers or not isinstance(answers, list):
-            return JsonResponse({"status": "error", "message": "answers must be a non-empty list"}, status=400)
+            return JsonResponse({
+                "status": "error",
+                "message": "answers must be a non-empty list"
+            }, status=400)
 
         try:
             form_id = int(form_id)
@@ -235,42 +417,65 @@ def submit_category_answers(request):
                 "message": "form_id and category_id must be valid integers"
             }, status=400)
 
-        # Validate that the form and category exist
-
         try:
             form_type = FormType.objects.get(id=form_id)
         except FormType.DoesNotExist:
-            return JsonResponse({"status": "error", "message": "Invalid form_id"}, status=400)
+            return JsonResponse({
+                "status": "error",
+                "message": "Invalid form_id"
+            }, status=400)
 
         try:
             main_category = MainCategory.objects.get(id=category_id)
         except MainCategory.DoesNotExist:
-            return JsonResponse({"status": "error", "message": "Invalid category_id"}, status=400)
+            return JsonResponse({
+                "status": "error",
+                "message": "Invalid category_id"
+            }, status=400)
 
-        if not FormCategoryAssignment.objects.filter(form_type=form_type, main_category=main_category).exists():
+        if not FormCategoryAssignment.objects.filter(
+            form_type=form_type,
+            main_category=main_category
+        ).exists():
             return JsonResponse({
                 "status": "error",
                 "message": "Category is not assigned to this form"
             }, status=400)
 
-        # Save submission record (create if not exists)
+        # -----------------------------
+        # CREATE SUBMISSION
+        # -----------------------------
         submission, created = FormSubmission.objects.get_or_create(
-            user=user,
+            user=submission_user,
             form_type=form_type,
             defaults={'is_complete': False}
         )
 
-        # Save the answers
-        saved_count = save_category_answers(submission, form_id, category_id, answers, request, user)
-        # Check if form is now complete and notify
+        # -----------------------------
+        # SAVE ANSWERS
+        # -----------------------------
+        saved_count = save_category_answers(
+            submission,
+            form_id,
+            category_id,
+            answers,
+            request,
+            submission_user
+        )
+
+        # -----------------------------
+        # COMPLETION CHECK
+        # -----------------------------
         check_form_complete_and_notify(submission, request)
-        
+
         return JsonResponse({
             "status": "success",
-            "message": f"Successfully saved {saved_count} answers for category '{main_category.name}'",
+            "message": f"Successfully saved {saved_count} answers",
             "formId": form_id,
             "categoryId": category_id,
-            "savedAnswers": saved_count
+            "savedAnswers": saved_count,
+            "submissionId": submission.id,
+            "submissionUser": submission_user.email,
         }, status=200)
 
     except Exception as e:
@@ -281,7 +486,221 @@ def submit_category_answers(request):
             "message": f"Server error occurred: {str(e)}"
         }, status=500)
 
+# @csrf_exempt
+# def submit_category_answers(request):
+#     try:
 
+#         if request.content_type != 'application/json':
+#             return JsonResponse({
+#                 "status": "error",
+#                 "message": "Content-Type must be application/json"
+#             }, status=400)
+
+#         try:
+#             data = json.loads(request.body)
+
+#         except json.JSONDecodeError:
+#             return JsonResponse({
+#                 "status": "error",
+#                 "message": "Invalid JSON format"
+#             }, status=400)
+
+#         auth_header = request.headers.get("Authorization", "")
+#         token = None
+
+#         if auth_header.startswith("Token "):
+#             token = auth_header.split("Token ")[-1]
+
+#         elif auth_header.startswith("Bearer "):
+#             token = auth_header.split("Bearer ")[-1]
+
+#         elif 'headers' in data and 'Authorization' in data['headers']:
+
+#             auth_value = data['headers']['Authorization']
+
+#             if auth_value.startswith("Token "):
+#                 token = auth_value.split("Token ")[-1]
+
+#             elif auth_value.startswith("Bearer "):
+#                 token = auth_value.split("Bearer ")[-1]
+
+#         if not token:
+#             return JsonResponse({
+#                 "status": "error",
+#                 "message": "Authorization token is required."
+#             }, status=401)
+
+#         try:
+#             token_obj = Token.objects.get(key=token)
+#             authenticated_user = token_obj.user
+
+#         except Token.DoesNotExist:
+#             return JsonResponse({
+#                 "status": "error",
+#                 "message": "Invalid token"
+#             }, status=401)
+
+#         # -----------------------------
+#         # PAYLOAD EXTRACTION
+#         # -----------------------------
+
+#         if 'headers' in data and 'payload' in data['headers']:
+#             payload_data = data['headers']['payload']
+
+#         elif 'payload' in data:
+#             payload_data = data['payload']
+
+#         else:
+#             payload_data = data
+
+#         form_id = payload_data.get("form_id")
+#         category_id = payload_data.get("category_id")
+#         answers = payload_data.get("answers", [])
+
+#         # -----------------------------
+#         # MAGIC LINK SUPPORT
+#         # -----------------------------
+
+#         magic_link_token = payload_data.get("magic_link_token")
+
+#         submission_user = authenticated_user
+
+#         if magic_link_token:
+
+#             try:
+#                 invite = FormInvite.objects.select_related(
+#                     'recipient',
+#                     'form_type'
+#                 ).get(token=magic_link_token)
+
+#                 submission_user = invite.recipient
+
+#                 # Optional security validation
+#                 if int(form_id) != invite.form_type.id:
+#                     return JsonResponse({
+#                         "status": "error",
+#                         "message": "Invalid form for this invite"
+#                     }, status=403)
+
+#             except FormInvite.DoesNotExist:
+#                 return JsonResponse({
+#                     "status": "error",
+#                     "message": "Invalid magic link token"
+#                 }, status=401)
+
+#         # -----------------------------
+#         # VALIDATION
+#         # -----------------------------
+
+#         if form_id is None:
+#             return JsonResponse({
+#                 "status": "error",
+#                 "message": "form_id is required"
+#             }, status=400)
+
+#         if category_id is None:
+#             return JsonResponse({
+#                 "status": "error",
+#                 "message": "category_id is required"
+#             }, status=400)
+
+#         if not answers or not isinstance(answers, list):
+#             return JsonResponse({
+#                 "status": "error",
+#                 "message": "answers must be a non-empty list"
+#             }, status=400)
+
+#         try:
+#             form_id = int(form_id)
+#             category_id = int(category_id)
+
+#         except (ValueError, TypeError):
+#             return JsonResponse({
+#                 "status": "error",
+#                 "message": "form_id and category_id must be valid integers"
+#             }, status=400)
+
+#         try:
+#             form_type = FormType.objects.get(id=form_id)
+
+#         except FormType.DoesNotExist:
+#             return JsonResponse({
+#                 "status": "error",
+#                 "message": "Invalid form_id"
+#             }, status=400)
+
+#         try:
+#             main_category = MainCategory.objects.get(id=category_id)
+
+#         except MainCategory.DoesNotExist:
+#             return JsonResponse({
+#                 "status": "error",
+#                 "message": "Invalid category_id"
+#             }, status=400)
+
+#         if not FormCategoryAssignment.objects.filter(
+#             form_type=form_type,
+#             main_category=main_category
+#         ).exists():
+
+#             return JsonResponse({
+#                 "status": "error",
+#                 "message": "Category is not assigned to this form"
+#             }, status=400)
+
+#         # -----------------------------
+#         # CREATE SUBMISSION
+#         # -----------------------------
+
+#         submission, created = FormSubmission.objects.get_or_create(
+#             user=submission_user,
+#             form_type=form_type,
+#             defaults={
+#                 'is_complete': False
+#             }
+#         )
+
+#         # -----------------------------
+#         # SAVE ANSWERS
+#         # -----------------------------
+
+#         saved_count = save_category_answers(
+#             submission,
+#             form_id,
+#             category_id,
+#             answers,
+#             request,
+#             submission_user
+#         )
+
+#         # -----------------------------
+#         # COMPLETION CHECK
+#         # -----------------------------
+
+#         check_form_complete_and_notify(
+#             submission,
+#             request
+#         )
+
+#         return JsonResponse({
+#             "status": "success",
+#             "message": f"Successfully saved {saved_count} answers",
+#             "formId": form_id,
+#             "categoryId": category_id,
+#             "savedAnswers": saved_count,
+#             "submissionId": submission.id,
+#             "submissionUser": submission_user.email,
+#         }, status=200)
+
+#     except Exception as e:
+
+#         import traceback
+#         traceback.print_exc()
+
+#         return JsonResponse({
+#             "status": "error",
+#             "message": f"Server error occurred: {str(e)}"
+#         }, status=500)
 
 def save_category_answers(submission, form_id, category_id, answers, request, user):
     """
@@ -306,14 +725,28 @@ def save_category_answers(submission, form_id, category_id, answers, request, us
             question_id = int(question_id)
             question = Question.objects.get(id=question_id)
 
+
+
             # Validate that this question belongs to this category and form
-            if not FormQuestionAssignment.objects.filter(
+                        # Validate that this question belongs to this category and form
+            exists = FormQuestionAssignment.objects.filter(
                 form_type_id=form_id,
                 main_category_id=category_id,
                 question_id=question_id
-            ).exists():
-                print(f"Question {question_id} not assigned to form {form_id}, category {category_id}")
+            ).exists()
+
+            print(f"DEBUG -> Q:{question_id} Form:{form_id} Cat:{category_id} Exists:{exists}")
+
+            if not exists:
+                print(f"SKIPPING Question {question_id} (not assigned)")
                 continue
+            # if not FormQuestionAssignment.objects.filter(
+            #     form_type_id=form_id,
+            #     main_category_id=category_id,
+            #     question_id=question_id
+            # ).exists():
+            #     print(f"Question {question_id} not assigned to form {form_id}, category {category_id}")
+                        
 
             # assignment_qs = FormQuestionAssignment.objects.filter(
             #     form_type_id=form_id,
@@ -339,8 +772,37 @@ def save_category_answers(submission, form_id, category_id, answers, request, us
                 'file_upload': None,
             }
 
+            
+            is_s3_url = (
+                response_text
+                and isinstance(response_text, str)
+                and response_text.startswith("http")
+)
             # Handle file uploads
+            # if question.input_type == 'file':
+
             if question.input_type == 'file':
+
+    # CASE 1: Already uploaded file (S3 URL)
+                if is_s3_url:
+                    print("Using S3 URL directly")
+
+                    response_data['file_upload'] = response_text
+                    response_data['response_text'] = os.path.basename(response_text)
+
+                    form_response, created = FormResponse.objects.update_or_create(
+                        submission=submission,
+                        form_type=form_type,
+                        category=main_category,
+                        question=question,
+                        defaults=response_data
+                    )
+
+                    saved_count += 1
+                    continue
+
+                
+                
                 print(f"Processing file upload for question {question_id}")
                 
                 # Check if this is a base64 encoded file
@@ -448,6 +910,7 @@ def save_category_answers(submission, form_id, category_id, answers, request, us
                     continue
                     
                 else:
+                    
                     # Look for file in request.FILES (for multipart uploads)
                     uploaded_file = request.FILES.get(f"file_{question_id}")
                     
@@ -578,6 +1041,7 @@ def save_category_answers(submission, form_id, category_id, answers, request, us
 
 
 
+# 
 @csrf_exempt
 def get_form_answers_from_user(request, formId):
     if request.method != 'GET':
@@ -587,39 +1051,61 @@ def get_form_answers_from_user(request, formId):
         auth_header = request.headers.get("Authorization", "")
         token = auth_header.replace("Token ", "").replace("Bearer ", "").strip()
 
-        if not token:
-            return JsonResponse({"status": "error", "message": "Authorization token is required."}, status=401)
+        # For magic link users — accept client_id from query param
+        override_client_id = request.GET.get("user_id")
 
-        try:
-            user = Token.objects.select_related('user').get(key=token).user
-            client_id = user.id
-            print('client_id', client_id)
-        except Token.DoesNotExist:
-            return JsonResponse({"status": "error", "message": "Invalid or expired token."}, status=401)
+        if token:
+            try:
+                user = Token.objects.select_related('user').get(key=token).user
+                client_id = int(override_client_id) if override_client_id else user.id
+            except Token.DoesNotExist:
+                return JsonResponse({"status": "error", "message": "Invalid or expired token."}, status=401)
+        elif override_client_id:
+            # Magic link user — no token but user_id provided
+            client_id = int(override_client_id)
+            token = ""  # no token needed for API call headers
+        else:
+            return JsonResponse({"status": "error", "message": "Authorization token or user_id is required."}, status=401)
+
+        print('client_id', client_id)
 
         base_url = host_url(request)
         query_string = f"?{urlencode({'detail': 'true'})}" if request.GET.get("detail", "").lower() == "true" else ""
 
-        api_path = reverse_lazy('get_form_answers_from_user_api', kwargs={'form_id': formId, 'client_id': client_id})
+        api_path = reverse_lazy(
+            'get_form_answers_from_user_api',
+            kwargs={'form_id': formId, 'client_id': client_id}
+        )
         api_url = f"{base_url}{api_path}{query_string}"
 
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Token {token}"
+            "Authorization": f"Token {token}" if token else "",
         }
 
         response = requests.get(api_url, headers=headers, timeout=60)
-        print('client_id', client_id)
+        # 404 means no submission yet — return empty answers gracefully
+        if response.status_code == 404:
+            return JsonResponse({
+                "status": "success",
+                "data": {"answers": []},
+                "message": "No answers submitted yet."
+            }, status=200)
 
+       
         response.raise_for_status()
         response_data = response.json()
 
         answers = response_data.get("data", {}).get("answers", [])
         print('answers', answers)
-        # Enhance file answers with viewable links
+
+        # Enhance file answers with presigned URLs
         for ans in answers:
-            file_url = ans.get("file") or ans.get("value")
-            if file_url and any(file_url.endswith(ext) for ext in [".pdf", ".jpg", ".jpeg", ".png", ".mp4", ".docx", ".xlsx"]):
+            file_url = ans.get("file_upload") or ans.get("file") or ans.get("value")
+            if file_url and any(
+                str(file_url).endswith(ext)
+                for ext in [".pdf", ".jpg", ".jpeg", ".png", ".mp4", ".docx", ".xlsx"]
+            ):
                 try:
                     ans["file_preview_url"] = open_back_blaze_s3_file(str(file_url))
                 except Exception as e:
@@ -634,12 +1120,10 @@ def get_form_answers_from_user(request, formId):
 
     except requests.RequestException as e:
         return JsonResponse({"status": "error", "message": f"Failed to retrieve answers: {str(e)}"}, status=500)
-
     except Exception as e:
         import traceback
         traceback.print_exc()
         return JsonResponse({"status": "error", "message": f"Server error occurred: {str(e)}"}, status=500)
-
 
 @csrf_exempt
 def get_all_documents_for_user(request):
@@ -763,66 +1247,113 @@ def _send_form_invite_thread(email_url, headers, payload):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def send_form_invitation_view(request):
+def send_form_invitation(request):
     """
     Send magic link invite to one user for a specific form.
     Body: { "user_id": 5, "form_id": 4 }
+    OR:   { "email": "client@example.com", "form_id": 4 }
     """
-    user_id = request.data.get('user_id')
     form_id = request.data.get('form_id')
+    print('form_id', form_id)
+    user_id = request.data.get('user_id')
+    print('user_id', user_id)
+    email = request.data.get('email')
+    print('email', email)
 
-    if not user_id or not form_id:
-        return Response({'error': 'user_id and form_id required'}, status=400)
+    if not form_id:
+        return Response({'error': 'form_id is required'}, status=400)
+
+    if not user_id and not email:
+        return Response({'error': 'Provide either user_id or email'}, status=400)
 
     try:
-        user = User.objects.get(id=user_id)
         form = FormType.objects.get(id=form_id)
-    except (User.DoesNotExist, FormType.DoesNotExist):
-        return Response({'error': 'User or form not found'}, status=404)
+    except FormType.DoesNotExist:
+        return Response({'error': 'Form not found'}, status=404)
 
-    token = generate_form_token(user_id, form_id)
+    # Resolve user — by ID or by email (create if not exists)
+    try:
+        if user_id:
+            user = User.objects.get(id=user_id)
+        else:
+            email = email.strip().lower()
+            existing = User.objects.filter(email=email).first()
+            if existing:
+                user = existing
+            else:
+                try:
+                    from system_management.models import UserType
+                    applicant_type = UserType.objects.get(name='Applicant')
+                except UserType.DoesNotExist:
+                    applicant_type = UserType.objects.order_by('id').last()
 
-    # Record who sent this invite
+                user = User.objects.create_user(
+                    email=email,
+                    password=User.objects.make_random_password(),
+                    first_name=email.split('@')[0],
+                    last_name='',
+                    user_type=applicant_type,
+                )
+                print(f"[INVITE] Created new user for {email}")
+
+    except User.DoesNotExist:
+        return Response({'error': f'No user found with id {user_id}'}, status=404)
+    except Exception as e:
+        return Response({'error': f'User resolution failed: {str(e)}'}, status=500)
+    
+
+    # Generate token and magic link
+    token = generate_form_token(user.id, form_id)
+    frontend_url = getattr(settings, 'FRONTEND_URL', request.build_absolute_uri('/').rstrip('/'))
+    form_link = f"{frontend_url}/form-access/{token}"
+
+    # Record the invite
     FormInvite.objects.create(
         sent_by=request.user,
         recipient=user,
         form_type=form,
         token=token
     )
-    
-    # Build the magic link
-    frontend_url = request.build_absolute_uri('/').rstrip('/')
-    # In production replace with your actual frontend domain
-    form_link = f"{frontend_url}/form-access/{token}"
 
-    # Reuse your existing send_email_api pattern
-    context_data = {
-        'first_name': user.first_name or user.email,
-        'form_name': form.name,
-        'organisation_name': 'Z83 Dynamic Tool',
-        'form_link': form_link,
-    }
+    print(f"[INVITE] Sending invite to {user.email} for form '{form.name}'")
+    print(f"[INVITE] Magic link: {form_link}")
 
+    # Send email
     try:
         from django.template.loader import get_template
+        context_data = {
+            'first_name': user.first_name or user.email,
+            'form_name': form.name,
+            'organisation_name': 'Z83 Dynamic Tool',
+            'form_link': form_link,
+        }
         html_content = get_template('email_temps/form_invite.html').render(context_data)
-        
-        # Send in background thread — same as create_firm_user
+
         thread = threading.Thread(
             target=send_email_api,
             args=(user.email, f"Complete your {form.name} form", html_content)
         )
         thread.start()
 
+    except Exception as e:
+        # Email failed but invite record exists — still return success with link
+        print(f"[INVITE] Email failed: {str(e)}")
         return Response({
             'status': 'success',
-            'message': f'Invitation sent to {user.email}',
-            'form_link': form_link  # Return for admin to copy/share manually too
-        })
+            'message': f'Invite created but email failed to send. Share this link manually.',
+            'form_link': form_link,
+            'user_id': user.id,
+            'email': user.email,
+        }, status=200)
 
-    except Exception as e:
-        return Response({'error': str(e)}, status=500)
-
+    return Response({
+        'status': 'success',
+        'message': f'Invitation sent to {user.email}',
+        'form_link': form_link,
+        'user_id': user.id,
+        'email': user.email,
+        'user_created': not bool(user_id),
+    }, status=200)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -1124,3 +1655,72 @@ def check_form_complete_and_notify(submission, request):
         print(f"[NOTIFY ERROR] {e}")
         import traceback
         traceback.print_exc()
+
+
+
+@csrf_exempt
+def get_all_submissions_admin(request):
+    if request.method != 'GET':
+        return JsonResponse(
+            {'status': 'error', 'message': 'Method not allowed'},
+            status=405
+        )
+
+    try:
+        auth_header = request.headers.get('Authorization', '')
+        token = None
+
+        if auth_header.startswith('Token '):
+            token = auth_header.split('Token ')[-1]
+
+        elif auth_header.startswith('Bearer '):
+            token = auth_header.split('Bearer ')[-1]
+
+        if not token:
+            return JsonResponse(
+                {
+                    'status': 'error',
+                    'message': 'Authorization token required'
+                },
+                status=401
+            )
+
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Token {token}'
+        }
+
+        query_string = request.GET.urlencode()
+
+        url = f"{host_url(request)}{reverse_lazy('get_all_submissions_admin_api')}"
+
+        if query_string:
+            url = f"{url}?{query_string}"
+
+        response = requests.get(
+            url,
+            headers=headers,
+            timeout=10
+        )
+
+        response.raise_for_status()
+
+        return JsonResponse(response.json(), status=200)
+
+    except requests.exceptions.RequestException as e:
+        return JsonResponse(
+            {
+                'status': 'error',
+                'message': f'Request failed: {str(e)}'
+            },
+            status=500
+        )
+
+    except Exception as e:
+        return JsonResponse(
+            {
+                'status': 'error',
+                'message': f'Server error: {str(e)}'
+            },
+            status=500
+        )

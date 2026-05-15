@@ -11,7 +11,7 @@ from application_management.models import FormCategoryAssignment, FormQuestionAs
 from form_portal_management.api.serailizers import GetAnsweredQuestionFromFormResponseSerializer, GetCategoryWithQuestionsAssignedSerializer, RetreiveDocumentSerializer, SubmissionDetailSerializer, SubmissionListSerializer
 from django.db.models import Max
 
-from form_portal_management.models import Document
+from form_portal_management.models import Document, FormInvite
 from question_management.models import Question
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import (
@@ -321,4 +321,80 @@ def update_submission_status_api(request, submission_id):
         return Response(
             {'status': 'error', 'message': str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def get_all_submissions_admin_api(request):
+#     try:
+#         submissions = FormSubmission.objects.select_related(
+#             'user', 'form_type'
+#         ).order_by('-submitted_at')
+
+#         # Optional filters from query params
+#         form_id = request.GET.get('form_id')
+#         status_filter = request.GET.get('status')
+
+#         if form_id:
+#             submissions = submissions.filter(form_type_id=form_id)
+#         if status_filter:
+#             submissions = submissions.filter(status=status_filter)
+
+#         serializer = SubmissionListSerializer(submissions, many=True)
+
+#         return Response({
+#             'status': 'success',
+#             'count': submissions.count(),
+#             'submissions': serializer.data,
+#         }, status=200)
+
+#     except Exception as e:
+#         return Response(
+#             {'status': 'error', 'message': str(e)},
+#             status=500
+#         )
+
+from django.db.models import Q
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_all_submissions_admin_api(request):
+    try:
+
+        invites = FormInvite.objects.filter(
+            sent_by=request.user
+        )
+
+        query = Q()
+
+        for invite in invites:
+            query |= Q(
+                user=invite.recipient,
+                form_type=invite.form_type
+            )
+
+        submissions = FormSubmission.objects.select_related(
+            'user',
+            'form_type'
+        ).filter(query).order_by('-submitted_at')
+
+        serializer = SubmissionListSerializer(
+            submissions,
+            many=True
+        )
+
+        return Response({
+            'status': 'success',
+            'count': submissions.count(),
+            'submissions': serializer.data,
+        }, status=200)
+
+    except Exception as e:
+        return Response(
+            {
+                'status': 'error',
+                'message': str(e)
+            },
+            status=500
         )

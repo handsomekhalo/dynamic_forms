@@ -13,6 +13,7 @@ urlpatterns = [
      path('get_all_submissions_api/<int:form_id>/', views.get_all_submissions_api, name='get_all_submissions_api'),
      path('get_submission_detail_api/<int:submission_id>/', views.get_submission_detail_api, name='get_submission_detail_api'),
      path('update_submission_status_api/<int:submission_id>/', views.update_submission_status_api , name='update_submission_status_api'),
+     path('get_all_submissions_admin_api/', views.get_all_submissions_admin_api, name='get_all_submissions_admin_api'),
 
      #     retrieve_user_documents_api
   

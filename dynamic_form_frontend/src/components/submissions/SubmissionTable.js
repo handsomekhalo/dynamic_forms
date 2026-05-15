@@ -41,24 +41,38 @@ export default function SubmissionTable({ formId }) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
+  // useEffect(() => {
+  //   if (formId) {
+  //     fetchSubmissions();
+  //   }
+  // }, [formId]);
+
   useEffect(() => {
-    if (formId) {
-      fetchSubmissions();
-    }
-  }, [formId]);
+  if (authToken) {
+    fetchSubmissions();
+  }
+}, [authToken]);
+
 
   const fetchSubmissions = async () => {
     try {
       setLoading(true);
 
+      console.log("Fetching submissions with authToken:", authToken);
+      
       const res = await backendApi.get(
-        `form_portal_management/get_all_submissions/${formId}/`,
+        // `form_portal_management/get_all_submissions/${formId}/`,
+          `form_portal_management/get_all_submissions_admin/`,
+          
+
         {
           headers: {
             Authorization: `Token ${authToken}`,
           },
         }
       );
+
+      console.log("Fetched submissions:", res.data.submissions);
 
       setSubmissions(res.data.submissions || []);
     } catch (error) {

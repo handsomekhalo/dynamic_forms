@@ -1,29 +1,36 @@
 'use client';
 import { useEffect, useState } from 'react';
 import backendApi from "../../../../utils/backendApi"
-import FormPortal_Management from "../../Components/Form_Portal_Management_Component/form_portal_Management";
+import FormPortal_Management from "../../../components/portal/FormPortal"
 
 export default function FormAccessClient({ token }) {
+    // Decode URL-encoded token
+  const decodedToken = decodeURIComponent(token);
+  
+  
+  // use decodedToken everywhere instead of token
   const [status, setStatus] = useState('validating');
   const [formContext, setFormContext] = useState(null);
+console.log('Received token in FormAccessClient :', token);
 
-  useEffect(() => {
-    const validate = async () => {
-      try {
-        const res = await backendApi.get(
-          `/form_portal_management/validate_token/${token}/`
-        );
-        if (res.data.status === 'success') {
-          setFormContext(res.data);
-          setStatus('valid');
-        }
-      } catch (err) {
-        const msg = err.response?.data?.message || '';
-        setStatus(msg.includes('expired') ? 'expired' : 'invalid');
+
+ useEffect(() => {
+  const validate = async () => {
+    try {
+      const res = await backendApi.get(
+        `/form_portal_management/validate_token/${decodedToken}/`
+      );
+      if (res.data.status === 'success') {
+        setFormContext(res.data);
+        setStatus('valid');
       }
-    };
-    if (token) validate();
-  }, [token]);
+    } catch (err) {
+      const msg = err.response?.data?.message || '';
+      setStatus(msg.includes('expired') ? 'expired' : 'invalid');
+    }
+  };
+  if (token) validate();
+}, [token]);
 
   if (status === 'validating') {
     return (
@@ -71,6 +78,9 @@ export default function FormAccessClient({ token }) {
     <FormPortal_Management
       magicLinkFormId={formContext.form_id}
       magicLinkUserId={formContext.user_id}
+          magicLinkToken={decodedToken}
+        
+
     />
   </div>
 );
