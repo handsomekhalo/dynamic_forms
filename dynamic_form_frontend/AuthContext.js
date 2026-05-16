@@ -82,44 +82,55 @@ export const AuthProvider = ({ children }) => {
   const [csrfToken, setCSRFToken] = useState(null);
   // isLoading is crucial here to prevent rendering children until tokens are loaded from localStorage
   const [isLoading, setIsLoading] = useState(true); // Start as true
+  const [user, setUser] = useState(null); // add this
 
   const router = useRouter();
 
   // This useEffect will run *only on the client side* after initial render
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('authToken');
-      const csrf = localStorage.getItem('csrfToken');
+useEffect(() => {
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('authToken');
+    const csrf = localStorage.getItem('csrfToken');
+    const storedUser = localStorage.getItem('user');
 
-      // Update state only if tokens are found and valid (not 'null' string)
-      if (token && token !== 'null') {
-        setAuthToken(token);
-      }
-      if (csrf && csrf !== 'null') {
-        setCSRFToken(csrf);
-      }
+    if (token && token !== 'null') setAuthToken(token);
+    if (csrf && csrf !== 'null') setCSRFToken(csrf);
+    if (storedUser && storedUser !== 'null') {
+      setUser(JSON.parse(storedUser));
     }
-    setIsLoading(false); // Once localStorage check is done, set isLoading to false
-  }, []); // Run only once on client-side mount
+  }
+  setIsLoading(false);
+}, []);// Run only once on client-side mount
 
-  const login = (token, csrf) => {
-    const actualToken = token && token !== 'null' ? token : null;
-    const actualCsrf = csrf && csrf !== 'null' ? csrf : null;
+const login = (token, csrf, userData) => {
+  const actualToken = token && token !== 'null' ? token : null;
+  const actualCsrf = csrf && csrf !== 'null' ? csrf : null;
 
-    setAuthToken(actualToken);
-    setCSRFToken(actualCsrf);
-    localStorage.setItem('authToken', actualToken || '');
-    localStorage.setItem('csrfToken', actualCsrf || '');
-  };
+  const normalizedUser = userData ? {
+    ...userData,
+    full_name: `${userData.first_name} ${userData.last_name}`.trim(),
+    role: userData.user_type__name || 'Administrator',
+  } : null;
 
-  const logout = () => {
-    setAuthToken(null);
-    setCSRFToken(null);
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('csrfToken');
-    localStorage.removeItem('user');
-    router.push('/');
-  };
+  setAuthToken(actualToken);
+  setCSRFToken(actualCsrf);
+  setUser(normalizedUser);
+
+  localStorage.setItem('authToken', actualToken || '');
+  localStorage.setItem('csrfToken', actualCsrf || '');
+  localStorage.setItem('user', JSON.stringify(normalizedUser));
+};
+
+
+const logout = () => {
+  setAuthToken(null);
+  setCSRFToken(null);
+  setUser(null); // add this
+  localStorage.removeItem('authToken');
+  localStorage.removeItem('csrfToken');
+  localStorage.removeItem('user');
+  router.push('/');
+};
 
   const navigate = (path) => {
     router.push(path);
@@ -130,6 +141,7 @@ export const AuthProvider = ({ children }) => {
   const contextValue = {
     authToken,
     csrfToken,
+      user,        // add this
     isAuthenticated,
     isLoading, // Provide isLoading to consumers
     login,

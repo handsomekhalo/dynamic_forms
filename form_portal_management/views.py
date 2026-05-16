@@ -1724,3 +1724,104 @@ def get_all_submissions_admin(request):
             },
             status=500
         )
+
+@csrf_exempt
+def get_dashboard_stats(request):
+
+    if request.method != 'GET':
+        return JsonResponse(
+            {
+                'status': 'error',
+                'message': 'Method not allowed'
+            },
+            status=405
+        )
+
+    try:
+
+        auth_header = request.headers.get('Authorization', '')
+        token = None
+
+        # -----------------------------
+        # TOKEN EXTRACTION
+        # -----------------------------
+
+        if auth_header.startswith('Token '):
+            token = auth_header.split('Token ')[-1]
+
+        elif auth_header.startswith('Bearer '):
+            token = auth_header.split('Bearer ')[-1]
+
+        # -----------------------------
+        # VALIDATION
+        # -----------------------------
+
+        if not token:
+            return JsonResponse(
+                {
+                    'status': 'error',
+                    'message': 'Authorization token required'
+                },
+                status=401
+            )
+
+        # -----------------------------
+        # HEADERS
+        # -----------------------------
+
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Token {token}'
+        }
+
+        # -----------------------------
+        # QUERY PARAMS
+        # -----------------------------
+
+        query_string = request.GET.urlencode()
+
+        url = f"{host_url(request)}{reverse_lazy('get_dashboard_stats_api')}"
+
+        if query_string:
+            url = f"{url}?{query_string}"
+
+        # -----------------------------
+        # API REQUEST
+        # -----------------------------
+
+        response = requests.get(
+            url,
+            headers=headers,
+            timeout=10
+        )
+
+        response.raise_for_status()
+
+        # -----------------------------
+        # SUCCESS RESPONSE
+        # -----------------------------
+
+        return JsonResponse(
+            response.json(),
+            status=200
+        )
+
+    except requests.exceptions.RequestException as e:
+
+        return JsonResponse(
+            {
+                'status': 'error',
+                'message': f'Request failed: {str(e)}'
+            },
+            status=500
+        )
+
+    except Exception as e:
+
+        return JsonResponse(
+            {
+                'status': 'error',
+                'message': f'Server error: {str(e)}'
+            },
+            status=500
+        )

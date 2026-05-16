@@ -13,15 +13,15 @@ import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 
 const StatusBadge = ({ status }) => {
-  const styles = {
-    submitted: "bg-blue-100 text-blue-800",
-    under_review: "bg-yellow-100 text-yellow-800",
-    approved: "bg-green-100 text-green-800",
-    rejected: "bg-red-100 text-red-800",
-    returned: "bg-orange-100 text-orange-800",
-    draft: "bg-gray-100 text-gray-800",
-  };
-
+const styles = {
+  pending: "bg-slate-100 text-slate-800",
+  submitted: "bg-blue-100 text-blue-800",
+  under_review: "bg-yellow-100 text-yellow-800",
+  approved: "bg-green-100 text-green-800",
+  rejected: "bg-red-100 text-red-800",
+  returned: "bg-orange-100 text-orange-800",
+  draft: "bg-gray-100 text-gray-800",
+};
   return (
     <span
       className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -75,6 +75,8 @@ export default function SubmissionTable({ formId }) {
       console.log("Fetched submissions:", res.data.submissions);
 
       setSubmissions(res.data.submissions || []);
+      console.log("Full response:", res.data);
+console.log("Submissions array:", res.data.submissions);
     } catch (error) {
       console.error("Failed to fetch submissions:", error);
     } finally {

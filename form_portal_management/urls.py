@@ -21,6 +21,7 @@ urlpatterns = [
         path('get_submission_detail/<int:submission_id>/', views.get_submission_detail, name='get_submission_detail'),
         path('update_submission_status/<int:submission_id>/', views.update_submission_status, name='update_submission_status'),
         path('get_all_submissions_admin/', views.get_all_submissions_admin, name='get_all_submissions_admin'),
+         path('get_dashboard_stats/', views.get_dashboard_stats, name='get_dashboard_stats'),
 
 
 ]

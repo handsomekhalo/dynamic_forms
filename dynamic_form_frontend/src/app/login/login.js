@@ -68,7 +68,9 @@ export default function Login() {
         const user = response.data.user;
         
         // Store authentication data in context
-        authLogin(token, tokenToUse);
+        // authLogin(token, tokenToUse);
+        authLogin(token, tokenToUse, user);
+
         
         // Store in localStorage with CORRECT KEYS matching what AuthContext expects
         localStorage.setItem('authToken', token);

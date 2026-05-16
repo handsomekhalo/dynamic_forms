@@ -173,23 +173,21 @@ export default function Sidebar() {
         {/* Footer */}
         <div className="p-2 border-t border-white/10 space-y-1">
           {/* Logout */}
-          <button
-            onClick={handleLogout}
-            className="
-              flex items-center gap-3
-              w-full px-3 py-2.5 rounded-xl
-              text-sm font-medium
-              text-slate-400
-              hover:bg-white/5
-              hover:text-white
-              transition-all duration-200
-            "
-          >
-            <LogOut className="w-[18px] h-[18px]" />
-
-            {!collapsed && <span>Logout</span>}
-          </button>
-
+        
+  <button
+    onClick={handleLogout}
+    className="
+      flex w-full items-center gap-3
+      rounded-md px-3 py-2
+      text-sm
+      text-slate-400
+      hover:bg-white/5
+      hover:text-white
+    "
+  >
+    <LogOut className="h-4 w-4" />
+    Logout
+  </button>
           {/* Collapse */}
           <button
             onClick={() => setCollapsed(!collapsed)}
@@ -213,103 +211,3 @@ export default function Sidebar() {
     </>
   );
 }
-
-
-// 'use client';
-// import { useState } from 'react';
-// import Link from 'next/link';
-// import { usePathname } from 'next/navigation';
-
-// const Sidebar = () => {
-//   const pathname = usePathname();
-//   const [isOpen, setIsOpen] = useState(false);
-
-//   const navItems = [
-//     {
-//       title: 'Dashboard',
-//       links: [{ href: '/dashboard', icon: 'bx bx-home', label: 'Dashboard' }],
-//     },
-//         {
-//       title: 'Client Portal',
-//       links: [{ href: '/portal',
-//          icon: 'bx bx-home', label: 'Client Portal' }],
-//     },
-//     {
-//       title: 'Manage Users',
-//       links: [
-//      { href: '/users',
-//        icon: 'bx bx-user-circle', label: 'Profile' },      
-
-//       ],
-      
-//     },
-//     {
-//       title: 'Form Management',
-//       links: [
-//         // {  href: '/Components/Form_Management_Component/',
-//         {  href: '/forms',
-
-//            icon: 'bx bx-user-circle', label: 'Manage Forms ' }// Link to /form management
-         
-//       ],
-//     },
-//     {
-//       title: 'Question Management',
-//       links: [
-//         // {  href: '/Components/Question_Management_Component/',
-//         {  href: '/questions',
-//            icon: 'bx bx-user-circle', label: 'Manage Questions' },// Link to /form management
-         
-//       ],
-//     },
-//        ,
-
-    
-//     {
-//       title: 'Accounts',
-//       links: [
-//         { href: '/profile', icon: 'bx bx-user-circle', label: 'Profile' },
-//         { href: '/', icon: 'bx bx-log-out', label: 'Logout' },
-//       ],
-//     },
-    
-//   ];
-
-//   return (
-//     <>
-//       {/* Mobile Toggle Button */}
-//       <button
-//         className="md:hidden p-4 text-gray-600 z-50 relative"
-//         onClick={() => setIsOpen(!isOpen)}
-//       >
-//         <i className="bx bx-menu text-3xl"></i>
-//       </button>
-
-//       {/* Sidebar */}
-//       <div className={`fixed top-0 left-0 h-full w-64 bg-white shadow-lg z-40 transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 md:relative md:block`}>
-//         <div className="p-6 space-y-6">
-//           {navItems.map((section, index) => (
-//             <div key={index} className="nav-button">
-//               <span className="font-bold text-primary block mb-2">{section.title}</span>
-//               <ul className="space-y-2">
-//                 {section.links.map((link, idx) => (
-//                   <li key={idx}>
-//                     <Link
-//                       href={link.href}
-//                       className={`flex items-center gap-3 px-3 py-2 rounded text-sm hover:bg-gray-100 transition ${pathname === link.href ? 'bg-gray-100 font-semibold' : ''}`}
-//                     >
-//                       <i className={`${link.icon} text-xl`} aria-hidden="true"></i>
-//                       <span>{link.label}</span>
-//                     </Link>
-//                   </li>
-//                 ))}
-//               </ul>
-//             </div>
-//           ))}
-//         </div>
-//       </div>
-//     </>
-//   );
-// };
-
-// export default Sidebar;

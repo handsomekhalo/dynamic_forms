@@ -81,7 +81,7 @@ class GetAllFormTypeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = FormType
-        fields = ['id', 'name', 'description', 'is_active', 'date_created', 'categories']
+        fields = ['id', 'name', 'description', 'is_active', 'categories']
 
     def get_categories(self, obj):
         assignments = FormCategoryAssignment.objects.filter(form_type=obj)

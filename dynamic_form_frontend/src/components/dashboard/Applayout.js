@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from '../../../AuthContext';
+import { useRouter } from 'next/navigation';
 
 import { useState } from "react";
 
@@ -65,6 +67,13 @@ export default function AppLayout({ children }) {
   const [open, setOpen] = useState(false);
 
   const pathname = usePathname();
+    const { user, logout } = useAuth();
+  const router = useRouter();
+
+    const handleLogout = () => {
+    logout();
+    router.push('/');
+  };
 
   return (
     <div className="flex min-h-screen w-full bg-background">
@@ -185,23 +194,16 @@ export default function AppLayout({ children }) {
           <div className="flex-1" />
 
           {/* User Section */}
-          <div className="flex items-center gap-3">
-            <span className="hidden text-sm font-medium text-slate-800 sm:inline">
-              Sarah Mokoena
-            </span>
+          {/* User Section */}
+<div className="flex items-center gap-3">
+  <span className="hidden text-sm font-medium text-slate-800 sm:inline">
+    {user?.full_name || 'User'}
+  </span>
 
-            <span
-              className="
-                rounded-full
-                bg-blue-600
-                px-2.5 py-0.5
-                text-xs font-medium
-                text-white
-              "
-            >
-              Admin
-            </span>
-          </div>
+  <span className="rounded-full bg-blue-600 px-2.5 py-0.5 text-xs font-medium text-white">
+    {user?.role || 'Admin'}
+  </span>
+</div>
         </header>
 
         {/* Page Content */}

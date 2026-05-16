@@ -243,47 +243,78 @@ def get_all_submissions_api(request, form_id):
 @permission_classes([IsAuthenticated])
 def get_submission_detail_api(request, submission_id):
     try:
+        org = request.user.organisation
         submission = FormSubmission.objects.select_related(
             'user', 'form_type', 'reviewed_by'
-        ).get(id=submission_id)
-
-        # Only admin or the submission owner can view
-        if request.user != submission.user and not request.user.is_staff:
-            return Response(
-                {'status': 'error', 'message': 'Permission denied'},
-                status=status.HTTP_403_FORBIDDEN
-            )
+        ).get(id=submission_id, form_type__organisation=org)
 
         serializer = SubmissionDetailSerializer(submission)
-        print(f"Fetched submission detail for submission_id {submission_id}: {serializer.data}")
-        return Response({
-            'status': 'success',
-            'submission': serializer.data,
-        }, status=status.HTTP_200_OK)
+        return Response({'status': 'success', 'submission': serializer.data}, status=200)
 
     except FormSubmission.DoesNotExist:
-        return Response(
-            {'status': 'error', 'message': 'Submission not found'},
-            status=status.HTTP_404_NOT_FOUND
-        )
+        return Response({'status': 'error', 'message': 'Submission not found'}, status=404)
     except Exception as e:
-        return Response(
-            {'status': 'error', 'message': str(e)},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+        return Response({'status': 'error', 'message': str(e)}, status=500)
 
+
+# @api_view(['PATCH'])
+# @permission_classes([IsAuthenticated])
+# def update_submission_status_api(request, submission_id):
+#     try:
+#         submission = FormSubmission.objects.get(id=submission_id)
+
+#         # Only staff/admin can update status
+#         if not request.user.is_staff:
+#             return Response(
+#                 {'status': 'error', 'message': 'Permission denied'},
+#                 status=status.HTTP_403_FORBIDDEN
+#         )
+
+#         new_status = request.data.get('status')
+#         review_notes = request.data.get('review_notes', None)
+
+#         valid_statuses = ['draft', 'submitted', 'under_review', 'approved', 'rejected', 'returned']
+#         if new_status not in valid_statuses:
+#             return Response(
+#                 {'status': 'error', 'message': f'Invalid status. Must be one of: {valid_statuses}'},
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
+
+#         submission.status = new_status
+#         if review_notes is not None:
+#             submission.review_notes = review_notes
+#         submission.reviewed_by = request.user
+#         submission.reviewed_at = timezone.now()
+#         submission.save()
+
+#         return Response({
+#             'status': 'success',
+#             'message': f'Submission status updated to {new_status}',
+#             'submission_id': submission.id,
+#             'new_status': submission.status,
+#             'reviewed_by': request.user.email,
+#             'reviewed_at': submission.reviewed_at,
+#         }, status=status.HTTP_200_OK)
+
+#     except FormSubmission.DoesNotExist:
+#         return Response(
+#             {'status': 'error', 'message': 'Submission not found'},
+#             status=status.HTTP_404_NOT_FOUND
+#         )
+#     except Exception as e:
+#         return Response(
+#             {'status': 'error', 'message': str(e)},
+#             status=status.HTTP_500_INTERNAL_SERVER_ERROR
+#         )
 
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
 def update_submission_status_api(request, submission_id):
     try:
-        submission = FormSubmission.objects.get(id=submission_id)
-
-        # Only staff/admin can update status
-        if not request.user.is_staff:
-            return Response(
-                {'status': 'error', 'message': 'Permission denied'},
-                status=status.HTTP_403_FORBIDDEN
+        org = request.user.organisation
+        submission = FormSubmission.objects.get(
+            id=submission_id,
+            form_type__organisation=org
         )
 
         new_status = request.data.get('status')
@@ -291,10 +322,7 @@ def update_submission_status_api(request, submission_id):
 
         valid_statuses = ['draft', 'submitted', 'under_review', 'approved', 'rejected', 'returned']
         if new_status not in valid_statuses:
-            return Response(
-                {'status': 'error', 'message': f'Invalid status. Must be one of: {valid_statuses}'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({'status': 'error', 'message': f'Invalid status.'}, status=400)
 
         submission.status = new_status
         if review_notes is not None:
@@ -305,25 +333,16 @@ def update_submission_status_api(request, submission_id):
 
         return Response({
             'status': 'success',
-            'message': f'Submission status updated to {new_status}',
+            'message': f'Status updated to {new_status}',
             'submission_id': submission.id,
             'new_status': submission.status,
-            'reviewed_by': request.user.email,
-            'reviewed_at': submission.reviewed_at,
-        }, status=status.HTTP_200_OK)
+        }, status=200)
 
     except FormSubmission.DoesNotExist:
-        return Response(
-            {'status': 'error', 'message': 'Submission not found'},
-            status=status.HTTP_404_NOT_FOUND
-        )
+        return Response({'status': 'error', 'message': 'Submission not found'}, status=404)
     except Exception as e:
-        return Response(
-            {'status': 'error', 'message': str(e)},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
-
-
+        return Response({'status': 'error', 'message': str(e)}, status=500)
+    
 # @api_view(['GET'])
 # @permission_classes([IsAuthenticated])
 # def get_all_submissions_admin_api(request):
@@ -357,33 +376,68 @@ def update_submission_status_api(request, submission_id):
 
 from django.db.models import Q
 
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def get_all_submissions_admin_api(request):
+#     try:
+
+#         invites = FormInvite.objects.filter(
+#             sent_by=request.user
+#         )
+
+#         query = Q()
+
+#         for invite in invites:
+#             query |= Q(
+#                 user=invite.recipient,
+#                 form_type=invite.form_type
+#             )
+
+#         submissions = FormSubmission.objects.select_related(
+#             'user',
+#             'form_type'
+#         ).filter(query).order_by('-submitted_at')
+
+#         serializer = SubmissionListSerializer(
+#             submissions,
+#             many=True
+#         )
+
+#         return Response({
+#             'status': 'success',
+#             'count': submissions.count(),
+#             'submissions': serializer.data,
+#         }, status=200)
+
+#     except Exception as e:
+#         return Response(
+#             {
+#                 'status': 'error',
+#                 'message': str(e)
+#             },
+#             status=500
+#         )
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_all_submissions_admin_api(request):
     try:
+        org = request.user.organisation
+        if not org:
+            return Response({"error": "User has no organisation."}, status=403)
 
-        invites = FormInvite.objects.filter(
-            sent_by=request.user
-        )
+        submissions = FormSubmission.objects.filter(
+            form_type__organisation=org
+        ).select_related('user', 'form_type').order_by('-submitted_at')
 
-        query = Q()
+        form_id = request.GET.get('form_id')
+        status_filter = request.GET.get('status')
 
-        for invite in invites:
-            query |= Q(
-                user=invite.recipient,
-                form_type=invite.form_type
-            )
+        if form_id:
+            submissions = submissions.filter(form_type_id=form_id)
+        if status_filter:
+            submissions = submissions.filter(status=status_filter)
 
-        submissions = FormSubmission.objects.select_related(
-            'user',
-            'form_type'
-        ).filter(query).order_by('-submitted_at')
-
-        serializer = SubmissionListSerializer(
-            submissions,
-            many=True
-        )
-
+        serializer = SubmissionListSerializer(submissions, many=True)
         return Response({
             'status': 'success',
             'count': submissions.count(),
@@ -391,10 +445,59 @@ def get_all_submissions_admin_api(request):
         }, status=200)
 
     except Exception as e:
-        return Response(
-            {
-                'status': 'error',
-                'message': str(e)
+        return Response({'status': 'error', 'message': str(e)}, status=500)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_dashboard_stats_api(request):
+    try:
+        org = request.user.organisation
+        if not org:
+            return Response({'error': 'No organisation assigned'}, status=403)
+
+        from application_management.models import FormType
+        from system_management.models import User
+
+        total_forms = FormType.objects.filter(organisation=org).count()
+        
+        total_users = User.objects.filter(organisation=org).count()
+        
+        pending_reviews = FormSubmission.objects.filter(
+            form_type__organisation=org,
+            status='pending'
+        ).count()
+        
+        from django.utils import timezone
+        from datetime import timedelta
+        last_7_days = timezone.now() - timedelta(days=7)
+        recent_submissions = FormSubmission.objects.filter(
+            form_type__organisation=org,
+            submitted_at__gte=last_7_days
+        ).count()
+
+        recent = FormSubmission.objects.filter(
+            form_type__organisation=org
+        ).select_related('user', 'form_type').order_by('-submitted_at')[:5]
+
+        recent_data = [{
+            'id': s.id,
+            'applicant_name': f"{s.user.first_name} {s.user.last_name}".strip() or s.user.email,
+            'form': s.form_type.name,
+            'date': s.submitted_at.strftime('%Y-%m-%d'),
+            'status': s.status,
+        } for s in recent]
+
+        return Response({
+            'status': 'success',
+            'stats': {
+                'total_forms': total_forms,
+                'pending_reviews': pending_reviews,
+                'total_users': total_users,
+                'recent_submissions_count': recent_submissions,
             },
-            status=500
-        )
+            'recent_submissions': recent_data,
+        }, status=200)
+
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=500)
+

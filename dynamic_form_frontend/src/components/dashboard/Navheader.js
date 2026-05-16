@@ -27,6 +27,9 @@ export default function Navbar() {
 
   const { user, logout } = useAuth();
 
+  console.log('AUTH USER:', user);
+
+
   const initials = user?.full_name
     ? user.full_name
         .split(" ")
@@ -35,6 +38,8 @@ export default function Navbar() {
         .toUpperCase()
         .slice(0, 2)
     : "U";
+
+    console.log("User in Navheader:", user);
 
   const handleLogout = () => {
     logout();

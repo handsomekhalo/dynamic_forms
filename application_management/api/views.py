@@ -15,38 +15,36 @@ from rest_framework.decorators import api_view, permission_classes
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def create_form_api(request):
-    """
-    This API creates a new form type (defines the purpose of the form).
-    """
     data = request.data
     name = data.get('name')
     description = data.get('description', '')
     is_active = data.get('is_active', True)
 
-    # Validation
     if not name:
         return Response({"error": "Form name is required."}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Check if form with this name already exists
-    if FormType.objects.filter(name=name).exists():
+    org = request.user.organisation
+    if not org:
+        return Response({"error": "User has no organisation assigned."}, status=status.HTTP_403_FORBIDDEN)
+
+    if FormType.objects.filter(name=name, organisation=org).exists():
         return Response({"error": "A form with this name already exists."}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Create form
     form_type = FormType.objects.create(
         name=name,
         description=description,
-        is_active=is_active
+        is_active=is_active,
+        organisation=org
     )
 
     serializer = FormTypeSerializer(form_type)
-
     return Response({
         "status": "success",
         "message": "Form created successfully.",
         "form": serializer.data
     }, status=status.HTTP_201_CREATED)
-
 
 
 
@@ -184,14 +182,25 @@ def get_all_categories_by_form_id_api(request, formId):
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def get_all_forms_api(request):
-    # forms = FormType.objects.filter(is_active=True).order_by('-date_created')
-    forms = FormType.objects.all().order_by('-date_created')
-    serializer = GetAllFormTypeSerializer(forms, many=True)
+    try:
+        print(f"User: {request.user.email}, Organisation: {request.user.organisation}" )
+        org = request.user.organisation
+        if not org:
+            print("User has no organisation assigned.")
+            return Response({"error": "User has no organisation assigned."}, status=status.HTTP_403_FORBIDDEN)
 
-    print('get_all_forms_api serializer:', serializer.data)
-    return Response(serializer.data, status=status.HTTP_200_OK)
+        forms = FormType.objects.filter(organisation=org)
+        print(f"Forms found: {forms.count()}")
 
+        serializer = GetAllFormTypeSerializer(forms, many=True)
+        print(f"Serialized data: {serializer.data}")
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['POST'])
@@ -516,11 +525,38 @@ def get_assigned_categories_api(request, form_type_id):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+# @api_view(['POST'])
+# def update_form_api(request):
+#     """
+#     Updates an existing form type based on formId.
+#     """
+#     data = request.data
+#     form_id = data.get('formId')
+
+#     if not form_id:
+#         return Response({"status": "error", "message": "formId is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+#     try:
+#         form_type = FormType.objects.get(id=form_id)
+#     except FormType.DoesNotExist:
+#         return Response({"status": "error", "message": "Form not found."}, status=status.HTTP_404_NOT_FOUND)
+
+#     # Update fields if provided
+#     form_type.name = data.get('name', form_type.name)
+#     form_type.description = data.get('description', form_type.description)
+#     form_type.is_active = data.get('is_active', form_type.is_active)
+#     form_type.save()
+
+#     serializer = UpdateFormeSerializer(form_type)
+#     return Response({
+#         "status": "success",
+#         "message": "Form updated successfully.",
+#         "form": serializer.data
+#     }, status=status.HTTP_200_OK)
+
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def update_form_api(request):
-    """
-    Updates an existing form type based on formId.
-    """
     data = request.data
     form_id = data.get('formId')
 
@@ -528,11 +564,11 @@ def update_form_api(request):
         return Response({"status": "error", "message": "formId is required."}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        form_type = FormType.objects.get(id=form_id)
+        org = request.user.organisation
+        form_type = FormType.objects.get(id=form_id, organisation=org)
     except FormType.DoesNotExist:
         return Response({"status": "error", "message": "Form not found."}, status=status.HTTP_404_NOT_FOUND)
 
-    # Update fields if provided
     form_type.name = data.get('name', form_type.name)
     form_type.description = data.get('description', form_type.description)
     form_type.is_active = data.get('is_active', form_type.is_active)
@@ -545,24 +581,36 @@ def update_form_api(request):
         "form": serializer.data
     }, status=status.HTTP_200_OK)
 
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def get_form_details_api(request, form_id):
+#     try:
+#         form = FormType.objects.get(id=form_id)
+#         print(f"Retrieved form: {form.name} (ID: {form.id})")
+#         serializer = GetFormDetailsSerializer(form)
+#         return Response(serializer.data, status=status.HTTP_200_OK)
+#     except FormType.DoesNotExist:
+#         print(f"Form with ID {form_id} does not exist.")
+#         return Response(
+#             {'status': 'error', 'message': 'Form not found'},
+#             status=status.HTTP_404_NOT_FOUND
+#         )
+#     except Exception as e:
+#         print(f"An error occurred while retrieving form details: {str(e)}")
+#         return Response(
+#             {'status': 'error', 'message': str(e)},
+#             status=status.HTTP_500_INTERNAL_SERVER_ERROR
+#         )
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_form_details_api(request, form_id):
     try:
-        form = FormType.objects.get(id=form_id)
-        print(f"Retrieved form: {form.name} (ID: {form.id})")
+        org = request.user.organisation
+        form = FormType.objects.get(id=form_id, organisation=org)
         serializer = GetFormDetailsSerializer(form)
         return Response(serializer.data, status=status.HTTP_200_OK)
     except FormType.DoesNotExist:
-        print(f"Form with ID {form_id} does not exist.")
-        return Response(
-            {'status': 'error', 'message': 'Form not found'},
-            status=status.HTTP_404_NOT_FOUND
-        )
+        return Response({'status': 'error', 'message': 'Form not found'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
-        print(f"An error occurred while retrieving form details: {str(e)}")
-        return Response(
-            {'status': 'error', 'message': str(e)},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+        return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
