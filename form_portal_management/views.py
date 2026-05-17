@@ -151,138 +151,6 @@ def get_all_form_details_no_token(request, formId):
         }, status=500)
 
 
-# @csrf_exempt
-# def submit_category_answers(request):
-#     try:
-#         # Ensure Content-Type is application/json
-#         if request.content_type != 'application/json':
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "Content-Type must be application/json"
-#             }, status=400)
-
-#         # Load and debug the data
-#         try:
-#             data = json.loads(request.body)
-#         except json.JSONDecodeError:
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "Invalid JSON format"
-#             }, status=400)
-
-#         # Extract Authorization Token - try from headers first, then from data
-#         auth_header = request.headers.get("Authorization", "")
-#         token = None
-        
-#         if auth_header.startswith("Token "):
-#             token = auth_header.split("Token ")[-1]
-#         elif auth_header.startswith("Bearer "):
-#             token = auth_header.split("Bearer ")[-1]
-#         elif 'headers' in data and 'Authorization' in data['headers']:
-#             # Extract from nested headers if not in request headers
-#             auth_value = data['headers']['Authorization']
-#             if auth_value.startswith("Token "):
-#                 token = auth_value.split("Token ")[-1]
-#             elif auth_value.startswith("Bearer "):
-#                 token = auth_value.split("Bearer ")[-1]
-
-#         if not token:
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "Authorization token is required."
-#             }, status=401)
-
-#         # Authenticate user based on token
-#         try:
-#             token_obj = Token.objects.get(key=token)
-#             user = token_obj.user
-#         except Token.DoesNotExist:
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "Invalid token"
-#             }, status=401)
-
-#         # Extract the actual payload data - check multiple possible locations
-#         if 'headers' in data and 'payload' in data['headers']:
-#             # Data is nested under headers.payload
-#             payload_data = data['headers']['payload']
-#         elif 'payload' in data:
-#             # Data is nested under 'payload'
-#             payload_data = data['payload']
-#         else:
-#             # Data is at root level
-#             payload_data = data
-
-#         # Extract the expected fields from the correct data structure
-#         form_id = payload_data.get("form_id")
-#         category_id = payload_data.get("category_id")
-#         answers = payload_data.get("answers", [])
-
-#         print('answers', answers)
-
-#         # Validation
-#         if form_id is None:
-#             return JsonResponse({"status": "error", "message": "form_id is required"}, status=400)
-#         if category_id is None:
-#             return JsonResponse({"status": "error", "message": "category_id is required"}, status=400)
-#         if not answers or not isinstance(answers, list):
-#             return JsonResponse({"status": "error", "message": "answers must be a non-empty list"}, status=400)
-
-#         try:
-#             form_id = int(form_id)
-#             category_id = int(category_id)
-#         except (ValueError, TypeError):
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "form_id and category_id must be valid integers"
-#             }, status=400)
-
-#         # Validate that the form and category exist
-
-#         try:
-#             form_type = FormType.objects.get(id=form_id)
-#         except FormType.DoesNotExist:
-#             return JsonResponse({"status": "error", "message": "Invalid form_id"}, status=400)
-
-#         try:
-#             main_category = MainCategory.objects.get(id=category_id)
-#         except MainCategory.DoesNotExist:
-#             return JsonResponse({"status": "error", "message": "Invalid category_id"}, status=400)
-
-#         if not FormCategoryAssignment.objects.filter(form_type=form_type, main_category=main_category).exists():
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "Category is not assigned to this form"
-#             }, status=400)
-
-#         # Save submission record (create if not exists)
-#         submission, created = FormSubmission.objects.get_or_create(
-#             user=user,
-#             form_type=form_type,
-#             defaults={'is_complete': False}
-#         )
-
-#         # Save the answers
-#         saved_count = save_category_answers(submission, form_id, category_id, answers, request, user)
-#         # Check if form is now complete and notify
-#         check_form_complete_and_notify(submission, request)
-
-#         return JsonResponse({
-#             "status": "success",
-#             "message": f"Successfully saved {saved_count} answers for category '{main_category.name}'",
-#             "formId": form_id,
-#             "categoryId": category_id,
-#             "savedAnswers": saved_count
-#         }, status=200)
-
-#     except Exception as e:
-#         import traceback
-#         traceback.print_exc()
-#         return JsonResponse({
-#             "status": "error",
-#             "message": f"Server error occurred: {str(e)}"
-#         }, status=500)
-
 @csrf_exempt
 def submit_category_answers(request):
     try:
@@ -486,221 +354,6 @@ def submit_category_answers(request):
             "message": f"Server error occurred: {str(e)}"
         }, status=500)
 
-# @csrf_exempt
-# def submit_category_answers(request):
-#     try:
-
-#         if request.content_type != 'application/json':
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "Content-Type must be application/json"
-#             }, status=400)
-
-#         try:
-#             data = json.loads(request.body)
-
-#         except json.JSONDecodeError:
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "Invalid JSON format"
-#             }, status=400)
-
-#         auth_header = request.headers.get("Authorization", "")
-#         token = None
-
-#         if auth_header.startswith("Token "):
-#             token = auth_header.split("Token ")[-1]
-
-#         elif auth_header.startswith("Bearer "):
-#             token = auth_header.split("Bearer ")[-1]
-
-#         elif 'headers' in data and 'Authorization' in data['headers']:
-
-#             auth_value = data['headers']['Authorization']
-
-#             if auth_value.startswith("Token "):
-#                 token = auth_value.split("Token ")[-1]
-
-#             elif auth_value.startswith("Bearer "):
-#                 token = auth_value.split("Bearer ")[-1]
-
-#         if not token:
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "Authorization token is required."
-#             }, status=401)
-
-#         try:
-#             token_obj = Token.objects.get(key=token)
-#             authenticated_user = token_obj.user
-
-#         except Token.DoesNotExist:
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "Invalid token"
-#             }, status=401)
-
-#         # -----------------------------
-#         # PAYLOAD EXTRACTION
-#         # -----------------------------
-
-#         if 'headers' in data and 'payload' in data['headers']:
-#             payload_data = data['headers']['payload']
-
-#         elif 'payload' in data:
-#             payload_data = data['payload']
-
-#         else:
-#             payload_data = data
-
-#         form_id = payload_data.get("form_id")
-#         category_id = payload_data.get("category_id")
-#         answers = payload_data.get("answers", [])
-
-#         # -----------------------------
-#         # MAGIC LINK SUPPORT
-#         # -----------------------------
-
-#         magic_link_token = payload_data.get("magic_link_token")
-
-#         submission_user = authenticated_user
-
-#         if magic_link_token:
-
-#             try:
-#                 invite = FormInvite.objects.select_related(
-#                     'recipient',
-#                     'form_type'
-#                 ).get(token=magic_link_token)
-
-#                 submission_user = invite.recipient
-
-#                 # Optional security validation
-#                 if int(form_id) != invite.form_type.id:
-#                     return JsonResponse({
-#                         "status": "error",
-#                         "message": "Invalid form for this invite"
-#                     }, status=403)
-
-#             except FormInvite.DoesNotExist:
-#                 return JsonResponse({
-#                     "status": "error",
-#                     "message": "Invalid magic link token"
-#                 }, status=401)
-
-#         # -----------------------------
-#         # VALIDATION
-#         # -----------------------------
-
-#         if form_id is None:
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "form_id is required"
-#             }, status=400)
-
-#         if category_id is None:
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "category_id is required"
-#             }, status=400)
-
-#         if not answers or not isinstance(answers, list):
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "answers must be a non-empty list"
-#             }, status=400)
-
-#         try:
-#             form_id = int(form_id)
-#             category_id = int(category_id)
-
-#         except (ValueError, TypeError):
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "form_id and category_id must be valid integers"
-#             }, status=400)
-
-#         try:
-#             form_type = FormType.objects.get(id=form_id)
-
-#         except FormType.DoesNotExist:
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "Invalid form_id"
-#             }, status=400)
-
-#         try:
-#             main_category = MainCategory.objects.get(id=category_id)
-
-#         except MainCategory.DoesNotExist:
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "Invalid category_id"
-#             }, status=400)
-
-#         if not FormCategoryAssignment.objects.filter(
-#             form_type=form_type,
-#             main_category=main_category
-#         ).exists():
-
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "Category is not assigned to this form"
-#             }, status=400)
-
-#         # -----------------------------
-#         # CREATE SUBMISSION
-#         # -----------------------------
-
-#         submission, created = FormSubmission.objects.get_or_create(
-#             user=submission_user,
-#             form_type=form_type,
-#             defaults={
-#                 'is_complete': False
-#             }
-#         )
-
-#         # -----------------------------
-#         # SAVE ANSWERS
-#         # -----------------------------
-
-#         saved_count = save_category_answers(
-#             submission,
-#             form_id,
-#             category_id,
-#             answers,
-#             request,
-#             submission_user
-#         )
-
-#         # -----------------------------
-#         # COMPLETION CHECK
-#         # -----------------------------
-
-#         check_form_complete_and_notify(
-#             submission,
-#             request
-#         )
-
-#         return JsonResponse({
-#             "status": "success",
-#             "message": f"Successfully saved {saved_count} answers",
-#             "formId": form_id,
-#             "categoryId": category_id,
-#             "savedAnswers": saved_count,
-#             "submissionId": submission.id,
-#             "submissionUser": submission_user.email,
-#         }, status=200)
-
-#     except Exception as e:
-
-#         import traceback
-#         traceback.print_exc()
-
-#         return JsonResponse({
-#             "status": "error",
-#             "message": f"Server error occurred: {str(e)}"
-#         }, status=500)
 
 def save_category_answers(submission, form_id, category_id, answers, request, user):
     """
@@ -712,12 +365,9 @@ def save_category_answers(submission, form_id, category_id, answers, request, us
     for answer in answers:
         question_id = answer.get("question_id")
         response_text = answer.get("answer", "")
-        print('Processing answer for question_id:', question_id)
-        print('response_text:', response_text)
         other_option = answer.get("other_option")
 
         if not question_id:
-            print("Skipping answer - no question_id")
             continue
 
         try:
@@ -735,30 +385,11 @@ def save_category_answers(submission, form_id, category_id, answers, request, us
                 question_id=question_id
             ).exists()
 
-            print(f"DEBUG -> Q:{question_id} Form:{form_id} Cat:{category_id} Exists:{exists}")
 
             if not exists:
                 print(f"SKIPPING Question {question_id} (not assigned)")
                 continue
-            # if not FormQuestionAssignment.objects.filter(
-            #     form_type_id=form_id,
-            #     main_category_id=category_id,
-            #     question_id=question_id
-            # ).exists():
-            #     print(f"Question {question_id} not assigned to form {form_id}, category {category_id}")
-                        
-
-            # assignment_qs = FormQuestionAssignment.objects.filter(
-            #     form_type_id=form_id,
-            #     question_id=question_id
-            # )
-
-            # # If the question is assigned to multiple categories, allow saving if current category matches any
-            # if not assignment_qs.filter(main_category_id=category_id).exists():
-            #     print(f"Skipping Question {question_id} — not assigned to category {category_id} in form {form_id}")
-            #     continue
-
-
+            
             # Get form_type and category objects
             form_type = FormType.objects.get(id=form_id)
             main_category = MainCategory.objects.get(id=category_id)
@@ -785,7 +416,6 @@ def save_category_answers(submission, form_id, category_id, answers, request, us
 
     # CASE 1: Already uploaded file (S3 URL)
                 if is_s3_url:
-                    print("Using S3 URL directly")
 
                     response_data['file_upload'] = response_text
                     response_data['response_text'] = os.path.basename(response_text)
@@ -799,12 +429,7 @@ def save_category_answers(submission, form_id, category_id, answers, request, us
                     )
 
                     saved_count += 1
-                    continue
-
-                
-                
-                print(f"Processing file upload for question {question_id}")
-                
+                    continue                
                 # Check if this is a base64 encoded file
                 if answer.get('is_file') and response_text and response_text.startswith('data:'):
                     try:
@@ -843,9 +468,7 @@ def save_category_answers(submission, form_id, category_id, answers, request, us
                         # Ensure filename has correct extension
                         if not filename.lower().endswith(f'.{ext}'):
                             filename = f"{os.path.splitext(filename)[0]}.{ext}"
-                        
-                        print(f'Processing file: {filename}')
-                        
+                                                
                         # Decode base64 - add padding if needed
                         try:
                             # Add padding if needed
@@ -936,7 +559,6 @@ def save_category_answers(submission, form_id, category_id, answers, request, us
                             # Save to FormResponse
                             response_data['file_upload'] = full_s3_url
                             response_data['response_text'] = file_name
-                            print('Multipart file uploaded successfully:', response_data)
                         except Exception as e:
                             print(f"Multipart file upload failed for question {question_id}: {e}")
                             continue
@@ -1017,7 +639,6 @@ def save_category_answers(submission, form_id, category_id, answers, request, us
             )
             
             saved_count += 1
-            print(f"{'Created' if created else 'Updated'} response for question {question_id}")
 
         except (ValueError, TypeError) as e:
             print(f"Data type error for question {question_id}: {str(e)}")

@@ -31,7 +31,6 @@ DEBUG = True
 ALLOWED_HOSTS = ['*'] if DEBUG else config("ALLOWED_HOSTS").split(",")
 
 # ALLOWED_HOSTS = config("ALLOWED_HOSTS").split(",")
-# print("ALLOWED_HOSTS =", ALLOWED_HOSTS)
 
 INTERNAL_API_BASE_URL = os.environ.get("INTERNAL_API_BASE_URL", "http://127.0.0.1:8000")
 

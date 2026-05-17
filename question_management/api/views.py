@@ -184,74 +184,21 @@ def get_question_detail_api(request, question_id):
 
    
     serializer = GetQuestionSerializer(question).data
-    print('serializer',serializer)
     
     return Response({'status': 'success', 'data': serializer}, status=status.HTTP_200_OK)
 
 
 
-# @api_view(['PUT'])
-# def update_question_api(request, question_id):
-#     try:
-#         # Try fetching the Question
-#         try:
-#             question = Question.objects.get(pk=question_id)
-#         except Question.DoesNotExist:
-#             logger.warning(f"Question with ID {question_id} not found.")
-#             return Response({"error": "Question not found."}, status=status.HTTP_404_NOT_FOUND)
-
-#         # Deserialize and validate data
-#         serializer = QuestionUpdateSerializer(question, data=request.data, partial=True)
-
-#         if serializer.is_valid():
-#             serializer.save()
-#             logger.info(f"Question ID {question_id} updated successfully.")
-#             return Response({
-#                 "success": "Question updated successfully.",
-#                 "data": serializer.data
-#             }, status=status.HTTP_200_OK)
-
-#         # Log validation errors
-#         logger.error(f"Validation failed for question ID {question_id}: {serializer.errors}")
-#         print('invalid')
-#         return Response({
-#             "error": "Validation failed.",
-#             "details": serializer.errors
-#         }, status=status.HTTP_400_BAD_REQUEST)
-
-#     except ValidationError as ve:
-#         logger.exception(f"Validation error occurred for question ID {question_id}: {ve}")
-#         return Response({
-#             "error": "Invalid input.",
-#             "details": str(ve)
-#         }, status=status.HTTP_400_BAD_REQUEST)
-
-#     except Exception as e:
-#         logger.exception(f"Unexpected error occurred while updating question ID {question_id}: {e}")
-#         return Response({
-#             "error": "An unexpected error occurred.",
-#             "details": str(e)
-#         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 @api_view(['PUT'])
 def update_question_api(request, question_id):
     try:
         question = Question.objects.get(pk=question_id)
         
-        print(f"Received data: {request.data}")
-        print(f"Current question values:")
-        print(f"  text: {question.text}")
-        print(f"  question_type: {question.question_type.id if question.question_type else None}")
-        print(f"  input_type: {question.input_type}")
-        print(f"  order: {question.order}")
-        print(f"  is_active: {question.is_active}")
-        print(f"  is_required: {question.is_required}")
-        print(f"  allow_other_option: {question.allow_other_option}")
-        
+       
         serializer = QuestionUpdateSerializer(question, data=request.data, partial=True)
         
         if serializer.is_valid():
             updated_question = serializer.save()
-            print(f"Successfully updated question {question_id}")
             
             # Return the updated data
             return Response({
@@ -696,8 +643,6 @@ def get_questions_assigned_to_category_api(request, form_type_id, main_category_
         ).order_by('order')
 
         detail = request.query_params.get('detail', 'false').lower() == 'true'
-        print(f"detail param raw value: {request.query_params.get('detail')}")
-
 
         if not assignments.exists():
             return Response({
@@ -712,7 +657,6 @@ def get_questions_assigned_to_category_api(request, form_type_id, main_category_
             serialized_questions = GetAssignedQuestionToCategorySerializer(questions, many=True).data
         else:
             serialized_questions = [assignment.question_id for assignment in assignments]
-            print('serialized questions',serialized_questions)
         return Response({
             "status": "success",
             "data": {

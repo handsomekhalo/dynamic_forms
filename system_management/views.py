@@ -629,8 +629,6 @@ def logout(request):
         'Content-Type': 'application/json'
     }
 
-    print("Token being sent to logout_api:", token)
-
     try:
         api_response_data = api_connection(method="POST", url=url, headers=headers, data={})
         if isinstance(api_response_data, dict) and api_response_data.get('status') == 'success':
@@ -693,7 +691,6 @@ def create_user(request):
         else:
             # Handle form data
             user_type_id = request.POST.get('user_type')
-            # print('user_type_id', user_type_id)
             first_name = request.POST.get('first_name')
             last_name = request.POST.get('last_name')
             email = request.POST.get('user_email') or request.POST.get('email')
@@ -877,14 +874,10 @@ def delete_user(request):
         if request.content_type == 'application/json':
             data = json.loads(request.body)
 
-            print('email data', data)
         else:
             data = request.POST
 
         email = data.get('email')
-        print('email data', email)
-
-
         if not email:
             return JsonResponse({
                 "status": "error",
@@ -902,7 +895,6 @@ def delete_user(request):
 
         #     "email": email
         # })
-        print('delete user payload', payload)
         response_data = api_connection(method="POST", url=url, headers=headers, data=payload)
         # response_data = api_connection(method="POST", url=url, headers=headers, json=payload)
         print('delete user response', response_data)

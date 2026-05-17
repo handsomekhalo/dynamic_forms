@@ -28,4 +28,3 @@ class Command(BaseCommand):
                 self.stdout.write(f'Usetype already exists: {name}')
 
         self.stdout.write(self.style.SUCCESS('Finished adding usertypes'))
-        print("Usertype loaded successfully.")

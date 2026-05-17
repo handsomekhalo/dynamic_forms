@@ -185,17 +185,13 @@ def get_all_categories_by_form_id_api(request, formId):
 @permission_classes([IsAuthenticated])
 def get_all_forms_api(request):
     try:
-        print(f"User: {request.user.email}, Organisation: {request.user.organisation}" )
         org = request.user.organisation
         if not org:
-            print("User has no organisation assigned.")
             return Response({"error": "User has no organisation assigned."}, status=status.HTTP_403_FORBIDDEN)
 
         forms = FormType.objects.filter(organisation=org)
-        print(f"Forms found: {forms.count()}")
 
         serializer = GetAllFormTypeSerializer(forms, many=True)
-        print(f"Serialized data: {serializer.data}")
 
         return Response(serializer.data, status=status.HTTP_200_OK)
     
@@ -581,26 +577,6 @@ def update_form_api(request):
         "form": serializer.data
     }, status=status.HTTP_200_OK)
 
-# @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
-# def get_form_details_api(request, form_id):
-#     try:
-#         form = FormType.objects.get(id=form_id)
-#         print(f"Retrieved form: {form.name} (ID: {form.id})")
-#         serializer = GetFormDetailsSerializer(form)
-#         return Response(serializer.data, status=status.HTTP_200_OK)
-#     except FormType.DoesNotExist:
-#         print(f"Form with ID {form_id} does not exist.")
-#         return Response(
-#             {'status': 'error', 'message': 'Form not found'},
-#             status=status.HTTP_404_NOT_FOUND
-#         )
-#     except Exception as e:
-#         print(f"An error occurred while retrieving form details: {str(e)}")
-#         return Response(
-#             {'status': 'error', 'message': str(e)},
-#             status=status.HTTP_500_INTERNAL_SERVER_ERROR
-#         )
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

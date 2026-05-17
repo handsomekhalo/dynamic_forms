@@ -183,78 +183,6 @@ def get_question_detail(request, question_id):
     except requests.exceptions.RequestException as e:
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
 
-
-# @csrf_exempt
-# def update_question(request, question_id):
-#     if request.method != 'PUT':
-#         return JsonResponse({
-#             "status": "error",
-#             "message": "Method not allowed"
-#         }, status=405)
-
-#     try:
-#         # Extract token
-#         auth_header = request.headers.get("Authorization", "")
-#         token = None
-#         if auth_header.startswith("Token "):
-#             token = auth_header.split("Token ")[-1]
-#         elif auth_header.startswith("Bearer "):
-#             token = auth_header.split("Bearer ")[-1]
-
-#         if not token:
-#             return JsonResponse({
-#                 "status": "error",
-#                 "message": "Authorization token is required."
-#             }, status=401)
-
-#         request.session["token"] = token
-#         request.session.modified = True
-
-#         # Parse JSON
-#         try:
-#             data = json.loads(request.body)
-#         except json.JSONDecodeError:
-#             return JsonResponse({'status': 'error', 'message': 'Invalid JSON data'}, status=400)
-
-#         # Construct payload (without question_id, since it's in URL)
-#         payload = {
-#             'question': data.get('question'),
-#             'question_number': data.get('question_number'),
-#             'question_type': data.get('question_type'),
-#             'mandatory': data.get('mandatory'),
-#             'other_field': data.get('other_field'),
-#             'options': data.get('options', []),
-#             'delete_options': data.get('delete_options', False),
-#         }
-
-#         # Call the internal API using PUT
-#         url = f"{host_url(request)}{reverse('update_question_api', args=[question_id])}"
-#         headers = {
-#             "Content-Type": "application/json",
-#             "Authorization": f"Token {token}",
-#         }
-
-#         try:
-#             response = requests.put(url, headers=headers, json=payload, timeout=10)
-#             response.raise_for_status()
-#         except requests.exceptions.RequestException as e:
-#             return JsonResponse({'status': 'error', 'message': f'Error while sending data to API: {str(e)}'}, status=500)
-
-#         try:
-#             response_data = response.json()
-#         except ValueError:
-#             return JsonResponse({'status': 'error', 'message': 'Invalid JSON response from API'}, status=500)
-
-#         return JsonResponse(response_data, status=response.status_code)
-
-#     except Exception as e:
-#         import traceback
-#         traceback.print_exc()
-#         return JsonResponse({
-#             "status": "error",
-#             "message": f"Unexpected server error: {str(e)}"
-#         }, status=500)
-
 @csrf_exempt
 def update_question(request, question_id):
     if request.method != 'PUT':
@@ -515,7 +443,6 @@ def add_or_assign_questions_to_category(request):
             for auth_format in auth_formats:
                 headers = {"Content-Type": "application/json", **auth_format}
                 try:
-                    print(f"Trying authentication format: {auth_format}")
                     response = requests.post(api_url, headers=headers, json=payload, timeout=10)
                     if response.status_code != 401:
                         success = True
@@ -558,7 +485,6 @@ def remove_assigned_question(request):
             "status": "error",
             "message": "Method not allowed"
         }, status=405)
-    print("Received request:", request.body)  # Log the request body
 
     try:
         # Step 1: Extract Token from Headers
@@ -615,7 +541,6 @@ def remove_assigned_question(request):
         for auth_format in auth_formats:
             headers = {"Content-Type": "application/json", **auth_format}
             try:
-                print(f"Trying authentication format: {auth_format}")
                 response = requests.post(api_url, headers=headers, json=payload, timeout=10)
                 if response.status_code != 401:
                     success = True
@@ -696,7 +621,6 @@ def get_questions_assigned_to_category(request, formId, category):
         for auth_format in auth_formats:
             headers = {"Content-Type": "application/json", **auth_format}
             try:
-                print(f"Final API URL being called: {api_url}")
                 response = requests.get(api_url, headers=headers, timeout=10)
                 if response.status_code != 401:
                     break
